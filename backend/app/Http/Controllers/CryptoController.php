@@ -74,7 +74,7 @@ class CryptoController extends Controller
                 if ($request->hasFile('image')) {
                     $crypto = Cryptomoney::find($id);
                     if ($crypto) {
-                        $imagePath = $request->file('image')->store('cryptos', 'public');
+                        $imagePath = Cryptomoney::storeImage($request->file('image'));
                         $crypto->update(['image' => $imagePath]);
                     }
                 }

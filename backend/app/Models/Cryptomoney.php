@@ -28,7 +28,7 @@ class Cryptomoney extends Model
         'updated_at_api',
     ];
 
-    protected $hidden = ['image'];
+    protected $hidden = [];
 
     protected $appends = ['image_url', 'price', 'change_24h'];
 
@@ -53,9 +53,12 @@ class Cryptomoney extends Model
     public function getImageUrlAttribute()
     {
         if ($this->image) {
-            // Check if file exists in storage
-            if (file_exists(storage_path('app/public/' . $this->image))) {
+            // Check if file exists in public storage (symlinked)
+            $imagePath = public_path('storage/' . $this->image);
+            if (file_exists($imagePath)) {
                 return asset('storage/' . $this->image);
+            } else {
+                \Log::warning('Image file not found: ' . $imagePath);
             }
         }
         // Fallback to default image
@@ -98,5 +101,28 @@ class Cryptomoney extends Model
             $array['image_url'] = $this->image_url;
         }
         return $array;
+    }
+
+    /**
+     * Store image file and return relative path
+     */
+    public static function storeImage($imageFile)
+    {
+        if (!$imageFile) return null;
+        $filename = time() . '_' . uniqid() . '.' . $imageFile->getClientOriginalExtension();
+        return $imageFile->storeAs('cryptos', $filename, 'public');
+    }
+
+    /**
+     * Delete image file from storage
+     */
+    public function deleteImage()
+    {
+        if ($this->image) {
+            $path = public_path('storage/' . $this->image);
+            if (file_exists($path)) {
+                unlink($path);
+            }
+        }
     }
 }

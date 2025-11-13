@@ -332,7 +332,6 @@ const chartDataset = computed(() => ({
 
       <!-- Main Section: Chart + Summary Panel -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Chart (2/3) -->
         <Card class="lg:col-span-2">
           <CardHeader class="pb-3">
             <div class="space-y-3">

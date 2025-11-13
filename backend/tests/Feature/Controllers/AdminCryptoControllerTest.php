@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 use Mockery;
+use Illuminate\Http\UploadedFile;
 
 class AdminCryptoControllerTest extends TestCase
 {
@@ -37,34 +38,34 @@ class AdminCryptoControllerTest extends TestCase
         Sanctum::actingAs($this->admin);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function it_can_update_crypto_successfully()
-    {
-        $updateData = [
+
+#[\PHPUnit\Framework\Attributes\Test]
+public function it_can_update_crypto_successfully()
+{
+    $updateData = [
+        'name' => 'Updated Bitcoin',
+        'symbol' => 'BTC',
+        'price_eur' => 55000.00,
+        'coingecko_id' => 'updated-bitcoin'
+    ];
+
+    $response = $this->putJson("/api/v1/admin/cryptos/{$this->crypto->id}", $updateData);
+
+    $response->assertStatus(200)
+        ->assertJson([
             'name' => 'Updated Bitcoin',
             'symbol' => 'BTC',
-            'price_eur' => 55000.00,
-            'image' => 'https://example.com/new-image.png',
             'coingecko_id' => 'updated-bitcoin'
-        ];
+        ])
+        ->assertJsonPath('price_eur', '55000.00000000');
 
-        $response = $this->putJson("/api/v1/admin/cryptos/{$this->crypto->id}", $updateData);
+    $this->assertDatabaseHas('cryptomoney', [
+        'id' => $this->crypto->id,
+        'name' => 'Updated Bitcoin',
+        'price_eur' => 55000.00
+    ]);
+}
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'name' => 'Updated Bitcoin',
-                'symbol' => 'BTC',
-                'image' => 'https://example.com/new-image.png',
-                'coingecko_id' => 'updated-bitcoin'
-            ])
-            ->assertJsonPath('price_eur', '55000.00000000'); // Check decimal string format
-
-        $this->assertDatabaseHas('cryptomoney', [
-            'id' => $this->crypto->id,
-            'name' => 'Updated Bitcoin',
-            'price_eur' => 55000.00
-        ]);
-    }
 
     #[\PHPUnit\Framework\Attributes\Test]
     public function it_can_update_partial_crypto_data()

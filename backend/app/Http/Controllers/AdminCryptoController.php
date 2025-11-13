@@ -35,12 +35,8 @@ class AdminCryptoController extends Controller
         
         // Gérer l'upload d'image
         if ($request->hasFile('image')) {
-            // Supprimer l'ancienne image si elle existe
-            if ($crypto->image && file_exists(storage_path('app/public/' . $crypto->image))) {
-                unlink(storage_path('app/public/' . $crypto->image));
-            }
-            
-            $imagePath = $request->file('image')->store('cryptos', 'public');
+            $crypto->deleteImage();
+            $imagePath = Cryptomoney::storeImage($request->file('image'));
             $data['image'] = $imagePath;
         }
         
@@ -54,9 +50,7 @@ class AdminCryptoController extends Controller
         if (!$crypto) return response()->json(['error'=>'Crypto non trouvée'],404);
         
         // Supprimer l'image si elle existe
-        if ($crypto->image && file_exists(storage_path('app/public/' . $crypto->image))) {
-            unlink(storage_path('app/public/' . $crypto->image));
-        }
+        $crypto->deleteImage();
         
         $crypto->delete();
         return response()->json(['message'=>'Crypto supprimée']);
