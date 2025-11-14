@@ -1,0 +1,756 @@
+<script setup lang="ts">
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../../services/api'
+import { Chart, registerables } from 'chart.js'
+
+// Import des composants shadcn-vue
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { 
+  CheckCircle2, 
+  AlertCircle, 
+  TrendingUp, 
+  TrendingDown, 
+  Eye, 
+  EyeOff,
+  User,
+  Lock,
+  Wallet,
+  RefreshCw
+} from 'lucide-vue-next'
+
+// Enregistrer Chart.js
+Chart.register(...registerables)
+
+// Types
+type PortfolioResponse = {
+  success: boolean;
+  data: {
+    stats: {
+      total_invested: number;
+      current_value: number;
+      total_profit: number;
+      profit_percentage: number;
+      total_transactions: number;
+    };
+    growth: {
+      labels: string[];
+      data: number[];
+      raw: {
+        date: string;
+        value: number;
+        timestamp: number;
+      }[];
+    };
+    distribution: {
+      labels: string[];
+      data: number[];
+      colors: string[];
+      raw: {
+        crypto_name: string;
+        crypto_symbol: string;
+        value: number;
+        percentage: number;
+        quantity: string;
+      }[];
+    };
+  };
+};
+
+type UserProfile = {
+  name: string;
+  email: string;
+  created_at: string;
+  email_verified_at: string | null;
+};
+
+type PasswordForm = {
+  current_password: string;
+  new_password: string;
+  new_password_confirmation: string;
+};
+
+const router = useRouter()
+const loading = ref(false)
+const error = ref<string | null>(null)
+const message = ref<string | null>(null)
+
+// Onglets
+const activeTab = ref('overview')
+
+// Données du profil
+const profile = ref<UserProfile | null>(null)
+const profileForm = ref({
+  name: '',
+  email: ''
+})
+const updatingProfile = ref(false)
+
+// Changement de mot de passe
+const passwordForm = ref<PasswordForm>({
+  current_password: '',
+  new_password: '',
+  new_password_confirmation: ''
+})
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+const changingPassword = ref(false)
+
+// Données du portfolio
+const portfolioStats = ref<PortfolioResponse['data'] | null>(null)
+
+// Graphiques
+const growthChart = ref<Chart | null>(null)
+const distributionChart = ref<Chart | null>(null)
+
+// Fonctions utilitaires
+function formatCurrency(value: any): string {
+  const n = Number(value ?? 0)
+  if (!isFinite(n) || isNaN(n)) return '€0.00'
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'EUR' })
+}
+
+const formatNumber = (num: any, decimals = 2) => {
+  if (num === null || num === undefined) return '0'
+  return parseFloat(num).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  })
+}
+
+// Charger les données du profil
+async function fetchProfile() {
+  try {
+    const res = await api.auth.profile()
+    profile.value = res.user || res
+    profileForm.value = {
+      name: profile.value.name || '',
+      email: profile.value.email || ''
+    }
+  } catch (e: any) {
+    console.error('Error loading profile:', e)
+  }
+}
+
+// Charger les stats du portfolio
+async function fetchPortfolioStats() {
+  loading.value = true
+  error.value = null
+  try {
+    const response = await api.auth.getProfileStats()
+    portfolioStats.value = response.data
+    
+    // Recréer les graphiques après un court délai pour s'assurer que le DOM est mis à jour
+    setTimeout(() => {
+      createGrowthChart()
+      createDistributionChart()
+    }, 100)
+  } catch (e: any) {
+    error.value = e.message || String(e)
+    console.error('Error loading stats:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Mettre à jour le profil
+async function updateProfile() {
+  updatingProfile.value = true
+  message.value = null
+  error.value = null
+  
+  try {
+    await api.auth.updateProfile(profileForm.value)
+    message.value = 'Profile updated successfully!'
+    await fetchProfile()
+    
+    setTimeout(() => {
+      message.value = null
+    }, 3000)
+  } catch (e: any) {
+    error.value = e.message || 'Error updating profile'
+  } finally {
+    updatingProfile.value = false
+  }
+}
+
+// Changer le mot de passe
+async function changePassword() {
+  if (passwordForm.value.new_password !== passwordForm.value.new_password_confirmation) {
+    error.value = 'Passwords do not match'
+    return
+  }
+  
+  changingPassword.value = true
+  message.value = null
+  error.value = null
+  
+  try {
+    await api.auth.changePassword(passwordForm.value)
+    message.value = 'Password changed successfully!'
+    
+    // Réinitialiser le formulaire
+    passwordForm.value = {
+      current_password: '',
+      new_password: '',
+      new_password_confirmation: ''
+    }
+    
+    setTimeout(() => {
+      message.value = null
+    }, 3000)
+  } catch (e: any) {
+    error.value = e.message || 'Error changing password'
+  } finally {
+    changingPassword.value = false
+  }
+}
+
+// Détruire les graphiques existants
+function destroyCharts() {
+  if (growthChart.value) {
+    growthChart.value.destroy()
+    growthChart.value = null
+  }
+  if (distributionChart.value) {
+    distributionChart.value.destroy()
+    distributionChart.value = null
+  }
+}
+
+// Créer le graphique de croissance
+function createGrowthChart() {
+  if (!portfolioStats.value?.growth) return
+  
+  const ctx = document.getElementById('growthChart') as HTMLCanvasElement
+  if (!ctx) return
+  
+  // Détruire le graphique existant
+  if (growthChart.value) {
+    growthChart.value.destroy()
+  }
+  
+  const growth = portfolioStats.value.growth
+  
+  growthChart.value = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: growth.labels,
+      datasets: [{
+        label: 'Portfolio Value',
+        data: growth.data,
+        borderColor: '#35A7FF',
+        backgroundColor: 'rgba(53, 167, 255, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#35A7FF',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          backgroundColor: 'rgba(56, 97, 140, 0.95)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          padding: 12,
+          borderColor: '#35A7FF',
+          borderWidth: 1,
+          displayColors: false,
+          callbacks: {
+            label: function(context) {
+              return formatCurrency(context.parsed.y)
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          },
+          ticks: {
+            callback: function(value) {
+              return formatCurrency(value)
+            },
+            font: {
+              size: 11
+            },
+            color: '#6b7280'
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              size: 11
+            },
+            color: '#6b7280'
+          }
+        }
+      }
+    }
+  })
+}
+
+// Créer le graphique de distribution
+function createDistributionChart() {
+  if (!portfolioStats.value?.distribution) return
+  
+  const ctx = document.getElementById('distributionChart') as HTMLCanvasElement
+  if (!ctx) return
+  
+  // Détruire le graphique existant
+  if (distributionChart.value) {
+    distributionChart.value.destroy()
+  }
+  
+  const distribution = portfolioStats.value.distribution
+  
+  distributionChart.value = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: distribution.labels,
+      datasets: [{
+        data: distribution.data,
+        backgroundColor: distribution.colors,
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            padding: 15,
+            font: {
+              size: 12
+            },
+            color: '#374151',
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(56, 97, 140, 0.95)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          padding: 12,
+          borderColor: '#35A7FF',
+          borderWidth: 1,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || ''
+              const value = context.parsed || 0
+              return `${label}: ${formatCurrency(value)}`
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+// Recréer les graphiques quand on revient à l'onglet portfolio
+watch(activeTab, (newTab) => {
+  if (newTab === 'overview' && portfolioStats.value) {
+    nextTick(() => {
+      setTimeout(() => {
+        createGrowthChart()
+        createDistributionChart()
+      }, 100)
+    })
+  }
+})
+
+onMounted(async () => {
+  await fetchProfile()
+  await fetchPortfolioStats()
+})
+
+// Computed
+const stats = computed(() => portfolioStats.value?.stats || null)
+const distributionData = computed(() => portfolioStats.value?.distribution.raw || [])
+
+const profitTrend = computed(() => {
+  if (!stats.value) return 'neutral'
+  return (stats.value.total_profit || 0) >= 0 ? 'up' : 'down'
+})
+</script>
+
+<template>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#38618C] mb-1">My Profile & Portfolio</h1>
+        <p class="text-sm sm:text-base text-gray-500">Manage your account and investments</p>
+      </div>
+      <Button 
+        variant="outline" 
+        @click="fetchPortfolioStats"
+        :disabled="loading"
+        class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white transition-colors"
+      >
+        <RefreshCw class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
+        {{ loading ? 'Refreshing...' : 'Refresh' }}
+      </Button>
+    </div>
+
+    <!-- Alertes -->
+    <Alert v-if="message" class="border-[#01FF19] bg-[#01FF19]/10 rounded-xl">
+      <CheckCircle2 class="h-4 w-4 text-[#01FF19]" />
+      <AlertDescription class="text-[#01FF19] font-medium">
+        {{ message }}
+      </AlertDescription>
+    </Alert>
+
+    <Alert v-if="error" class="border-[#FF5964] bg-[#FF5964]/10 rounded-xl">
+      <AlertCircle class="h-4 w-4 text-[#FF5964]" />
+      <AlertDescription class="text-[#FF5964] font-medium">
+        {{ error }}
+      </AlertDescription>
+    </Alert>
+
+    <!-- Onglets -->
+    <Tabs v-model="activeTab" class="w-full">
+      <TabsList class="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+        <TabsTrigger 
+          value="overview" 
+          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+        >
+          <Wallet class="w-4 h-4 mr-2" />
+          Portfolio
+        </TabsTrigger>
+        <TabsTrigger 
+          value="profile" 
+          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+        >
+          <User class="w-4 h-4 mr-2" />
+          Profile
+        </TabsTrigger>
+        <TabsTrigger 
+          value="security" 
+          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+        >
+          <Lock class="w-4 h-4 mr-2" />
+          Security
+        </TabsTrigger>
+      </TabsList>
+
+      <!-- Onglet Portfolio -->
+      <TabsContent value="overview" class="space-y-6 mt-6">
+        <!-- Statistiques principales -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-300 bg-gradient-to-br from-[#35A7FF]/5 to-transparent hover-lift">
+            <CardContent class="p-4 sm:p-6">
+              <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Invested</div>
+              <div class="text-xl sm:text-2xl font-bold text-[#38618C]">
+                {{ loading ? '...' : formatCurrency(stats?.total_invested || 0) }}
+              </div>
+              <div class="text-xs text-gray-400 mt-1">Amount invested</div>
+            </CardContent>
+          </Card>
+
+          <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-300 bg-gradient-to-br from-[#35A7FF]/5 to-transparent hover-lift">
+            <CardContent class="p-4 sm:p-6">
+              <div class="text-xs sm:text-sm text-gray-500 mb-1">Current Value</div>
+              <div class="text-xl sm:text-2xl font-bold text-[#35A7FF]">
+                {{ loading ? '...' : formatCurrency(stats?.current_value || 0) }}
+              </div>
+              <div class="text-xs text-gray-400 mt-1">Portfolio value</div>
+            </CardContent>
+          </Card>
+
+          <Card class="border-gray-200 transition-all duration-300 bg-gradient-to-br hover-lift" 
+                :class="profitTrend === 'up' ? 'hover:border-[#01FF19] from-[#01FF19]/5' : 'hover:border-[#FF5964] from-[#FF5964]/5'">
+            <CardContent class="p-4 sm:p-6">
+              <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Profit</div>
+              <div class="text-xl sm:text-2xl font-bold flex items-center gap-1" 
+                   :class="profitTrend === 'up' ? 'text-[#01FF19]' : 'text-[#FF5964]'">
+                {{ loading ? '...' : formatCurrency(stats?.total_profit || 0) }}
+                <TrendingUp v-if="profitTrend === 'up'" class="w-5 h-5" />
+                <TrendingDown v-else class="w-5 h-5" />
+              </div>
+              <div class="text-xs text-gray-400 mt-1">
+                {{ loading ? '...' : formatNumber(stats?.profit_percentage || 0) }}% profit
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card class="border-gray-200 hover:border-[#38618C] transition-all duration-300 bg-gradient-to-br from-[#38618C]/5 to-transparent hover-lift">
+            <CardContent class="p-4 sm:p-6">
+              <div class="text-xs sm:text-sm text-gray-500 mb-1">Transactions</div>
+              <div class="text-xl sm:text-2xl font-bold text-[#38618C]">
+                {{ loading ? '...' : stats?.total_transactions || 0 }}
+              </div>
+              <div class="text-xs text-gray-400 mt-1">Operations performed</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Graphiques -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Graphique de croissance -->
+          <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+            <CardHeader class="pb-4">
+              <CardTitle class="text-[#38618C] flex items-center gap-2">
+                <TrendingUp class="w-5 h-5" />
+                Portfolio Evolution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div v-if="loading" class="flex items-center justify-center h-64">
+                <Skeleton class="h-full w-full rounded-lg" />
+              </div>
+              <div v-else-if="!portfolioStats?.growth" class="flex items-center justify-center h-64 text-gray-500">
+                No growth data available
+              </div>
+              <div v-else class="h-64">
+                <canvas id="growthChart"></canvas>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Graphique de distribution -->
+          <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+            <CardHeader class="pb-4">
+              <CardTitle class="text-[#38618C] flex items-center gap-2">
+                💰 Portfolio Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div v-if="loading" class="flex items-center justify-center h-64">
+                <Skeleton class="h-full w-full rounded-lg" />
+              </div>
+              <div v-else-if="distributionData.length === 0" class="flex items-center justify-center h-64 text-gray-500">
+                No distribution data available
+              </div>
+              <div v-else class="h-64">
+                <canvas id="distributionChart"></canvas>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Détails de distribution -->
+        <Card v-if="distributionData.length > 0 && !loading" class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+          <CardHeader>
+            <CardTitle class="text-[#38618C]">Distribution Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-3">
+              <div
+                v-for="item in distributionData"
+                :key="item.crypto_symbol"
+                class="border border-gray-200 rounded-xl p-4 hover:border-[#35A7FF] transition-all duration-300 hover:shadow-md"
+              >
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <div class="font-semibold text-[#38618C]">{{ item.crypto_name }}</div>
+                    <div class="text-sm text-gray-500">{{ item.crypto_symbol }}</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-semibold text-[#38618C]">{{ formatCurrency(item.value) }}</div>
+                    <div class="text-sm text-gray-500">{{ formatNumber(item.percentage) }}%</div>
+                  </div>
+                </div>
+                <div class="mt-2 pt-2 border-t border-gray-100">
+                  <div class="text-sm text-gray-600">
+                    Quantity: <span class="font-medium">{{ formatNumber(parseFloat(item.quantity), 6) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <!-- Onglet Profil -->
+      <TabsContent value="profile" class="space-y-6 mt-6">
+        <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+          <CardHeader>
+            <CardTitle class="text-[#38618C]">Profile Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form @submit.prevent="updateProfile" class="space-y-4">
+              <div class="space-y-2">
+                <Label for="name">Name</Label>
+                <Input
+                  id="name"
+                  v-model="profileForm.name"
+                  type="text"
+                  placeholder="Your name"
+                  required
+                  class="transition-colors focus:border-[#35A7FF]"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <Label for="email">Email</Label>
+                <Input
+                  id="email"
+                  v-model="profileForm.email"
+                  type="email"
+                  placeholder="your@email.com"
+                  required
+                  class="transition-colors focus:border-[#35A7FF]"
+                />
+              </div>
+
+              <div v-if="profile" class="pt-4 border-t space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Member since:</span>
+                  <span class="font-medium">{{ new Date(profile.created_at).toLocaleDateString('en-US') }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600">Account status:</span>
+                  <Badge :class="profile.email_verified_at ? 'bg-[#01FF19]/20 text-[#01FF19]' : 'bg-[#FF5964]/20 text-[#FF5964]'">
+                    {{ profile.email_verified_at ? '✓ Verified' : '⚠ Not verified' }}
+                  </Badge>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                :disabled="updatingProfile"
+                class="w-full bg-[#35A7FF] hover:bg-[#38618C] text-white transition-colors"
+              >
+                {{ updatingProfile ? 'Updating...' : 'Update Profile' }}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <!-- Onglet Sécurité -->
+      <TabsContent value="security" class="space-y-6 mt-6">
+        <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+          <CardHeader>
+            <CardTitle class="text-[#38618C]">Change Password</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form @submit.prevent="changePassword" class="space-y-4">
+              <div class="space-y-2">
+                <Label for="current_password">Current Password</Label>
+                <div class="relative">
+                  <Input
+                    id="current_password"
+                    v-model="passwordForm.current_password"
+                    :type="showCurrentPassword ? 'text' : 'password'"
+                    placeholder="••••••••"
+                    required
+                    class="pr-10 transition-colors focus:border-[#35A7FF]"
+                  />
+                  <button
+                    type="button"
+                    @click="showCurrentPassword = !showCurrentPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <Eye v-if="showCurrentPassword" class="w-4 h-4" />
+                    <EyeOff v-else class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <Label for="new_password">New Password</Label>
+                <div class="relative">
+                  <Input
+                    id="new_password"
+                    v-model="passwordForm.new_password"
+                    :type="showNewPassword ? 'text' : 'password'"
+                    placeholder="••••••••"
+                    required
+                    class="pr-10 transition-colors focus:border-[#35A7FF]"
+                  />
+                  <button
+                    type="button"
+                    @click="showNewPassword = !showNewPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <Eye v-if="showNewPassword" class="w-4 h-4" />
+                    <EyeOff v-else class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <Label for="confirm_password">Confirm New Password</Label>
+                <div class="relative">
+                  <Input
+                    id="confirm_password"
+                    v-model="passwordForm.new_password_confirmation"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    placeholder="••••••••"
+                    required
+                    class="pr-10 transition-colors focus:border-[#35A7FF]"
+                  />
+                  <button
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <Eye v-if="showConfirmPassword" class="w-4 h-4" />
+                    <EyeOff v-else class="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                :disabled="changingPassword"
+                class="w-full bg-[#FF5964] hover:bg-[#E63946] text-white transition-colors"
+              >
+                {{ changingPassword ? 'Changing...' : 'Change Password' }}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  </div>
+</template>
+
+<style scoped>
+.hover-lift {
+  transform: translateY(0);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+</style>

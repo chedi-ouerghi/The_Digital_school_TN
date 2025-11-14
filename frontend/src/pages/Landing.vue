@@ -11,11 +11,11 @@ import HowItWork from '../components/landing/HowItWork.vue'
 <template>
   <div class="min-h-screen bg-gradient-to-br from-[#071B2C] via-[#0B2E4E] to-[#071B2C]">
     <Header />
-    <HeroSection />
-    <FeaturesSection />
-    <InvestorFeatures />
-    <HowItWork/>
-    <Newsletter />
+    <HeroSection id="hero" />
+    <FeaturesSection id="features" />
+    <InvestorFeatures id="for-everyone" />
+    <HowItWork id="how-it-works" />
+    <Newsletter id="contact" />
     <Footer />
   </div>
 </template>

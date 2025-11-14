@@ -9,6 +9,7 @@ import type {
   ApiResponse,
   PaginatedResponse, UpdateUserInput
 } from '@/types';
+import type { PortfolioResponse } from '../types';
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
@@ -170,6 +171,10 @@ export const authApi = {
   
   async changePassword(payload: ChangePasswordRequest): Promise<void> {
     return await request<void>('/profile/password', 'POST', payload);
+  },
+
+    async getProfileStats(): Promise<PortfolioResponse> {
+    return await request<PortfolioResponse>('/profile/stats', 'GET');
   },
 };
 

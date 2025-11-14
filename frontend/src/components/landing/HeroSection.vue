@@ -23,7 +23,7 @@ onUnmounted(() => animationInstance?.destroy())
 </script>
 
 <template>
-  <section class="relative overflow-hidden">
+  <section id="hero" class="relative overflow-hidden">
     <div class="absolute inset-0 bg-gradient-to-br from-[#071B2C] via-[#0B2E4E] to-[#071B2C]" aria-hidden="true"></div>
 
     <div class="relative container mx-auto px-6 py-24 md:py-28">

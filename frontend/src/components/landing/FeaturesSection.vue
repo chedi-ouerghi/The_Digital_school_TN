@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, BarChart3, Shield, Zap } from 'lucide-vue-next';
-import * as THREE from 'three'
+import { BarChart3, Shield, Zap } from 'lucide-vue-next';
+import * as THREE from 'three';
 
 const features = [
   {

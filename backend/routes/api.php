@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminTransactionController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\ClientAdminController;
+use App\Http\Controllers\ProfileController;
 
 Route::prefix('v1')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -29,6 +30,9 @@ Route::prefix('v1')->group(function () {
 
         Route::get('notifications', [NotificationController::class, 'index']);
         Route::put('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+
+        // Routes pour le profil et ses statistiques
+Route::get('profile/stats', [ProfileController::class, 'getProfileOverview']);
     });
 
     Route::get('cryptos', [CryptoController::class, 'index']);

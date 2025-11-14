@@ -19,6 +19,42 @@ export interface User extends BaseModel {
   accountRequest?: AccountRequest;
 }
 
+export interface PortfolioResponse extends BaseModel {
+  success: boolean;
+  data: {
+    stats: {
+      total_invested: number;
+      current_value: number;
+      total_profit: number;
+      profit_percentage: number;
+      total_transactions: number;
+    };
+    growth: {
+      labels: string[];
+      data: number[];
+      raw: {
+        date: string;
+        value: number;
+        timestamp: number;
+      }[];
+    };
+    distribution: {
+      labels: string[];
+      data: number[];
+      colors: string[];
+      raw: {
+        crypto_name: string;
+        crypto_symbol: string;
+        value: number;
+        percentage: number;
+        quantity: string;
+      }[];
+    };
+  };
+}
+
+
+
 // Wallet model
 export interface Wallet extends BaseModel {
   user_id: string;

@@ -6,7 +6,7 @@ import AdminOverview from '../pages/admin/Overview.vue'
 import AdminClients from '../pages/admin/Clients.vue'
 import ClientOverview from '../pages/client/Overview.vue'
 import ClientProfile from '../pages/client/Profile.vue'
-import ClientPortfolio from '../pages/client/Portfolio.vue'
+import ProfilePortfolio from '../pages/client/ProfilePortfolio.vue'
 import ClientTransactions from '../pages/client/Transactions.vue'
 import ClientCryptosDetails from '../pages/client/CryptosDetails.vue'
 import Cryptos from '../pages/admin/Cryptos.vue'
@@ -125,8 +125,8 @@ const routes = [
       },
       {
         path: 'portfolio',
-        name: 'ClientPortfolio',
-        component: ClientPortfolio,
+        name: 'ProfilePortfolio',
+        component: ProfilePortfolio,
         meta: { requiresAuth: true, roles: ['CLIENT'] }
       },
       {

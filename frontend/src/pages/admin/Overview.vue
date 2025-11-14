@@ -213,34 +213,47 @@ function goToTransactions() {
 function refreshData() {
   fetchStats()
 }
+function getRankColor(index: number): string {
+  switch (index) {
+    case 0:
+      return 'bg-yellow-400'
+    case 1:
+      return 'bg-gray-400'
+    case 2:
+      return 'bg-yellow-700'
+    default:
+      return 'bg-gray-300 text-gray-700'
+  }
+}
+
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-[#38618C] mb-1">Dashboard Administrateur</h1>
-        <p class="text-gray-500">Vue d'ensemble de la plateforme</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#38618C] mb-1">Admin Dashboard</h1>
+        <p class="text-sm sm:text-base text-gray-500">Platform overview and analytics</p>
       </div>
-      <div class="flex gap-3">
+      <div class="flex flex-wrap gap-2 sm:gap-3">
         <Button 
           @click="refreshData"
           :disabled="loading"
           variant="outline"
-          class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white"
+          class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white text-sm sm:text-base"
         >
-          🔄 Actualiser
+          🔄 Refresh
         </Button>
         <Button 
           @click="goToClients"
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold text-sm sm:text-base"
         >
           👥 Clients
         </Button>
         <Button 
           @click="goToCryptos"
-          class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+          class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold text-sm sm:text-base"
         >
           💎 Cryptos
         </Button>
@@ -249,12 +262,12 @@ function refreshData() {
 
     <!-- Loading State -->
     <div v-if="loading" class="space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card v-for="i in 4" :key="i">
-          <CardContent class="p-6">
+          <CardContent class="p-4 sm:p-6">
             <div class="animate-pulse">
-              <div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div class="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div class="h-3 sm:h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div class="h-6 sm:h-8 bg-gray-200 rounded w-3/4"></div>
             </div>
           </CardContent>
         </Card>
@@ -263,314 +276,337 @@ function refreshData() {
 
     <!-- Error State -->
     <Card v-else-if="error" class="border-[#FF5964]">
-      <CardContent class="p-12 text-center">
-        <div class="text-6xl mb-4">❌</div>
-        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Erreur de chargement</h3>
-        <div class="text-gray-600 mb-4">{{ error }}</div>
+      <CardContent class="p-6 sm:p-8 lg:p-12 text-center">
+        <div class="text-4xl sm:text-6xl mb-4">❌</div>
+        <h3 class="text-lg sm:text-xl font-semibold text-[#FF5964] mb-2">Loading Error</h3>
+        <div class="text-sm sm:text-base text-gray-600 mb-4">{{ error }}</div>
         <Button 
           @click="fetchStats"
           class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
         >
-          Réessayer
+          Try Again
         </Button>
       </CardContent>
     </Card>
 
     <!-- Content -->
     <div v-else class="space-y-6">
-      <!-- Cartes de statistiques -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Statistics Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-lg cursor-pointer" @click="goToClients">
-          <CardContent class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="text-4xl">👥</div>
-              <Badge class="bg-[#35A7FF] text-white">Total</Badge>
+          <CardContent class="p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="text-2xl sm:text-4xl">👥</div>
+              <Badge class="bg-[#35A7FF] text-white text-xs">Total</Badge>
             </div>
-            <div class="text-sm text-gray-500 mb-1">Clients</div>
-            <div class="text-3xl font-bold text-[#38618C]">
+            <div class="text-xs sm:text-sm text-gray-500 mb-1">Clients</div>
+            <div class="text-xl sm:text-2xl lg:text-3xl font-bold text-[#38618C]">
               {{ cardStats.totalClients }}
             </div>
           </CardContent>
         </Card>
 
         <Card class="border-gray-200 hover:border-[#01FF19] transition-all hover:shadow-lg bg-gradient-to-br from-[#01FF19]/10 to-transparent">
-          <CardContent class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="text-4xl">💰</div>
-              <Badge class="bg-[#01FF19] text-white">EUR</Badge>
+          <CardContent class="p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="text-2xl sm:text-4xl">💰</div>
+              <Badge class="bg-[#01FF19] text-white text-xs">EUR</Badge>
             </div>
-            <div class="text-sm text-gray-500 mb-1">Volume Total des transactions</div>
-            <div class="text-3xl font-bold text-[#01FF19]">
+            <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Transaction Volume</div>
+            <div class="text-xl sm:text-2xl lg:text-3xl font-bold text-[#01FF19]">
               {{ formatCurrency(cardStats.totalVolume) }}
             </div>
           </CardContent>
         </Card>
 
         <Card class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-lg bg-gradient-to-br from-[#35A7FF]/10 to-transparent">
-          <CardContent class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="text-4xl">📈</div>
-              <Badge class="bg-[#35A7FF] text-white">Revenue</Badge>
+          <CardContent class="p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="text-2xl sm:text-4xl">📈</div>
+              <Badge class="bg-[#35A7FF] text-white text-xs">Revenue</Badge>
             </div>
-            <div class="text-sm text-gray-500 mb-1">Chiffre d'Affaires</div>
-            <div class="text-3xl font-bold text-[#35A7FF]">
+            <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Revenue</div>
+            <div class="text-xl sm:text-2xl lg:text-3xl font-bold text-[#35A7FF]">
               {{ formatCurrency(cardStats.totalRevenue) }}
             </div>
           </CardContent>
         </Card>
 
         <Card class="border-gray-200 hover:border-[#38618C] transition-all hover:shadow-lg cursor-pointer" @click="goToCryptos">
-          <CardContent class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="text-4xl">💎</div>
-              <Badge class="bg-[#38618C] text-white">Actives</Badge>
+          <CardContent class="p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="text-2xl sm:text-4xl">💎</div>
+              <Badge class="bg-[#38618C] text-white text-xs">Active</Badge>
             </div>
-            <div class="text-sm text-gray-500 mb-1">Cryptos Tradées</div>
-            <div class="text-3xl font-bold text-[#38618C]">
+            <div class="text-xs sm:text-sm text-gray-500 mb-1">Traded Cryptos</div>
+            <div class="text-xl sm:text-2xl lg:text-3xl font-bold text-[#38618C]">
               {{ cardStats.totalCryptos }}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <!-- Graphiques -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Graphique en barres -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📊 Top Cryptos par Volume
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div class="h-[300px]">
-              <Bar :data="barChartData" :options="barChartOptions" />
-            </div>
-          </CardContent>
-        </Card>
+      <!-- Main Content Grid -->
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+        <!-- Left Column - 2/3 width -->
+        <div class="xl:col-span-2 space-y-4 sm:space-y-6">
+          <!-- Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <!-- Bar Chart -->
+            <Card>
+              <CardHeader class="pb-3">
+                <CardTitle class="text-base sm:text-lg font-semibold text-[#38618C]">
+                  📊 Top Cryptos by Volume
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div class="h-[250px] sm:h-[300px]">
+                  <Bar :data="barChartData" :options="barChartOptions" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <!-- Graphique circulaire -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              🥧 Répartition des Volumes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div class="h-[300px]">
-              <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <!-- Top 5 des cryptos les plus tradées -->
-      <Card>
-        <CardHeader>
-          <div class="flex items-center justify-between">
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              🏆 Top 5 Cryptos les Plus Tradées
-            </CardTitle>
-            <Button 
-              @click="goToCryptos"
-              variant="outline"
-              size="sm"
-              class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-            >
-              Voir tout →
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div v-if="!stats?.top_traded?.length" class="text-center py-12">
-            <div class="text-6xl mb-4">💎</div>
-            <p class="text-gray-500">Aucune donnée de trading disponible</p>
-          </div>
-          <div v-else class="space-y-3">
-            <Card 
-              v-for="(crypto, index) in stats.top_traded.slice(0, 5)" 
-              :key="crypto.cryptomoney_id"
-              class="border-gray-200 hover:border-[#35A7FF] transition-all"
-            >
-              <CardContent class="p-4">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-4 flex-1">
-                    <div class="text-2xl font-bold text-[#38618C] w-8">
-                      #{{ index + 1 }}
-                    </div>
-                    <div class="h-12 w-12 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <img 
-                        v-if="cryptoDetails.get(crypto.cryptomoney_id)?.image_url"
-                        :src="cryptoDetails.get(crypto.cryptomoney_id).image_url"
-                        :alt="cryptoDetails.get(crypto.cryptomoney_id)?.name"
-                        class="w-12 h-12 rounded-full object-cover"
-                        @error="(e) => e.target.style.display = 'none'"
-                      />
-                      <div v-if="!cryptoDetails.get(crypto.cryptomoney_id)?.image_url" class="text-lg">💎</div>
-                    </div>
-                    <div class="flex-1">
-                      <div class="font-bold text-[#38618C] text-lg">
-                        {{ cryptoDetails.get(crypto.cryptomoney_id)?.name || 'Chargement...' }}
-                      </div>
-                      <Badge class="bg-[#35A7FF] text-white font-mono">
-                        {{ (cryptoDetails.get(crypto.cryptomoney_id)?.symbol || crypto.symbole || 'N/A').toUpperCase() }}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-6 text-right">
-                    <div>
-                      <div class="text-xs text-gray-500">Quantité Tradée</div>
-                      <div class="text-xl font-bold text-[#01FF19] font-mono">
-                        {{ formatNumber(crypto.total_quantity, 4) }}
-                      </div>
-                    </div>
-                    <div>
-                      <div class="text-xs text-gray-500">Prix Actuel</div>
-                      <div class="text-xl font-bold text-[#35A7FF]">
-                        {{ formatCurrency(cryptoDetails.get(crypto.cryptomoney_id)?.price_eur || 0) }}
-                      </div>
-                    </div>
-                  </div>
+            <!-- Doughnut Chart -->
+            <Card>
+              <CardHeader class="pb-3">
+                <CardTitle class="text-base sm:text-lg font-semibold text-[#38618C]">
+                  🥧 Volume Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div class="h-[250px] sm:h-[300px]">
+                  <Doughnut :data="doughnutChartData" :options="doughnutChartOptions" />
                 </div>
               </CardContent>
             </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      <!-- Dernières transactions -->
-      <Card>
-        <CardHeader>
-          <div class="flex items-center justify-between">
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📋 5 Dernières Transactions
-            </CardTitle>
-            <Button 
-              @click="goToTransactions"
-              variant="outline"
-              size="sm"
-              class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-            >
-              Voir tout →
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div v-if="recentTransactions.length === 0" class="text-center py-12">
-            <div class="text-6xl mb-4">📋</div>
-            <p class="text-gray-500">Aucune transaction récente</p>
-          </div>
-          <div v-else class="space-y-3">
-            <Card 
-              v-for="tx in recentTransactions" 
-              :key="tx.id"
-              class="border-gray-200 hover:border-[#35A7FF] transition-all"
-            >
-              <CardContent class="p-4">
-                <div class="flex items-center justify-between gap-4">
-                  <div class="flex items-center gap-4 flex-1">
-                    <div class="h-10 w-10 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <img 
-                        v-if="tx.cryptomoney?.image_url"
-                        :src="tx.cryptomoney.image_url"
-                        :alt="tx.cryptomoney?.name"
-                        class="w-10 h-10 rounded-full object-cover"
-                        @error="(e) => {
-                          const target = e.target as HTMLImageElement
-                          if (target && target.parentNode) {
-                            target.style.display = 'none'
-                          }
-                        }"
-                      />
-                      <div v-if="!tx.cryptomoney?.image_url" class="text-lg">💎</div>
+          <!-- Recent Transactions -->
+          <Card>
+            <CardHeader class="pb-3">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <CardTitle class="text-base sm:text-lg font-semibold text-[#38618C]">
+                  📋 Last 5 Transactions
+                </CardTitle>
+                <Button 
+                  @click="goToTransactions"
+                  variant="outline"
+                  size="sm"
+                  class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white text-xs sm:text-sm"
+                >
+                  View All →
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div v-if="recentTransactions.length === 0" class="text-center py-8 sm:py-12">
+                <div class="text-4xl sm:text-6xl mb-4">📋</div>
+                <p class="text-gray-500 text-sm sm:text-base">No recent transactions</p>
+              </div>
+              <div v-else class="space-y-3">
+                <Card 
+                  v-for="tx in recentTransactions" 
+                  :key="tx.id"
+                  class="border-gray-200 hover:border-[#35A7FF] transition-all"
+                >
+                  <CardContent class="p-3 sm:p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                      <div class="flex items-center gap-3 sm:gap-4 flex-1">
+                        <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <img 
+                            v-if="tx.cryptomoney?.image_url"
+                            :src="tx.cryptomoney.image_url"
+                            :alt="tx.cryptomoney?.name"
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+                            @error="(e) => {
+                              const target = e.target as HTMLImageElement
+                              if (target && target.parentNode) {
+                                target.style.display = 'none'
+                              }
+                            }"
+                          />
+                          <div v-if="!tx.cryptomoney?.image_url" class="text-sm sm:text-lg">💎</div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                            <Badge 
+                              :class="tx.type === 'ACHAT' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+                              class="text-white text-xs"
+                            >
+                              {{ tx.type === 'ACHAT' ? '📈 BUY' : '📉 SELL' }}
+                            </Badge>
+                            <span class="text-xs text-gray-500">Transaction #{{ tx.id.slice(0, 8) }}</span>
+                          </div>
+                          <div class="font-semibold text-[#38618C] text-sm sm:text-base truncate">
+                            {{ tx.cryptomoney?.name || 'Crypto' }}
+                          </div>
+                          <div class="text-xs text-gray-500">
+                            {{ String(tx.cryptomoney?.symbol || '').toUpperCase() }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-4 sm:gap-6 text-right">
+                        <div>
+                          <div class="text-xs text-gray-500">Quantity</div>
+                          <div class="text-sm sm:text-base font-bold text-[#38618C] font-mono">
+                            {{ formatNumber(tx.quantity, 6) }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="text-xs text-gray-500">Amount</div>
+                          <div class="text-base sm:text-lg font-bold text-[#35A7FF]">
+                            {{ formatCurrency(tx.total_eur) }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="text-xs text-gray-500 text-center sm:text-right">
+                        {{ new Date(tx.created_at).toLocaleDateString('en-US', { 
+                          day: '2-digit', 
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) }}
+                      </div>
                     </div>
-                    <div>
-                      <div class="flex items-center gap-2 mb-1">
-                        <Badge 
-                          :class="tx.type === 'ACHAT' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                          class="text-white"
-                        >
-                          {{ tx.type === 'ACHAT' ? '📈 ACHAT' : '📉 VENTE' }}
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Right Column - 1/3 width -->
+        <div class="space-y-4 sm:space-y-6">
+          <!-- Top 5 Most Traded Cryptos -->
+          <Card class="xl:sticky xl:top-6">
+            <CardHeader class="pb-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle class="text-base sm:text-lg font-semibold text-[#38618C]">
+                  🏆 Top 5 Most Traded Cryptos
+                </CardTitle>
+                <Button 
+                  @click="goToCryptos"
+                  variant="outline"
+                  size="sm"
+                  class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white text-xs sm:text-sm"
+                >
+                  View All →
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div v-if="!stats?.top_traded?.length" class="text-center py-6 sm:py-8">
+                <div class="text-3xl sm:text-4xl mb-3">💎</div>
+                <p class="text-gray-500 text-xs sm:text-sm">No trading data available</p>
+              </div>
+              <div v-else class="space-y-2 sm:space-y-3">
+                <Card 
+                  v-for="(crypto, index) in stats.top_traded.slice(0, 5)" 
+                  :key="crypto.cryptomoney_id"
+                  class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-md"
+                >
+                  <CardContent class="p-2 sm:p-3">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                      <!-- Rank Badge -->
+                      <div class="flex-shrink-0">
+                        <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm"
+                             :class="getRankColor(index)">
+                          {{ index + 1 }}
+                        </div>
+                      </div>
+
+                      <!-- Crypto Image -->
+                      <div class="flex-shrink-0">
+                        <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-gray-300 bg-gray-100 flex items-center justify-center">
+                          <img 
+                            v-if="cryptoDetails.get(crypto.cryptomoney_id)?.image_url"
+                            :src="cryptoDetails.get(crypto.cryptomoney_id).image_url"
+                            :alt="cryptoDetails.get(crypto.cryptomoney_id)?.name"
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+                            @error="(e) => e.target.style.display = 'none'"
+                          />
+                          <div v-if="!cryptoDetails.get(crypto.cryptomoney_id)?.image_url" class="text-xs sm:text-sm">💎</div>
+                        </div>
+                      </div>
+
+                      <!-- Crypto Info -->
+                      <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-[#38618C] text-xs sm:text-sm truncate">
+                          {{ cryptoDetails.get(crypto.cryptomoney_id)?.name || 'Loading...' }}
+                        </div>
+                        <Badge class="bg-[#35A7FF] text-white text-xs font-mono mt-1">
+                          {{ (cryptoDetails.get(crypto.cryptomoney_id)?.symbol || crypto.symbole || 'N/A').toUpperCase() }}
                         </Badge>
-                        <span class="text-sm text-gray-500">Transaction #{{ tx.id.slice(0, 8) }}</span>
                       </div>
-                      <div class="font-semibold text-[#38618C]">
-                        {{ tx.cryptomoney?.name || 'Crypto' }}
+
+                      <!-- Trading Stats -->
+                      <div class="text-right flex-shrink-0">
+                        <div class="text-xs text-gray-500 mb-1">Traded Qty</div>
+                        <div class="text-xs sm:text-sm font-bold text-[#01FF19] font-mono">
+                          {{ formatNumber(crypto.total_quantity, 2) }}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                          {{ formatCurrency(cryptoDetails.get(crypto.cryptomoney_id)?.price_eur || 0) }}
+                        </div>
                       </div>
-                      <div class="text-sm text-gray-500">
-                        {{ String(tx.cryptomoney?.symbol || '').toUpperCase() }}
-                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <!-- Quick Stats Summary -->
+              <div v-if="stats?.top_traded?.length" class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 text-center">
+                  <div>
+                    <div class="text-xs text-gray-500">Total Traded</div>
+                    <div class="text-sm font-bold text-[#38618C]">
+                      {{ formatNumber(stats.top_traded.reduce((sum, crypto) => sum + crypto.total_quantity, 0), 2) }}
                     </div>
                   </div>
-
-                  <div class="grid grid-cols-2 gap-6 text-right">
-                    <div>
-                      <div class="text-xs text-gray-500">Quantité</div>
-                      <div class="font-bold text-[#38618C] font-mono">
-                        {{ formatNumber(tx.quantity, 6) }}
-                      </div>
+                  <div>
+                    <div class="text-xs text-gray-500">Active Cryptos</div>
+                    <div class="text-sm font-bold text-[#35A7FF]">
+                      {{ stats.top_traded.length }}
                     </div>
-                    <div>
-                      <div class="text-xs text-gray-500">Montant</div>
-                      <div class="text-lg font-bold text-[#35A7FF]">
-                        {{ formatCurrency(tx.total_eur) }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="text-xs text-gray-500">
-                    {{ new Date(tx.created_at).toLocaleDateString('fr-FR', { 
-                      day: '2-digit', 
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    }) }}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
-  border-color: #38618C;
+/* Styles pour le sticky sidebar sur desktop */
+@media (min-width: 1280px) {
+  .xl\:sticky {
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+  }
 }
 
-:deep(.text-\[#38618C\]) {
-  color: #38618C;
+/* Custom scrollbar pour le sticky sidebar */
+.xl\:sticky::-webkit-scrollbar {
+  width: 4px;
 }
 
-:deep(.bg-\[#01FF19\]) {
-  background-color: #01FF19;
+.xl\:sticky::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-:deep(.bg-\[#35A7FF\]) {
-  background-color: #35A7FF;
+.xl\:sticky::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 2px;
 }
 
-:deep(.bg-\[#FF5964\]) {
-  background-color: #FF5964;
-}
-
-:deep(.hover\:bg-\[#01FF19\]\/90:hover) {
-  background-color: rgba(1, 255, 25, 0.9);
-}
-
-:deep(.hover\:bg-\[#35A7FF\]\/90:hover) {
-  background-color: rgba(53, 167, 255, 0.9);
-}
-
-:deep(.hover\:bg-\[#38618C\]:hover) {
-  background-color: #38618C;
-}
-
-:deep(.hover\:border-\[#35A7FF\]:hover) {
-  border-color: #35A7FF;
+.xl\:sticky::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
 }
 </style>

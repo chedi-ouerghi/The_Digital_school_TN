@@ -50,9 +50,11 @@ function togglePasswordVisibility() {
     <div class="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-8 lg:px-16 py-8 lg:py-0 relative z-10 lg:rounded-r-[3rem] shadow-lg">
       <div class="max-w-md w-full mx-auto space-y-8">
         <!-- Logo -->
+        <router-link to="/">
         <div class="flex items-center space-x-2">
           <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
         </div>
+        </router-link>
         <!-- Title -->
         <div>
           <h1 class="text-3xl font-bold text-[#0f172a]">Welcome Back 👋</h1>
