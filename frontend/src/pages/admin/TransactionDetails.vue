@@ -245,8 +245,8 @@ onMounted(fetchTransaction)
             <div class="flex justify-center">
               <div class="relative">
                 <img 
-                  v-if="transaction.cryptomoney?.image"
-                  :src="transaction.cryptomoney.image"
+                  v-if="transaction.cryptomoney?.image_url || transaction.cryptomoney?.image"
+                  :src="transaction.cryptomoney.image_url || transaction.cryptomoney.image"
                   :alt="transaction.cryptomoney.nom"
                   class="h-20 w-20 rounded-full border-4 border-[#35A7FF]"
                 />

@@ -36,10 +36,24 @@ function formatCurrency(value: any): string {
   return n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
 }
 
-function formatNumber(value: any, decimals = 8): string {
-  const n = Number(value ?? 0)
-  if (!isFinite(n) || isNaN(n)) return '0'
-  return n.toFixed(decimals)
+const formatNumber = (num, decimals = 2) => {
+  if (num === null || num === undefined) return '0'
+  return parseFloat(num).toLocaleString('fr-FR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  })
+}
+
+const makeImageUrl = (imagePath) => {
+  if (!imagePath) return ''
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
+  
+  // If it's a relative path, construct full URL
+  return `${import.meta.env.VITE_API_URL}/storage/${imagePath}`
 }
 
 async function fetchPortfolioData() {
@@ -317,7 +331,7 @@ function refreshData() {
               <div class="h-12 w-12 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
                 <img 
                   v-if="p.image_url"
-                  :src="p.image_url" 
+                  :src="makeImageUrl(p.image_url)" 
                   :alt="p.name"
                   class="h-12 w-12 rounded-full object-cover"
                   @error="(e) => e.target.style.display = 'none'"

@@ -30,6 +30,12 @@ const routes = [
     meta: { requiresGuest: true }
   },
   
+  {
+  path: '/:pathMatch(.*)*',
+  name: 'NotFound',
+  component: () => import('../pages/NotFound.vue')
+},
+
   // Dashboard principal
   {
     path: '/dashboard',

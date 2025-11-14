@@ -259,7 +259,7 @@ class AuthController extends Controller
                 }
             }
 
-            return response()->json(['message' => 'Votre demande a été envoyée avec succès.'], 200);
+            return response()->json(['message' => 'Your request has been successfully sent..'], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['error' => 'Erreur de validation','details' => $e->errors()], 422);

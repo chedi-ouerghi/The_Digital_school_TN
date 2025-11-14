@@ -20,6 +20,17 @@ const error = ref<string | null>(null)
 const chartData = ref<number[]>([])
 const chartLabels = ref<string[]>([])
 
+function makeImageUrl(path: string | undefined | null): string | null {
+  if (!path) return null
+  const p = String(path)
+  if (p.startsWith('http://') || p.startsWith('https://')) return p
+
+  // Build complete URL for relative paths
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const cleanPath = p.startsWith('/storage/') ? p : `/storage/${p}`
+  return `${baseUrl}${cleanPath}`
+}
+
 function formatCurrency(value: any) {
   const n = Number(value ?? 0)
   if (!isFinite(n) || isNaN(n)) return '0,00 €'
@@ -340,13 +351,13 @@ const chartDataset = computed(() => ({
                   <div v-if="selectedCrypto" class="flex items-center gap-2">
                     <div class="h-10 w-10 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
                       <img
-                        v-if="selectedCrypto.image_url"
-                        :src="selectedCrypto.image_url"
+                        v-if="makeImageUrl(selectedCrypto.image_url)"
+                        :src="makeImageUrl(selectedCrypto.image_url)"
                         :alt="selectedCrypto.name"
                         class="h-10 w-10 rounded-full object-cover"
                         @error="(e) => e.target.style.display = 'none'"
                       />
-                      <div v-if="!selectedCrypto.image_url" class="text-lg">💎</div>
+                      <div v-if="!makeImageUrl(selectedCrypto.image_url)" class="text-lg">💎</div>
                     </div>
                     <div>
                       <div class="text-lg font-semibold text-[#38618C]">
@@ -474,13 +485,13 @@ const chartDataset = computed(() => ({
                   <div class="flex items-center gap-2 flex-1 min-w-0">
                     <div class="h-8 w-8 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
                       <img
-                        v-if="position.image_url"
-                        :src="position.image_url"
+                        v-if="makeImageUrl(position.image_url)"
+                        :src="makeImageUrl(position.image_url)"
                         :alt="position.name"
                         class="h-8 w-8 rounded-full object-cover"
                         @error="(e) => e.target.style.display = 'none'"
                       />
-                      <div v-if="!position.image_url" class="text-sm">💎</div>
+                      <div v-if="!makeImageUrl(position.image_url)" class="text-sm">💎</div>
                     </div>
                     <div class="min-w-0">
                       <div class="text-sm font-semibold text-[#38618C] truncate">
@@ -549,13 +560,13 @@ const chartDataset = computed(() => ({
                     <div class="flex items-center gap-2">
                       <div class="h-8 w-8 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
                         <img
-                          v-if="position.image_url"
-                          :src="position.image_url"
+                          v-if="makeImageUrl(position.image_url)"
+                          :src="makeImageUrl(position.image_url)"
                           :alt="position.name"
                           class="h-8 w-8 rounded-full object-cover"
                           @error="(e) => e.target.style.display = 'none'"
                         />
-                        <div v-if="!position.image_url" class="text-xs">💎</div>
+                        <div v-if="!makeImageUrl(position.image_url)" class="text-xs">💎</div>
                       </div>
                       <div>
                         <div class="font-semibold text-[#38618C]">{{ position.name }}</div>

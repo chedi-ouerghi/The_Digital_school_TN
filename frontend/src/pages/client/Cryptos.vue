@@ -49,6 +49,18 @@ const isBuying = ref(false)
 const portfolio = ref<any[]>([])
 const ownedSymbols = ref<Set<string>>(new Set())
 
+// Helper function to build proper image URLs
+function makeImageUrl(path: string | undefined | null): string | null {
+  if (!path) return null
+  const p = String(path)
+  if (p.startsWith('http://') || p.startsWith('https://')) return p
+
+  // Build complete URL for relative paths
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const cleanPath = p.startsWith('/storage/') ? p : `/storage/${p}`
+  return `${baseUrl}${cleanPath}`
+}
+
 // Fonction utilitaire pour formater les prix
 function formatCurrency(value: any): string {
   const n = Number(value ?? 0)
@@ -343,8 +355,8 @@ function changePage(newPage: number) {
            
               <div class="relative">
                 <img
-                  v-if="(crypto.image || crypto.image_url || crypto.image_url_full)"
-                  :src="crypto.image || crypto.image_url || crypto.image_url_full"
+                  v-if="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
+                  :src="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
                   :alt="crypto.name || crypto.nom || 'crypto'"
                   class="h-12 w-12 rounded-full border-2 border-gray-300 group-hover:border-[#35A7FF] transition-colors object-cover"
                   @error="(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none' }"
@@ -432,8 +444,8 @@ function changePage(newPage: number) {
             <div class="flex items-center gap-4 flex-1 min-w-0">
               <div class="relative flex-shrink-0">
                 <img
-                  v-if="(crypto.image || crypto.image_url || crypto.image_url_full)"
-                  :src="crypto.image || crypto.image_url || crypto.image_url_full"
+                  v-if="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
+                  :src="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
                   :alt="crypto.name || crypto.nom || 'crypto'"
                   class="h-12 w-12 rounded-full border-2 border-gray-300 object-cover"
                   @error="(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none' }"
@@ -557,8 +569,8 @@ function changePage(newPage: number) {
             <CardContent class="p-4">
               <div class="flex items-center gap-4">
                 <img 
-                  v-if="selectedCrypto?.image || selectedCrypto?.image_url"
-                  :src="selectedCrypto?.image || selectedCrypto?.image_url"
+                  v-if="makeImageUrl(selectedCrypto?.image || selectedCrypto?.image_url)"
+                  :src="makeImageUrl(selectedCrypto?.image || selectedCrypto?.image_url)"
                   :alt="selectedCrypto?.name || selectedCrypto?.nom || 'crypto'"
                   class="h-14 w-14 rounded-full border-2 border-[#35A7FF] object-cover"
                   @error="(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none' }"

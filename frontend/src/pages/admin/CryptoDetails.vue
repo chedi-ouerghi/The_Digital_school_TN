@@ -199,13 +199,13 @@ function goBack() {
     <Card v-else-if="error" class="border-[#FF5964]">
       <CardContent class="p-12 text-center">
         <div class="text-6xl mb-4">❌</div>
-        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Erreur de chargement</h3>
+        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Loading Error</h3>
         <div class="text-gray-600 mb-4">{{ error }}</div>
         <Button 
           @click="fetchData"
           class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
         >
-          Réessayer
+          Retry
         </Button>
       </CardContent>
     </Card>
@@ -246,7 +246,7 @@ function goBack() {
               <div class="text-4xl font-bold text-[#35A7FF]">
                 {{ formatCurrency(crypto.price_eur) }}
               </div>
-              <div class="text-sm text-gray-500 mt-1">Prix actuel</div>
+              <div class="text-sm text-gray-500 mt-1">Current Price</div>
             </div>
           </div>
         </CardContent>
@@ -256,7 +256,7 @@ function goBack() {
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
           <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Prix actuel</div>
+            <div class="text-xs text-gray-500 mb-1">Current Price</div>
             <div class="text-xl font-bold text-[#35A7FF]">
               {{ formatCurrency(crypto.price_eur) }}
             </div>
@@ -274,7 +274,7 @@ function goBack() {
 
         <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
           <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Volume 24h</div>
+            <div class="text-xs text-gray-500 mb-1">24h Volume</div>
             <div class="text-xl font-bold text-[#38618C]">
               {{ formatLargeNumber(crypto.volume_24h) }}
             </div>
@@ -286,7 +286,7 @@ function goBack() {
           :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'hover:border-[#01FF19]' : 'hover:border-[#FF5964]'"
         >
           <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Variation 24h</div>
+            <div class="text-xs text-gray-500 mb-1">24h Change</div>
             <div 
               class="text-xl font-bold"
               :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
@@ -302,7 +302,7 @@ function goBack() {
         <CardHeader>
           <div class="flex items-center justify-between">
             <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📈 Évolution du Prix (30 jours)
+              📈 Price Evolution (30 days)
             </CardTitle>
             <div class="flex gap-2">
               <Badge class="bg-[#35A7FF] text-white">30J</Badge>
@@ -313,7 +313,7 @@ function goBack() {
           <div v-if="!chartData" class="h-[400px] flex items-center justify-center">
             <div class="text-center text-gray-500">
               <div class="text-6xl mb-4">📊</div>
-              <div>Aucune donnée historique disponible</div>
+              <div>No historical data available</div>
             </div>
           </div>
           <div v-else class="h-[400px]">

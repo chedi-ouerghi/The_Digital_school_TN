@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-vue-next';
+import GetStartedDialog from './GetStartedDialog.vue';
 
 const navItems = [
   { label: 'Home', href: '#' },
@@ -26,10 +25,7 @@ const navItems = [
           </a>
         </nav>
 
-        <Button class="bg-[#01FF19] hover:bg-[#00e617] text-[#071B2C] font-semibold px-6 py-2 rounded-full shadow-lg hover:shadow-[#01FF19]/40 transition-all duration-300">
-          Get Started
-          <ArrowRight class="ml-2 h-4 w-4" />
-        </Button>
+        <GetStartedDialog />
       </div>
     </div>
   </header>

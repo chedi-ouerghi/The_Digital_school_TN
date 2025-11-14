@@ -25,6 +25,17 @@ const history = ref<any[]>([])
 // ============================
 // Fonctions utilitaires
 // ============================
+function makeImageUrl(path: string | undefined | null): string | null {
+  if (!path) return null
+  const p = String(path)
+  if (p.startsWith('http://') || p.startsWith('https://')) return p
+
+  // Build complete URL for relative paths
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const cleanPath = p.startsWith('/storage/') ? p : `/storage/${p}`
+  return `${baseUrl}${cleanPath}`
+}
+
 function formatCurrency(value: any): string {
   const num = parseFloat(value) || 0
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(num)
@@ -286,8 +297,8 @@ function buyCrypto() {
             <!-- Header image -->
             <div class="h-24 w-24 rounded-full border-4 border-[#35A7FF] bg-gray-100 flex items-center justify-center flex-shrink-0 relative">
               <img
-                v-if="(crypto.image || crypto.image_url || crypto.image_url_full)"
-                :src="crypto.image || crypto.image_url || crypto.image_url_full"
+                v-if="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
+                :src="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
                 :alt="crypto.name || crypto.nom || 'crypto'"
                 class="h-24 w-24 rounded-full object-cover"
                 @error="(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none' }"

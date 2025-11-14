@@ -38,7 +38,7 @@ class AccountRequestControllerTest extends TestCase
         // Vérifier la réponse
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Votre demande a été envoyée avec succès.'
+                'message' => 'Your request has been successfully sent..'
             ]);
 
         // Vérifier que la demande a été créée en base
