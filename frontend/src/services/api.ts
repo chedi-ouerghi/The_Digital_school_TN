@@ -176,6 +176,10 @@ export const authApi = {
     async getProfileStats(): Promise<PortfolioResponse> {
     return await request<PortfolioResponse>('/profile/stats', 'GET');
   },
+
+  async changeId(payload: { new_id: string; confirmation: string }): Promise<{ message: string }> {
+    return await request<{ message: string }>('/admin/change-id', 'POST', payload);
+  },
 };
 
 // ------------------

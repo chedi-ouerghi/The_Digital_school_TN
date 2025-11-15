@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @OA\Info(
@@ -268,4 +269,71 @@ class AuthController extends Controller
             return response()->json(['error' => 'Une erreur est survenue'], 500);
         }
     }
+
+    /**
+     * Change administrator ID
+     */
+public function changeId(Request $request): JsonResponse
+{
+    try {
+        $user = $request->user();
+        if (strtoupper($user->role ?? '') !== 'ADMIN') {
+            return response()->json(['error' => 'Only administrators can change their ID.'], 403);
+        }
+
+        $validated = $request->validate([
+            'new_id' => ['required', 'string', 'regex:/^[A-Z0-9]{14}$/'],
+            'confirmation' => ['required', 'string'],
+        ]);
+
+        if ($validated['confirmation'] !== 'I confirm that I want to change my administrator ID') {
+            return response()->json(['error' => 'Invalid confirmation sentence.'], 400);
+        }
+
+        if ($user->last_id_change_at && now()->diffInDays($user->last_id_change_at) < 2) {
+            return response()->json(['error' => 'ID can only be changed once every 2 days.'], 400);
+        }
+
+        $new_id = $validated['new_id'];
+
+        // Check if new_id is unique
+        if (\App\Models\User::where('id', $new_id)->exists()) {
+            return response()->json(['error' => 'This ID is already in use.'], 400);
+        }
+
+        $old_id = $user->id;
+
+        DB::transaction(function () use ($user, $new_id, $old_id) {
+            // 1. DÉSACTIVER TEMPORAIREMENT LES CONTRAINTES
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            
+            // 2. METTRE À JOUR L'UTILISATEUR EN PREMIER
+            $user->id = $new_id;
+            $user->last_id_change_at = now();
+            $user->save();
+            
+            // 3. METTRE À JOUR LES TABLES LIÉES
+            \App\Models\Wallet::where('user_id', $old_id)->update(['user_id' => $new_id]);
+            \App\Models\Notification::where('user_id', $old_id)->update(['user_id' => $new_id]);
+            \App\Models\AccountRequest::where('user_id', $old_id)->update(['user_id' => $new_id]);
+            
+            // Sanctum tokens
+            DB::table('personal_access_tokens')
+                ->where('tokenable_id', $old_id)
+                ->where('tokenable_type', \App\Models\User::class)
+                ->update(['tokenable_id' => $new_id]);
+            
+            // 4. RÉACTIVER LES CONTRAINTES
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        });
+
+        return response()->json(['message' => 'ID changed successfully.']);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::warning('Validation error during ID change: ' . json_encode($e->errors()));
+        return response()->json(['error' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        \Log::error('Error changing ID: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to change ID.'], 500);
+    }
+}
 }

@@ -39,14 +39,14 @@
           <h3 class="font-semibold mb-4 text-white">Contact</h3>
           <ul class="space-y-3">
             <li class="text-white/70">support@bitchest.com</li>
-            <li class="text-white/70">+1 (555) 123-4567</li>
+            <li class="text-white/70">+216 25 02 59 17</li>
           </ul>
         </div>
       </div>
       
       <div class="border-t border-white/10 pt-8 text-center">
         <p class="text-sm text-white/60">
-          © 2024 BitChest. All rights reserved.
+          © 2025 BitChest. All rights reserved.
         </p>
       </div>
     </div>

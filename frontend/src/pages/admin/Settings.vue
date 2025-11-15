@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const router = useRouter()
 
@@ -53,11 +54,15 @@ const timezone = ref('Europe/Paris')
 const dateFormat = ref('DD/MM/YYYY')
 const timeFormat = ref('24h')
 
-// User ID Management (for admin)
-const userId = ref('')
-const userIdOriginal = ref('')
-const userIdLoading = ref(false)
-
+// Change ID Dialog
+const showChangeIdDialog = ref(false)
+const newId = ref('')
+const confirmation = ref('')
+const changeIdLoading = ref(false)
+const changeIdError = ref('')
+const changeIdSuccess = ref('')
+const confirmationValid = ref(false)
+const newIdValid = ref(false)
 // Available options
 const languages = [
   { value: 'en', label: 'English' },
@@ -91,8 +96,6 @@ async function fetchProfile() {
     profile.value = user || null
     name.value = profile.value?.name || ''
     email.value = profile.value?.email || ''
-    userId.value = profile.value?.id || profile.value?.user_id || ''
-    userIdOriginal.value = userId.value
     
     // Set avatar if exists
     if (profile.value?.avatar_url) {
@@ -230,25 +233,66 @@ function saveLocationSettings() {
   // await api.auth.updateSettings(settings)
 }
 
-// User ID Management Functions
-async function updateUserId() {
-  if (userId.value === userIdOriginal.value) return
-  
-  userIdLoading.value = true
-  try {
-    // Adapt to your API
-    await api.auth.updateUserId({ user_id: userId.value })
-    userIdOriginal.value = userId.value
-    // Show success message
-  } catch (e: any) {
-    console.error('Failed to update user ID:', e)
-  } finally {
-    userIdLoading.value = false
-  }
+
+const validateConfirmation = () => {
+  const expectedText = "I confirm that I want to change my administrator ID"
+  confirmationValid.value = confirmation.value.trim() === expectedText
 }
 
-function resetUserId() {
-  userId.value = userIdOriginal.value
+const validateNewId = () => {
+  newIdValid.value = /^[A-Z0-9]{14}$/.test(newId.value)
+}
+
+// Surveillez les changements
+watch(confirmation, validateConfirmation)
+watch(newId, validateNewId)
+
+// Change ID Functions
+function cancelChangeId() {
+  showChangeIdDialog.value = false
+  newId.value = ''
+  confirmation.value = ''
+  changeIdError.value = ''
+  changeIdSuccess.value = ''
+  confirmationValid.value = false
+  newIdValid.value = false
+}
+
+
+async function confirmChangeId() {
+  changeIdError.value = ''
+  changeIdSuccess.value = ''
+
+  // Validation
+  if (!newId.value) {
+    changeIdError.value = 'New ID is required'
+    return
+  }
+  if (!/^[A-Z0-9]{14}$/.test(newId.value)) {
+    changeIdError.value = 'ID must be exactly 14 uppercase alphanumeric characters'
+    return
+  }
+  if (confirmation.value !== 'I confirm that I want to change my administrator ID') {
+    changeIdError.value = 'Confirmation sentence does not match'
+    return
+  }
+
+  changeIdLoading.value = true
+  try {
+    await api.auth.changeId({ new_id: newId.value, confirmation: confirmation.value })
+    changeIdSuccess.value = 'ID changed successfully'
+    await fetchProfile()
+    setTimeout(() => {
+      showChangeIdDialog.value = false
+      newId.value = ''
+      confirmation.value = ''
+      changeIdSuccess.value = ''
+    }, 2000)
+  } catch (e: any) {
+    changeIdError.value = e?.message || 'Failed to change ID'
+  } finally {
+    changeIdLoading.value = false
+  }
 }
 
 // Reset success messages when changing tabs
@@ -617,58 +661,143 @@ onMounted(fetchProfile)
         <TabsContent value="advanced" class="space-y-6 mt-6">
           <Card class="border-gray-200 max-w-2xl">
             <CardHeader>
-              <CardTitle class="text-lg font-semibold">User ID Management</CardTitle>
+              <CardTitle class="text-lg font-semibold">Administrator ID Management</CardTitle>
               <CardDescription>
-                Manage your user identifier for system integration purposes
+                Change your administrator identifier. This action requires confirmation and can only be performed once every 2 days.
               </CardDescription>
             </CardHeader>
             <CardContent class="space-y-4">
-              <Alert class="border-amber-200 bg-amber-50">
-                <AlertDescription class="text-amber-800 text-sm">
-                  <strong>Warning:</strong> Changing your User ID may affect system integrations and external references.
+              <Alert class="border-red-200 bg-red-50">
+                <AlertDescription class="text-red-800 text-sm">
+                  <strong>Security Notice:</strong> Changing your ID affects all system references and integrations. Ensure you understand the implications before proceeding.
                 </AlertDescription>
               </Alert>
 
               <div class="space-y-3">
-                <div class="space-y-2">
-                  <Label for="userId" class="text-sm font-medium">User ID</Label>
-                  <Input 
-                    id="userId" 
-                    v-model="userId" 
-                    :disabled="userIdLoading"
-                    placeholder="Enter custom user ID"
-                  />
-                  <p class="text-xs text-gray-500">
-                    This identifier is used for system integration and API references
-                  </p>
+                <div class="p-4 bg-gray-50 rounded-lg">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">Current ID</p>
+                      <p class="text-lg font-mono text-gray-700">{{ profile?.id }}</p>
+                    </div>
+                    <Badge variant="outline" class="text-xs">
+                      ADMINISTRATOR
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
               <div class="flex gap-3 pt-2">
-                <Button 
-                  @click="updateUserId" 
-                  :disabled="userId === userIdOriginal || userIdLoading"
-                  class="bg-blue-600 hover:bg-blue-700 text-white"
+                <Button
+                  @click="showChangeIdDialog = true"
+                  class="bg-red-600 hover:bg-red-700 text-white"
                 >
-                  <span v-if="userIdLoading" class="flex items-center gap-2">
-                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Updating...
-                  </span>
-                  <span v-else>Update User ID</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  @click="resetUserId" 
-                  :disabled="userId === userIdOriginal || userIdLoading"
-                  class="border-gray-300 text-gray-700"
-                >
-                  Reset
+                  Change Administrator ID
                 </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <!-- Change ID Dialog -->
+      <Dialog v-model:open="showChangeIdDialog">
+        <DialogContent class="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Change Administrator ID</DialogTitle>
+            <DialogDescription>
+              Enter your new ID and type the confirmation sentence exactly. This action can only be performed once every 2 days and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div class="space-y-4">
+           <div class="space-y-2">
+  <Label for="newId" class="text-sm font-medium">New Administrator ID</Label>
+  <Input
+    id="newId"
+    v-model="newId"
+    placeholder="Enter 14-character alphanumeric ID (e.g., RWW60MGY2NDVSF)"
+    :disabled="changeIdLoading"
+    maxlength="14"
+    @input="newId = $event.target.value.toUpperCase()"
+    :class="{
+      'border-green-500': newIdValid && newId,
+      'border-red-500': !newIdValid && newId,
+      'border-gray-300': !newId
+    }"
+  />
+  <div class="flex items-center gap-2">
+    <p class="text-xs text-gray-500">
+      Must be exactly 14 uppercase letters and numbers
+    </p>
+    <span 
+      v-if="newId" 
+      class="text-xs px-2 py-1 rounded"
+      :class="newIdValid ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'"
+    >
+      {{ newIdValid ? '✓ Valid format' : '✗ Invalid format' }}
+    </span>
+  </div>
+</div>
+
+       <div class="space-y-2">
+  <Label for="confirmation" class="text-sm font-medium">Confirmation : I confirm that I want to change my administrator ID</Label>
+  <Input
+    id="confirmation"
+    v-model="confirmation"
+    placeholder='Type: "I confirm that I want to change my administrator ID"'
+    :disabled="changeIdLoading"
+    :class="{
+      'border-green-500': confirmationValid && confirmation,
+      'border-red-500': !confirmationValid && confirmation,
+      'border-gray-300': !confirmation
+    }"
+  />
+  <div class="flex items-center gap-2">
+    <p class="text-xs text-gray-500">
+      You must type the exact confirmation sentence
+    </p>
+    <span 
+      v-if="confirmation" 
+      class="text-xs px-2 py-1 rounded"
+      :class="confirmationValid ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'"
+    >
+      {{ confirmationValid ? '✓ Correct' : '✗ Incorrect' }}
+    </span>
+  </div>
+</div>
+
+            <div v-if="changeIdError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md border border-red-200">
+              {{ changeIdError }}
+            </div>
+
+            <div v-if="changeIdSuccess" class="text-sm text-green-600 bg-green-50 px-3 py-2 rounded-md border border-green-200">
+              {{ changeIdSuccess }}
+            </div>
+          </div>
+
+          <DialogFooter class="gap-2">
+            <Button
+              variant="outline"
+              @click="cancelChangeId"
+              :disabled="changeIdLoading"
+            >
+              Cancel
+            </Button>
+          <Button
+  @click="confirmChangeId"
+  :disabled="changeIdLoading || !newIdValid || !confirmationValid"
+  class="bg-red-600 hover:bg-red-700 text-white"
+>
+  <span v-if="changeIdLoading" class="flex items-center gap-2">
+    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+    Changing ID...
+  </span>
+  <span v-else>Confirm Change</span>
+</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   </div>
 </template>

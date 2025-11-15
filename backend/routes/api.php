@@ -62,6 +62,8 @@ Route::get('profile/stats', [ProfileController::class, 'getProfileOverview']);
         Route::get('/admin/account-requests', [AdminUserController::class, 'accountRequests']);
         Route::post('/admin/account-requests/{id}/approve', [AdminUserController::class, 'approveRequest']);
         Route::post('/admin/account-requests/{id}/reject', [AdminUserController::class, 'rejectRequest']);
+
+        Route::post('/admin/change-id', [AuthController::class, 'changeId']);
     });
 });
 
