@@ -48,11 +48,6 @@ const avatarPreview = ref('')
 const bannerPreview = ref('')
 const uploadLoading = ref(false)
 
-// Location Settings
-const language = ref('en')
-const timezone = ref('Europe/Paris')
-const dateFormat = ref('DD/MM/YYYY')
-const timeFormat = ref('24h')
 
 // Change ID Dialog
 const showChangeIdDialog = ref(false)
@@ -249,20 +244,6 @@ async function deleteProfileBanner() {
   }
 }
 
-// Location Settings Functions
-function saveLocationSettings() {
-  // Save to backend - implement based on your API
-  const settings = {
-    language: language.value,
-    timezone: timezone.value,
-    date_format: dateFormat.value,
-    time_format: timeFormat.value
-  }
-  console.log('Saving location settings:', settings)
-  // await api.auth.updateSettings(settings)
-}
-
-
 const validateConfirmation = () => {
   const expectedText = "I confirm that I want to change my administrator ID"
   confirmationValid.value = confirmation.value.trim() === expectedText
@@ -338,7 +319,7 @@ onMounted(fetchProfile)
     <!-- Header -->
     <div class="flex items-start justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Admin Settings</h1>
+        <h1 class="text-3xl font-bold text-gray-900">Admin Settings</h1> 
         <p class="text-sm text-gray-600 mt-2">
           Manage your administrator profile, security settings, and platform preferences
         </p>
@@ -376,9 +357,6 @@ onMounted(fetchProfile)
           </TabsTrigger>
           <TabsTrigger value="media" class="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">
             🖼️ Media
-          </TabsTrigger>
-          <TabsTrigger value="location" class="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            🌎 Location
           </TabsTrigger>
           <TabsTrigger value="advanced" class="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">
             ⚙️ Advanced
@@ -605,86 +583,7 @@ onMounted(fetchProfile)
           </div>
         </TabsContent>
 
-        <!-- Location Tab -->
-        <TabsContent value="location" class="space-y-6 mt-6">
-          <Card class="border-gray-200 max-w-2xl">
-            <CardHeader>
-              <CardTitle class="text-lg font-semibold">Regional Settings</CardTitle>
-              <CardDescription>
-                Customize your dashboard language, timezone, and date formats
-              </CardDescription>
-            </CardHeader>
-            <CardContent class="space-y-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-3">
-                  <Label for="language" class="text-sm font-medium">Dashboard Language</Label>
-                  <Select v-model="language">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="lang in languages" :key="lang.value" :value="lang.value">
-                        {{ lang.label }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div class="space-y-3">
-                  <Label for="timezone" class="text-sm font-medium">Timezone</Label>
-                  <Select v-model="timezone">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="tz in timezones" :key="tz" :value="tz">
-                        {{ tz }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div class="space-y-3">
-                  <Label for="dateFormat" class="text-sm font-medium">Date Format</Label>
-                  <Select v-model="dateFormat">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select date format" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem v-for="format in dateFormats" :key="format" :value="format">
-                        {{ format }}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div class="space-y-3">
-                  <Label for="timeFormat" class="text-sm font-medium">Time Format</Label>
-                  <Select v-model="timeFormat">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select time format" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24h">24-hour format</SelectItem>
-                      <SelectItem value="12h">12-hour format</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div class="flex justify-end">
-                <Button 
-                  @click="saveLocationSettings"
-                  class="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Save Location Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+  
 
         <!-- Advanced Tab -->
         <TabsContent value="advanced" class="space-y-6 mt-6">
