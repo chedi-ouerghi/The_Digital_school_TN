@@ -120,7 +120,6 @@ const stats = computed(() => ({
   totalClients: clients.value.length,
   totalBalance: clients.value.reduce((sum, c) => sum + Number(c.balance_eur || 0), 0),
   verifiedClients: clients.value.filter(c => c.email_verified_at !== null).length,
-  pendingRequests: 0
 }))
 
 const filteredClients = computed(() => {
@@ -251,16 +250,6 @@ function viewClientDetails(id: number) {
           <div class="text-3xl font-bold"
               :class="stats.verifiedClients > 0 ? 'text-[#38618C]' : 'text-red-500'">
             {{ stats.verifiedClients }}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card class="border-gray-200 hover:border-[#FF5964] transition-colors bg-gradient-to-br from-[#FF5964]/10 to-transparent">
-        <CardContent class="p-6 text-center">
-          <div class="text-4xl mb-2">⏳</div>
-          <div class="text-sm text-gray-500 mb-1">Pending Requests</div>
-          <div class="text-3xl font-bold text-[#FF5964]">
-            {{ stats.pendingRequests }}
           </div>
         </CardContent>
       </Card>

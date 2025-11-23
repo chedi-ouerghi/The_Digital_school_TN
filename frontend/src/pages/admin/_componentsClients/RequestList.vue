@@ -7,6 +7,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
+// Émissions d'événements
+const emit = defineEmits<{
+  'requests-updated': []
+}>()
+
 // State
 const requests = ref<any[]>([])
 const loading = ref(false)
@@ -26,6 +31,8 @@ async function fetchAccountRequests() {
   try {
     const res = await api.admin.accountRequests.list()
     requests.value = res.data || res.items || res || []
+    // Émettre l'événement de mise à jour
+    emit('requests-updated')
   } catch (err: any) {
     console.error('Error loading requests:', err)
     requests.value = []
@@ -51,6 +58,18 @@ async function rejectRequest(id: number | string) {
     await fetchAccountRequests()
   } catch (err: any) {
     alert(err.message || 'Error rejecting request')
+  }
+}
+
+async function approveAll() {
+  if (!confirm(`Approve all ${requests.value.length} requests?`)) return
+  
+  try {
+    for (const req of requests.value) {
+      await approveRequest(req.id)
+    }
+  } catch (err: any) {
+    alert(err.message || 'Error approving all requests')
   }
 }
 
@@ -223,10 +242,11 @@ onMounted(() => {
             </div>
             <div class="flex gap-4 mt-2 sm:mt-0">
               <Button 
-                @click="requests.forEach(req => approveRequest(req.id))"
+                @click="approveAll"
                 variant="outline"
                 size="sm"
                 class="border-[#01FF19] text-[#01FF19] hover:bg-[#01FF19] hover:text-white"
+                :disabled="requests.length === 0"
               >
                 ✓ Approve All
               </Button>
@@ -281,5 +301,21 @@ onMounted(() => {
 
 :deep(.hover\:border-\[#35A7FF\]:hover) {
   border-color: #35A7FF;
+}
+
+:deep(.border-\[#01FF19\]) {
+  border-color: #01FF19;
+}
+
+:deep(.text-\[#01FF19\]) {
+  color: #01FF19;
+}
+
+:deep(.hover\:bg-\[#01FF19\]:hover) {
+  background-color: #01FF19;
+}
+
+:deep(.hover\:text-white:hover) {
+  color: white;
 }
 </style>

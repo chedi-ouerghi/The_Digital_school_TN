@@ -53,7 +53,7 @@ const validateForm = () => {
   errors.value = { name: '', email: '' };
 
   if (!formData.value.name.trim()) {
-    errors.value.name = 'Name is required';
+    errors.value.name = 'Full name is required';
     isValid = false;
   }
 
@@ -61,7 +61,7 @@ const validateForm = () => {
     errors.value.email = 'Email is required';
     isValid = false;
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.value.email)) {
-    errors.value.email = 'Email is invalid';
+    errors.value.email = 'Invalid email format';
     isValid = false;
   }
 
@@ -80,28 +80,26 @@ const handleSignUp = async () => {
       email: formData.value.email
     });
 
-    console.log('API Response:', response); // Debug log
+    console.log('API Response:', response);
 
-    // The API returns ApiResponse<User> which has success and message properties
-    if (response.success) {
+    if (response && response.message) {
       notification.value = {
         type: 'success',
-        message: response.message || 'Your request has been successfully sent..'
+        message: 'Your request has been successfully submitted. Our team will contact you soon.'
       };
-      setTimeout(() => {
-        resetForm();
-        isOpen.value = false;
-      }, 3000);
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      resetForm();
+      isOpen.value = false;
     } else {
-      // Handle case where success is false but no error was thrown
       notification.value = {
         type: 'error',
-        message: response.message || 'Une erreur est survenue lors de la création de la demande.'
+        message: 'An error occurred while creating your request.'
       };
     }
   } catch (error: any) {
-    console.error('API Error:', error); // Debug log
-    const errorMessage = error.message || 'An error occurred while creating the account request.';
+    console.error('API Error:', error);
+    const errorMessage = error.message || 'An unexpected error occurred.';
     notification.value = {
       type: 'error',
       message: errorMessage
@@ -116,6 +114,7 @@ const handleCancel = () => {
   isOpen.value = false;
 };
 </script>
+
 
 <template>
   <Dialog v-model:open="isOpen">
