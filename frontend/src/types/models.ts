@@ -13,6 +13,8 @@ export interface User extends BaseModel {
   role: 'admin' | 'client';
   remember_token?: string;
   balance?: number;
+  profile_picture?: string | null;
+  profile_banner?: string | null;
   wallets?: Wallet[];
   wallet?: Wallet;
   notifications?: Notification[];

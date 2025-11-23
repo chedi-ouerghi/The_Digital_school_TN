@@ -32,9 +32,19 @@ Route::prefix('v1')->group(function () {
         Route::put('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
         // Routes pour le profil et ses statistiques
-Route::get('profile/stats', [ProfileController::class, 'getProfileOverview']);
-    });
+        Route::get('profile/stats', [ProfileController::class, 'getProfileOverview']);
+        
+        // Routes pour upload de photo et bannière de profil
+        // Backward-compatible POST endpoints (legacy)
+        Route::post('profile/picture/upload', [ProfileController::class, 'uploadProfilePicture']);
+        Route::post('profile/banner/upload', [ProfileController::class, 'uploadProfileBanner']);
 
+        // Preferred RESTful update endpoints (use PUT from frontend)
+        Route::put('profile/picture', [ProfileController::class, 'uploadProfilePicture']);
+        Route::delete('profile/picture', [ProfileController::class, 'deleteProfilePicture']);
+        Route::put('profile/banner', [ProfileController::class, 'uploadProfileBanner']);
+        Route::delete('profile/banner', [ProfileController::class, 'deleteProfileBanner']);
+    });
     Route::get('cryptos', [CryptoController::class, 'index']);
     Route::get('cryptos/{id}', [CryptoController::class, 'show']);
     Route::get('cryptos/{id}/history', [CryptoController::class, 'history']);

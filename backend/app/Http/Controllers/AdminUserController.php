@@ -36,9 +36,12 @@ public function index(): JsonResponse
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'profile_picture' => $user->profile_picture,
+            'profile_banner' => $user->profile_banner,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
-            'balance_eur' => $user->wallet?->balance_eur ?? 0, // ✅ ajouté ici
+            'balance_eur' => $user->wallet?->balance_eur ?? 0, 
+
         ];
     });
 
@@ -68,6 +71,8 @@ public function show($id): JsonResponse
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'profile_picture' => $user->profile_picture,
+            'profile_banner' => $user->profile_banner,
             'balance_eur' => 0,
             'account_balance' => 0,
             'positions' => [],
@@ -124,6 +129,9 @@ public function show($id): JsonResponse
         'name' => $user->name,
         'email' => $user->email,
         'role' => $user->role,
+                    'profile_picture' => $user->profile_picture,
+            'profile_banner' => $user->profile_banner,
+
         'balance_eur' => (float) $wallet->balance_eur,
         'account_balance' => $accountBalance,
         'positions' => $positions,

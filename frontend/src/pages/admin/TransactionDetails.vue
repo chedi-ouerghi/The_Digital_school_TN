@@ -44,7 +44,7 @@ function formatNumber(value: any, decimals = 8): string {
 const priceEvolutionData = computed(() => ({
   labels: ['-24h', '-12h', '-6h', '-3h', '-1h', 'Transaction', '+1h', '+3h'],
   datasets: [{
-    label: 'Prix EUR',
+    label: 'Price EUR',
     data: [92000, 93500, 94500, 95000, 95300, 95471.83, 95600, 95800],
     backgroundColor: 'rgba(53, 167, 255, 0.2)',
     borderColor: '#35A7FF',
@@ -87,7 +87,7 @@ const priceEvolutionOptions = {
 
 // Computed - Market comparison data
 const marketComparisonData = computed(() => ({
-  labels: ['Votre prix', 'Prix moyen marché', 'Prix min 24h', 'Prix max 24h'],
+  labels: ['Your Price', 'Average Market Price', '24h Min Price', '24h Max Price'],
   datasets: [{
     data: [
       transaction.value?.price || 0,
@@ -168,7 +168,7 @@ async function fetchTransaction() {
       created_at: tx.created_at ?? tx.createdAt ?? tx.date ?? null,
     }
   } catch (err: any) {
-    error.value = err.message || 'Erreur lors du chargement de la transaction'
+    error.value = err.message || 'Error loading transaction'
     console.error('Error fetching transaction:', err)
   } finally {
     loading.value = false
@@ -208,8 +208,8 @@ onMounted(fetchTransaction)
     <Card v-if="loading">
       <CardContent class="p-12 text-center">
         <div class="animate-pulse text-gray-600">
-          <div class="text-4xl mb-4">⏳</div>
-          <div>Chargement des détails de la transaction...</div>
+            <div class="text-4xl mb-4">⏳</div>
+            <div>Loading transaction details...</div>
         </div>
       </CardContent>
     </Card>
@@ -218,7 +218,7 @@ onMounted(fetchTransaction)
     <Card v-else-if="error" class="border-[#FF5964]">
       <CardContent class="p-12 text-center">
         <div class="text-6xl mb-4">❌</div>
-        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Erreur de Chargement</h3>
+        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Loading Error</h3>
         <div class="text-gray-600 mb-4">{{ error }}</div>
         <Button 
           @click="fetchTransaction"
@@ -237,7 +237,7 @@ onMounted(fetchTransaction)
         <Card class="lg:col-span-1 border-[#35A7FF]">
           <CardHeader>
             <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📊 Informations Transaction
+              📊 Transaction Information
             </CardTitle>
           </CardHeader>
           <CardContent class="space-y-6">
@@ -274,7 +274,7 @@ onMounted(fetchTransaction)
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div class="text-xs text-gray-500 mb-1">Date & Heure</div>
+                  <div class="text-xs text-gray-500 mb-1">Date & Time</div>
                   <div class="font-semibold text-[#38618C]">{{ formatDate(transaction.created_at) }}</div>
                 </div>
 
@@ -288,7 +288,7 @@ onMounted(fetchTransaction)
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-gray-200">
                 <div>
-                  <div class="text-xs text-gray-500">Quantité</div>
+                  <div class="text-xs text-gray-500">Quantity</div>
                   <div class="font-semibold text-[#38618C] font-mono">
                     {{ formatNumber(transaction.quantity ?? transaction.crypto_wallet_asset?.quantity, 8) }}
                     {{ String(transaction.cryptomoney?.symbol || '').toUpperCase() }}
@@ -296,21 +296,21 @@ onMounted(fetchTransaction)
                 </div>
 
                 <div>
-                  <div class="text-xs text-gray-500">Prix d'achat moyen</div>
+                  <div class="text-xs text-gray-500">Average Buy Price</div>
                   <div class="font-semibold text-[#38618C]">
                     {{ formatCurrency(Number(transaction.crypto_wallet_asset?.average_buy_price || transaction.price || 0)) }}
                   </div>
                 </div>
 
                 <div>
-                  <div class="text-xs text-gray-500">Solde du wallet</div>
+                  <div class="text-xs text-gray-500">Wallet Balance</div>
                   <div class="font-semibold text-[#01FF19]">
                     {{ formatCurrency(Number(transaction.crypto_wallet_asset?.wallet?.balance_eur || 0)) }}
                   </div>
                 </div>
 
                 <div>
-                  <div class="text-xs text-gray-500">Montant total</div>
+                  <div class="text-xs text-gray-500">Total Amount</div>
                   <div class="text-lg font-bold text-[#01FF19]">
                     {{ formatCurrency(Number(transaction.total_eur || 0)) }}
                   </div>
@@ -327,7 +327,7 @@ onMounted(fetchTransaction)
             <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
               <CardContent class="p-4 text-center">
                 <div class="text-2xl mb-2">💰</div>
-                <div class="text-xs text-gray-500 mb-1">Prix Unitaire</div>
+                <div class="text-xs text-gray-500 mb-1">Unit Price</div>
                 <div class="text-lg font-bold text-[#35A7FF]">{{ formatCurrency(transaction.price) }}</div>
               </CardContent>
             </Card>
@@ -335,7 +335,7 @@ onMounted(fetchTransaction)
             <Card class="border-gray-200 hover:border-[#01FF19] transition-colors">
               <CardContent class="p-4 text-center">
                 <div class="text-2xl mb-2">⚖️</div>
-                <div class="text-xs text-gray-500 mb-1">Quantité</div>
+                <div class="text-xs text-gray-500 mb-1">Quantity</div>
                 <div class="text-lg font-bold text-[#01FF19] font-mono">
                   {{ formatNumber(transaction.quantity) }}
                 </div>
@@ -372,7 +372,7 @@ onMounted(fetchTransaction)
             <Card>
               <CardHeader>
                 <CardTitle class="text-sm font-semibold text-[#38618C]">
-                  📈 Évolution du Prix
+                  📈 Price Evolution
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -386,7 +386,7 @@ onMounted(fetchTransaction)
             <Card>
               <CardHeader>
                 <CardTitle class="text-sm font-semibold text-[#38618C]">
-                  🏪 Comparaison Marché
+                  🏪 Market Comparison
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -404,7 +404,7 @@ onMounted(fetchTransaction)
         <!-- Client Information -->
         <Card>
           <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">👤 Informations Client</CardTitle>
+            <CardTitle class="text-lg font-semibold text-[#38618C]">👤 Client Information</CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
             <div class="flex items-center gap-3">
@@ -423,14 +423,14 @@ onMounted(fetchTransaction)
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-gray-200">
               <div>
-                <div class="text-xs text-gray-500">Rôle</div>
+                <div class="text-xs text-gray-500">Role</div>
                 <Badge class="bg-[#38618C] text-white">
                   {{ ( (transaction.user?.role || transaction.crypto_wallet_asset?.wallet?.user?.role || '').toString().toLowerCase() === 'admin') ? 'Admin' : 'Client' }}
                 </Badge>
               </div>
 
               <div>
-                <div class="text-xs text-gray-500">Membre depuis</div>
+                <div class="text-xs text-gray-500">Member Since</div>
                 <div class="font-semibold text-[#38618C]">
                   {{ formatDate(transaction.user?.created_at || transaction.crypto_wallet_asset?.wallet?.user?.created_at || '') }}
                 </div>
@@ -456,7 +456,7 @@ onMounted(fetchTransaction)
         <!-- Crypto Information -->
         <Card>
           <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">🪙 Informations Crypto</CardTitle>
+            <CardTitle class="text-lg font-semibold text-[#38618C]">🪙 Crypto Information</CardTitle>
           </CardHeader>
           <CardContent class="space-y-4">
             <div class="flex items-center gap-3">
@@ -480,7 +480,7 @@ onMounted(fetchTransaction)
 
             <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
               <div>
-                <div class="text-xs text-gray-500">Prix Actuel</div>
+                <div class="text-xs text-gray-500">Current Price</div>
                 <div class="font-semibold text-[#35A7FF]">
                   {{ formatCurrency(Number(transaction.cryptomoney?.price_eur || transaction.cryptomoney?.price || 0)) }}
                 </div>
@@ -501,7 +501,7 @@ onMounted(fetchTransaction)
               </div>
 
               <div>
-                <div class="text-xs text-gray-500">Quantité détenue (asset)</div>
+                <div class="text-xs text-gray-500">Quantity Held (asset)</div>
                 <div class="font-mono text-sm text-[#38618C]">
                   {{ formatNumber(transaction.crypto_wallet_asset?.quantity || transaction.quantity || 0, 8) }}
                 </div>
@@ -510,7 +510,7 @@ onMounted(fetchTransaction)
 
             <div class="pt-3">
               <a v-if="transaction.cryptomoney?.website" :href="transaction.cryptomoney.website" target="_blank" class="text-[#35A7FF] hover:underline">
-                ↗ Voir site officiel
+                ↗ View Official Website
               </a>
             </div>
           </CardContent>
@@ -521,18 +521,18 @@ onMounted(fetchTransaction)
       <Card v-if="transaction.cancelled_at" class="border-[#FF5964]">
         <CardHeader>
           <CardTitle class="text-lg font-semibold text-[#FF5964]">
-            ❌ Informations d'Annulation
+            ❌ Cancellation Information
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <div class="text-sm text-gray-500 mb-1">Date d'annulation</div>
+              <div class="text-sm text-gray-500 mb-1">Cancellation Date</div>
               <div class="font-semibold text-[#FF5964]">{{ formatDate(transaction.cancelled_at) }}</div>
             </div>
             <div>
-              <div class="text-sm text-gray-500 mb-1">Raison de l'annulation</div>
-              <div class="font-semibold text-[#FF5964]">{{ transaction.cancel_reason || 'Non spécifiée' }}</div>
+              <div class="text-sm text-gray-500 mb-1">Cancellation Reason</div>
+              <div class="font-semibold text-[#FF5964]">{{ transaction.cancel_reason || 'Not specified' }}</div>
             </div>
           </div>
         </CardContent>

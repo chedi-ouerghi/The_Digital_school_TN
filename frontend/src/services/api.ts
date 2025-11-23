@@ -1,13 +1,14 @@
 import type {
-  User,
-  Cryptomoney,
-  CryptoHistory,
-  Wallet,
-  Transaction,
   AccountRequest,
-  Notification,
   ApiResponse,
-  PaginatedResponse, UpdateUserInput
+  CryptoHistory,
+  Cryptomoney,
+  Notification,
+  PaginatedResponse,
+  Transaction,
+  UpdateUserInput,
+  User,
+  Wallet
 } from '@/types';
 import type { PortfolioResponse } from '../types';
 
@@ -36,6 +37,7 @@ async function request<T = any>(
     };
     
     if (t) headers['Authorization'] = `Bearer ${t}`;
+    // Only set Content-Type for non-FormData requests
     if (body && !(body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
     }
@@ -65,19 +67,22 @@ async function request<T = any>(
 
     if (!res.ok) {
       let message = `${res.status} ${res.statusText}`;
-      const errorData = data as ApiError;
-      
+      const errorData = data as ApiError & { errors?: Record<string, string[]> };
+
       if (errorData) {
         if (typeof errorData.message === 'string') {
           message = errorData.message;
         } else if (typeof errorData.error === 'string') {
           message = errorData.error;
+        } else if (errorData.errors && typeof errorData.errors === 'object') {
+          const first = Object.values(errorData.errors)[0];
+          message = Array.isArray(first) ? String(first[0]) : JSON.stringify(errorData.errors);
         } else if (errorData.error && typeof errorData.error === 'object') {
           const first = Object.values(errorData.error)[0];
           message = Array.isArray(first) ? String(first[0]) : JSON.stringify(errorData.error);
         }
       }
-      
+
       const err = new Error(message);
       Object.assign(err, { status: res.status, data: errorData });
       throw err;
@@ -148,6 +153,12 @@ export interface ChangePasswordRequest {
   password_confirmation: string;
 }
 
+export interface ProfileUploadResponse {
+  path: string;
+  url: string;
+  user: User; // added user in response payload
+}
+
 export const authApi = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
     return await request<LoginResponse>('/login', 'POST', payload);
@@ -179,6 +190,32 @@ export const authApi = {
 
   async changeId(payload: { new_id: string; confirmation: string }): Promise<{ message: string }> {
     return await request<{ message: string }>('/admin/change-id', 'POST', payload);
+  },
+
+  async uploadProfilePicture(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
+    // Preferred: PUT to update the resource
+    try {
+      return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture', 'PUT', formData);
+    } catch (err) {
+      // Fallback to legacy POST upload endpoint (method spoofing if needed)
+      return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture/upload', 'POST', formData);
+    }
+  },
+
+  async uploadProfileBanner(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
+    try {
+      return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner', 'PUT', formData);
+    } catch (err) {
+      return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner/upload', 'POST', formData);
+    }
+  },
+
+  async deleteProfilePicture(): Promise<ApiResponse<void>> {
+    return await request<ApiResponse<void>>('/profile/picture', 'DELETE');
+  },
+
+  async deleteProfileBanner(): Promise<ApiResponse<void>> {
+    return await request<ApiResponse<void>>('/profile/banner', 'DELETE');
   },
 };
 

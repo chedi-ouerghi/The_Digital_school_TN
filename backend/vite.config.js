@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
+import laravel from 'laravel-vite-plugin';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
     plugins: [
@@ -10,4 +10,17 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    server: {
+        host: 'localhost',
+        port: 5173,
+        strictPort: true,
+        origin: 'http://localhost:5173',
+        fs: {
+            allow: ['.'],
+        },
+    },
+    build: {
+        outDir: 'public/build',
+        emptyOutDir: false,
+    },
 });

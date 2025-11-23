@@ -364,31 +364,31 @@ onMounted(fetchTransactions)
           <div class="space-y-3 mb-4">
             <div>
               <div class="text-sm text-gray-500 mb-1">Client</div>
-              <div class="font-semibold text-[#38618C]">{{ t.user?.name || 'Utilisateur' }}</div>
+              <div class="font-semibold text-[#38618C]">{{ t.user?.name || 'USER' }}</div>
             </div>
 
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <div class="text-gray-500">Quantité</div>
+                <div class="text-gray-500">Quantity</div>
                 <div class="font-semibold text-[#38618C] font-mono">
                   {{ formatNumber(t.quantity) }}
                 </div>
               </div>
               <div>
-                <div class="text-gray-500">Prix Unit.</div>
+                <div class="text-gray-500">Unit Price</div>
                 <div class="font-semibold text-[#35A7FF]">{{ formatCurrency(t.price) }}</div>
               </div>
             </div>
 
             <div>
-              <div class="text-sm text-gray-500 mb-1">Montant Total</div>
+              <div class="text-sm text-gray-500 mb-1">Total Amount</div>
               <div class="text-2xl font-bold text-[#01FF19]">
                 {{ formatCurrency(t.total_eur) }}
               </div>
             </div>
 
             <div>
-              <div class="text-sm text-gray-500 mb-1">Date & Heure</div>
+              <div class="text-sm text-gray-500 mb-1">Date & Time</div>
               <div class="font-semibold text-[#38618C]">{{ formatDate(t.created_at) }}</div>
             </div>
           </div>
@@ -398,7 +398,7 @@ onMounted(fetchTransactions)
               @click.stop="viewDetails(t.id)"
               class="flex-1 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
             >
-              📊 Détails
+              📊 details
             </Button>
             <Button 
               v-if="!t.cancelled_at"
@@ -418,17 +418,18 @@ onMounted(fetchTransactions)
       <CardContent class="p-0">
         <Table>
           <TableHeader>
-            <TableRow class="bg-[#38618C]/10">
-              <TableHead class="text-[#38618C] font-semibold">Date & Heure</TableHead>
-              <TableHead class="text-[#38618C] font-semibold">Client</TableHead>
-              <TableHead class="text-[#38618C] font-semibold">Type</TableHead>
-              <TableHead class="text-[#38618C] font-semibold">Crypto</TableHead>
-              <TableHead class="text-[#38618C] font-semibold text-right">Quantité</TableHead>
-              <TableHead class="text-[#38618C] font-semibold text-right">Prix</TableHead>
-              <TableHead class="text-[#38618C] font-semibold text-right">Total</TableHead>
-              <TableHead class="text-[#38618C] font-semibold">Statut</TableHead>
-              <TableHead class="text-[#38618C] font-semibold text-right">Actions</TableHead>
-            </TableRow>
+           <TableRow class="bg-[#38618C]/10">
+  <TableHead class="text-[#38618C] font-semibold">Date & Time</TableHead>
+  <TableHead class="text-[#38618C] font-semibold">Client</TableHead>
+  <TableHead class="text-[#38618C] font-semibold">Type</TableHead>
+  <TableHead class="text-[#38618C] font-semibold">Crypto</TableHead>
+  <TableHead class="text-[#38618C] font-semibold text-right">Quantity</TableHead>
+  <TableHead class="text-[#38618C] font-semibold text-right">Price</TableHead>
+  <TableHead class="text-[#38618C] font-semibold text-right">Total</TableHead>
+  <TableHead class="text-[#38618C] font-semibold">Status</TableHead>
+  <TableHead class="text-[#38618C] font-semibold text-right">Actions</TableHead>
+</TableRow>
+
           </TableHeader>
           <TableBody>
             <TableRow 
@@ -496,13 +497,13 @@ onMounted(fetchTransactions)
                   class="bg-[#FF5964] text-white font-semibold"
                   :title="t.cancel_reason"
                 >
-                  ❌ Annulée
+                  ❌ Cancel
                 </Badge>
                 <Badge 
                   v-else
                   class="bg-[#01FF19] text-white font-semibold"
                 >
-                  ✅ Complétée
+                  ✅ Completed
                 </Badge>
               </TableCell>
               <TableCell>
@@ -513,7 +514,7 @@ onMounted(fetchTransactions)
                     @click="viewDetails(t.id)"
                     class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white font-semibold"
                   >
-                    📊 Détails
+                    📊 details
                   </Button>
                   <Button
                     v-if="!t.cancelled_at"
@@ -522,7 +523,7 @@ onMounted(fetchTransactions)
                     @click="openCancelDialog(t)"
                     class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white font-semibold"
                   >
-                    🗑️ Annuler
+                    🗑️ Cancel
                   </Button>
                 </div>
               </TableCell>

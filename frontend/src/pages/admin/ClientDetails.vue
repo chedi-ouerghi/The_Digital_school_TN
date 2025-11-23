@@ -277,6 +277,12 @@ function prevPage() {
     currentPage.value--
   }
 }
+
+// add small image error handler
+function handleImgError(e: Event) {
+  const t = e.target as HTMLImageElement | null
+  if (t) t.style.display = 'none'
+}
 </script>
 
 <template>
@@ -343,9 +349,32 @@ function prevPage() {
           </CardHeader>
           <CardContent class="space-y-6">
             <!-- Avatar -->
+            <!-- Banner + Profile Image -->
             <div class="flex justify-center">
-              <div class="h-24 w-24 rounded-full bg-gradient-to-br from-[#35A7FF] to-[#38618C] flex items-center justify-center text-white font-bold text-4xl">
-                {{ client.name?.charAt(0).toUpperCase() || 'U' }}
+              <div class="relative w-full max-w-md">
+                <div v-if="makeImageUrl(client.profile_banner)" class="w-full rounded-lg overflow-hidden">
+                  <img
+                    :src="makeImageUrl(client.profile_banner)"
+                    alt="banner"
+                    class="w-full h-28 object-cover rounded-lg"
+                    @error="handleImgError"
+                  />
+                </div>
+
+                <div class="mx-auto w-fit -mt-12">
+                  <div class="h-24 w-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gray-100">
+                    <img
+                      v-if="makeImageUrl(client.profile_picture)"
+                      :src="makeImageUrl(client.profile_picture)"
+                      alt="avatar"
+                      class="h-full w-full object-cover"
+                      @error="handleImgError"
+                    />
+                    <div v-else class="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#35A7FF] to-[#38618C] text-white font-bold text-4xl">
+                      {{ client.name?.charAt(0).toUpperCase() || 'U' }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -372,15 +401,16 @@ function prevPage() {
                 <div class="text-2xl font-bold text-[#01FF19]">{{ formatCurrency(client.account_balance) }}</div>
               </div>
 
-              <div>
-                <div class="text-xs text-gray-500 mb-1">Email Status</div>
-                <Badge 
-                  :class="client.email_verified_at ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                  class="text-white"
-                >
-                  {{ client.email_verified_at ? '✓ Verified' : '⏳ Pending' }}
-                </Badge>
-              </div>
+             <div>
+  <div class="text-xs text-gray-500 mb-1">Email Status</div>
+  <Badge
+    :class="client.email_verified_at === null ? 'bg-[#FF5964]' : 'bg-[#01FF19]'"
+    class="text-white"
+  >
+    {{ client.email_verified_at === null ? '⏳ Pending' : '✓ Verified' }}
+  </Badge>
+</div>
+
 
               <div>
                 <div class="text-xs text-gray-500 mb-1">Member Since</div>

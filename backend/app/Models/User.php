@@ -25,12 +25,14 @@ class User extends Authenticatable
         'role',
         'remember_token',
         'last_id_change_at',
+        'profile_picture',
+        'profile_banner',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'balance' => 'decimal:2',
-        'password' => 'hashed', // hashing automatique
+        'password' => 'hashed', 
         'last_id_change_at' => 'datetime',
     ];
 

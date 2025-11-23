@@ -1,6 +1,33 @@
-# Plateforme de Trading - Bitchest
+# BitChest (monorepo) — frontend + backend
 
-Une plateforme de trading complète avec backend et frontend modernes.
+This repository contains both the Laravel backend API and the Vue frontend for BitChest.
+
+Folders:
+- backend/  — Laravel API (see backend/README.md)
+- frontend/ — Vue 3 / Vite app (see frontend/README.md)
+
+## Run locally (minimal)
+1. Backend
+   - cd backend
+   - composer install
+   - cp .env.example .env  (configure DB, MAIL, APP_URL)
+   - php artisan key:generate
+   - php artisan migrate
+   - php artisan storage:link
+   - php artisan serve --host=127.0.0.1 --port=8000
+
+2. Frontend
+   - cd frontend
+   - npm install
+   - create .env with VITE_API_URL=http://localhost:8000
+   - npm run dev
+
+## Important
+- Run `php artisan storage:link` (or `php artisan storage:check-symlink`) so uploaded images are served from `/storage/...`.
+- Profile image and banner upload endpoints are documented in backend/README.md and used by frontend components.
+
+## Troubleshooting
+- If images don't load after upload: verify `public/storage` exists and points to `storage/app/public`, and the backend returned `data.url` for the uploaded asset.
 
 ## 📋 Description
 

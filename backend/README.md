@@ -215,3 +215,61 @@ Pour toute question ou problème, veuillez consulter la documentation ou ouvrir 
 ## 📝 License
 
 Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
+
+# What's new / Important notes (updated)
+This repository includes a few recent additions and improvements; please read before running.
+
+- Profile picture & banner management
+  - Endpoints:
+    - POST /api/v1/profile/picture/upload (legacy/backward compatible)
+    - PUT  /api/v1/profile/picture        (preferred)
+    - DELETE /api/v1/profile/picture
+    - POST /api/v1/profile/banner/upload (legacy/backward compatible)
+    - PUT  /api/v1/profile/banner
+    - DELETE /api/v1/profile/banner
+  - Uploads expect multipart/form-data; keys:
+    - profile_picture
+    - profile_banner
+  - Responses include `data.path` (storage relative path) and `data.url` (public URL via storage disk).
+
+- UploadService
+  - Centralized service for uploads (app/Services/UploadService.php).
+  - Stores files on the `public` disk under:
+    - profile_pictures/{user_id}/...
+    - profile_banners/{user_id}/...
+  - Deletes previous files on new upload, updates `users` table fields `profile_picture` / `profile_banner`.
+  - Controller wrappers are in `ProfileController`.
+
+- Migration
+  - A migration adds `profile_picture` and `profile_banner` to `users`:
+    - database/migrations/2025_11_17_000000_add_profile_picture_and_banner_to_users_table.php
+
+- Storage symlink & helper command
+  - You must expose storage to public via:
+    - php artisan storage:link
+  - A helper artisan command is provided to check/create the symlink:
+    - php artisan storage:check-symlink
+  - If you encounter Windows permission errors, run the commands as Administrator or follow Windows / Linux instructions below (see Troubleshooting).
+
+- Vite & frontend assets
+  - Backend contains a vite config and a package.json for building frontend assets (see vite.config.js).
+  - If serving assets from backend, ensure `npm install` and `npm run dev` (or build) as needed.
+
+# Setup quick start (backend)
+1. Copy env and configure database / mail:
+   - cp .env.example .env
+   - php artisan key:generate
+2. Install dependencies:
+   - composer install
+3. Migrate DB:
+   - php artisan migrate
+4. Make storage accessible:
+   - php artisan storage:link
+   - or, if issues: php artisan storage:check-symlink
+5. Run:
+   - php artisan serve
+
+# API highlights
+- Auth: /api/v1/login, /api/v1/logout, /api/v1/profile
+- Cryptos: /api/v1/cryptos
+- Admin (requires ADMIN role + auth:sanctum): /api/v1/admin/...

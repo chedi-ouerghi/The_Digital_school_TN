@@ -98,11 +98,11 @@ async function fetchProfile() {
     email.value = profile.value?.email || ''
     
     // Set avatar if exists
-    if (profile.value?.avatar_url) {
-      avatarPreview.value = profile.value.avatar_url
+    if (profile.value?.profile_picture) {
+      avatarPreview.value = `http://localhost:8000/storage/${profile.value.profile_picture}`
     }
-    if (profile.value?.banner_url) {
-      bannerPreview.value = profile.value.banner_url
+    if (profile.value?.profile_banner) {
+      bannerPreview.value = `http://localhost:8000/storage/${profile.value.profile_banner}`
     }
   } catch (e: any) {
     error.value = e?.message || 'Failed to load profile'
@@ -188,16 +188,23 @@ async function uploadImages() {
   
   uploadLoading.value = true
   try {
-    const formData = new FormData()
     if (avatarFile.value) {
-      formData.append('avatar', avatarFile.value)
-    }
-    if (bannerFile.value) {
-      formData.append('banner', bannerFile.value)
+      const formData = new FormData()
+      formData.append('profile_picture', avatarFile.value)
+      const response = await api.auth.uploadProfilePicture(formData)
+      if (response?.data?.user?.profile_picture) {
+        avatarPreview.value = `http://localhost:8000/storage/${response.data.user.profile_picture}`
+      }
     }
     
-    // Adapt this to your API endpoint
-    await api.auth.uploadProfileImages(formData)
+    if (bannerFile.value) {
+      const formData = new FormData()
+      formData.append('profile_banner', bannerFile.value)
+      const response = await api.auth.uploadProfileBanner(formData)
+      if (response?.data?.user?.profile_banner) {
+        bannerPreview.value = `http://localhost:8000/storage/${response.data.user.profile_banner}`
+      }
+    }
     
     // Reset files after successful upload
     avatarFile.value = null
@@ -218,6 +225,28 @@ function removeAvatar() {
 function removeBanner() {
   bannerPreview.value = ''
   bannerFile.value = null
+}
+
+async function deleteProfilePicture() {
+  try {
+    await api.auth.deleteProfilePicture()
+    avatarPreview.value = ''
+    avatarFile.value = null
+    await fetchProfile()
+  } catch (e: any) {
+    console.error('Delete profile picture failed:', e)
+  }
+}
+
+async function deleteProfileBanner() {
+  try {
+    await api.auth.deleteProfileBanner()
+    bannerPreview.value = ''
+    bannerFile.value = null
+    await fetchProfile()
+  } catch (e: any) {
+    console.error('Delete profile banner failed:', e)
+  }
 }
 
 // Location Settings Functions

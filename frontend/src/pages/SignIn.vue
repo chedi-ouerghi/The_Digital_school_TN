@@ -46,14 +46,14 @@ function togglePasswordVisibility() {
       <div class="absolute inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/50 to-gray-900/80" />
     </div>
 
-    <!-- LEFT SECTION -->
-    <div class="w-full lg:w-1/2 bg-white flex flex-col justify-center px-4 sm:px-8 lg:px-16 py-8 lg:py-0 relative z-10 lg:rounded-r-[3rem] shadow-lg">
-      <div class="max-w-md w-full mx-auto space-y-8">
+    <!-- LEFT SECTION - MODIFIÉ POUR LE CENTRAGE COMPLET -->
+    <div class="w-full min-h-screen lg:w-1/2 bg-white flex items-center justify-center px-4 sm:px-8 lg:px-16 py-8 lg:py-0 relative z-10 lg:rounded-r-[3rem] shadow-lg">
+      <div class="w-full max-w-md mx-auto space-y-8">
         <!-- Logo -->
         <router-link to="/">
-        <div class="flex items-center space-x-2">
-          <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
-        </div>
+          <div class="flex items-center space-x-2">
+            <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
+          </div>
         </router-link>
         <!-- Title -->
         <div>
@@ -127,19 +127,19 @@ function togglePasswordVisibility() {
       </div>
     </div>
 
-    <!-- RIGHT SECTION - Révisée -->
+    <!-- RIGHT SECTION - Revised -->
     <div class="hidden lg:flex w-1/2 relative overflow-hidden backdrop-blur-sm">
-      <!-- Effets de fond -->
+      <!-- Background effects -->
       <div class="absolute inset-0">
-        <!-- Cercles lumineux -->
+        <!-- Luminous circles -->
         <!-- <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-[#6E00FF]/20 rounded-full blur-[100px] animate-pulse" />
         <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#35A7FF]/20 rounded-full blur-[100px] animate-pulse delay-700" />
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#00E0FF]/20 rounded-full blur-[100px] animate-pulse delay-1000" /> -->
       </div>
 
-      <!-- Contenu principal -->
+      <!-- Main content -->
       <div class="relative z-10 flex flex-col justify-center items-center w-full h-full px-12">
-        <!-- En-tête -->
+        <!-- Header -->
         <div class="text-center mb-12">
           <h1 class="text-6xl font-black leading-tight">
             <span class="bg-gradient-to-r from-white via-[#FFE6FA] to-[#E6F7FF] bg-clip-text text-transparent drop-shadow-2xl">
@@ -148,7 +148,7 @@ function togglePasswordVisibility() {
             </span>
           </h1>
           <p class="mt-6 text-lg text-white/80 max-w-xl mx-auto">
-            Découvrez une nouvelle façon de trader avec BitChest, votre plateforme de confiance.
+            Discover a new way to trade with BitChest, your trusted platform.
           </p>
         </div>
 
@@ -156,23 +156,23 @@ function togglePasswordVisibility() {
         <div class="grid grid-cols-2 gap-8 max-w-2xl w-full mb-12">
           <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
             <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Trading Intelligent</h3>
-            <p class="text-white/70 text-sm">Analyses avancées et suggestions personnalisées</p>
+            <h3 class="text-white font-semibold mb-2">Smart Trading</h3>
+            <p class="text-white/70 text-sm">Advanced analysis and personalized suggestions</p>
           </div>
           <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
             <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Sécurité Renforcée</h3>
-            <p class="text-white/70 text-sm">Protection optimale de vos actifs</p>
+            <h3 class="text-white font-semibold mb-2">Enhanced Security</h3>
+            <p class="text-white/70 text-sm">Optimal protection for your assets</p>
           </div>
           <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
             <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Interface Intuitive</h3>
-            <p class="text-white/70 text-sm">Navigation fluide et agréable</p>
+            <h3 class="text-white font-semibold mb-2">Intuitive Interface</h3>
+            <p class="text-white/70 text-sm">Smooth and pleasant navigation</p>
           </div>
           <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
             <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Support 24/7</h3>
-            <p class="text-white/70 text-sm">Assistance dédiée à tout moment</p>
+            <h3 class="text-white font-semibold mb-2">24/7 Support</h3>
+            <p class="text-white/70 text-sm">Dedicated assistance at any time</p>
           </div>
         </div>
 
@@ -180,7 +180,7 @@ function togglePasswordVisibility() {
         <div class="absolute bottom-8 w-full text-center">
           <div class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md rounded-full px-6 py-2">
             <Shield class="w-4 h-4 text-[#00E0FF]" />
-            <span class="text-sm text-white/80">Sécurité de niveau bancaire</span>
+            <span class="text-sm text-white/80">Bank-level security</span>
           </div>
         </div>
       </div>

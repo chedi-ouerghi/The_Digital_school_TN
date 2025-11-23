@@ -142,9 +142,104 @@ async function fetchProfile() {
       name: profile.value.name || '',
       email: profile.value.email || ''
     }
+    // set previews if available
+    if (profile.value?.profile_picture) {
+      avatarPreview.value = profile.value.profile_picture.startsWith('http')
+        ? profile.value.profile_picture
+        : `${apiBaseStorageUrl()}/storage/${profile.value.profile_picture}`
+    }
+    if (profile.value?.profile_banner) {
+      bannerPreview.value = profile.value.profile_banner.startsWith('http')
+        ? profile.value.profile_banner
+        : `${apiBaseStorageUrl()}/storage/${profile.value.profile_banner}`
+    }
   } catch (e: any) {
     console.error('Error loading profile:', e)
   }
+}
+
+// helper to build base storage url (assumes backend on same host/port)
+function apiBaseStorageUrl() {
+  try {
+    const u = new URL(API_BASE.replace('/api/v1', ''))
+    return u.origin
+  } catch {
+    return 'http://localhost:8000'
+  }
+}
+
+// Media (avatar/banner) state
+const avatarFile = ref<File | null>(null)
+const bannerFile = ref<File | null>(null)
+const avatarPreview = ref<string>('')
+const bannerPreview = ref<string>('')
+const uploadLoading = ref(false)
+
+function handleAvatarUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    avatarFile.value = target.files[0]
+    const reader = new FileReader()
+    reader.onload = (e) => (avatarPreview.value = String(e.target?.result || ''))
+    reader.readAsDataURL(avatarFile.value)
+  }
+}
+
+function handleBannerUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    bannerFile.value = target.files[0]
+    const reader = new FileReader()
+    reader.onload = (e) => (bannerPreview.value = String(e.target?.result || ''))
+    reader.readAsDataURL(bannerFile.value)
+  }
+}
+
+async function uploadImages() {
+  if (!avatarFile.value && !bannerFile.value) return
+  uploadLoading.value = true
+  try {
+    if (avatarFile.value) {
+      const form = new FormData()
+      form.append('profile_picture', avatarFile.value)
+      const resp = await api.auth.uploadProfilePicture(form)
+      if (resp && resp.data && resp.data.url) {
+        avatarPreview.value = resp.data.url
+        message.value = 'Avatar uploaded successfully'
+      }
+    }
+
+    if (bannerFile.value) {
+      const form = new FormData()
+      form.append('profile_banner', bannerFile.value)
+      const resp = await api.auth.uploadProfileBanner(form)
+      if (resp && resp.data && resp.data.url) {
+        bannerPreview.value = resp.data.url
+        message.value = 'Banner uploaded successfully'
+      }
+    }
+
+    // refresh profile
+    await fetchProfile()
+    setTimeout(() => (message.value = null), 3000)
+  } catch (e: any) {
+    console.error('Upload failed:', e)
+    message.value = e?.message || 'Upload failed'
+  } finally {
+    uploadLoading.value = false
+    avatarFile.value = null
+    bannerFile.value = null
+  }
+}
+
+function removeAvatarPreview() {
+  avatarPreview.value = ''
+  avatarFile.value = null
+}
+
+function removeBannerPreview() {
+  bannerPreview.value = ''
+  bannerFile.value = null
 }
 
 // Charger les stats du portfolio
@@ -445,7 +540,7 @@ const profitTrend = computed(() => {
 
     <!-- Onglets -->
     <Tabs v-model="activeTab" class="w-full">
-      <TabsList class="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+      <TabsList class="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
         <TabsTrigger 
           value="overview" 
           class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
@@ -459,6 +554,13 @@ const profitTrend = computed(() => {
         >
           <User class="w-4 h-4 mr-2" />
           Profile
+        </TabsTrigger>
+        <TabsTrigger 
+          value="media" 
+          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+        >
+          <Eye class="w-4 h-4 mr-2" />
+          Media
         </TabsTrigger>
         <TabsTrigger 
           value="security" 
@@ -650,6 +752,54 @@ const profitTrend = computed(() => {
                 {{ updatingProfile ? 'Updating...' : 'Update Profile' }}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <!-- Onglet Media -->
+      <TabsContent value="media" class="space-y-6 mt-6">
+        <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+          <CardHeader>
+            <CardTitle class="text-[#38618C]">Media</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-3">
+                <Label>Avatar</Label>
+                <div class="flex items-center gap-4">
+                  <div class="w-28 h-28 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <img v-if="avatarPreview" :src="avatarPreview" class="object-cover w-full h-full" />
+                    <div v-else class="text-gray-400">No avatar</div>
+                  </div>
+                  <div class="space-y-2">
+                    <input type="file" accept="image/*" @change="handleAvatarUpload" />
+                    <div class="flex gap-2">
+                      <Button @click="removeAvatarPreview" variant="outline">Remove</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <Label>Banner</Label>
+                <div class="space-y-2">
+                  <div class="w-full h-40 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <img v-if="bannerPreview" :src="bannerPreview" class="object-cover w-full h-full" />
+                    <div v-else class="text-gray-400">No banner</div>
+                  </div>
+                  <input type="file" accept="image/*" @change="handleBannerUpload" />
+                  <div class="flex gap-2">
+                    <Button @click="removeBannerPreview" variant="outline">Remove</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <Button :disabled="uploadLoading" @click="uploadImages">
+                {{ uploadLoading ? 'Uploading...' : 'Upload Media' }}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
