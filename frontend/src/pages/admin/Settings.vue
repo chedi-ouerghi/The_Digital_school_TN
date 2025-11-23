@@ -244,18 +244,7 @@ async function deleteProfileBanner() {
   }
 }
 
-const validateConfirmation = () => {
-  const expectedText = "I confirm that I want to change my administrator ID"
-  confirmationValid.value = confirmation.value.trim() === expectedText
-}
 
-const validateNewId = () => {
-  newIdValid.value = /^[A-Z0-9]{14}$/.test(newId.value)
-}
-
-// Surveillez les changements
-watch(confirmation, validateConfirmation)
-watch(newId, validateNewId)
 
 // Change ID Functions
 function cancelChangeId() {
