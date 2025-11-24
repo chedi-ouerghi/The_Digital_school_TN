@@ -8,7 +8,7 @@ export function useAdminStats() {
   const stats = ref<any>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const cryptoDetails = ref<Map<number, any>>(new Map())
+  const cryptoDetails = ref<Map<string, any>>(new Map())
   const recentTransactions = ref<any[]>([])
 
   // Fonctions utilitaires
@@ -24,44 +24,49 @@ export function useAdminStats() {
     return n.toFixed(decimals)
   }
 
-  async function fetchCryptoDetails(cryptoIds: number[]) {
-    try {
-      const promises = cryptoIds.map(id => api.crypto.show(id))
-      const details = await Promise.all(promises)
-      details.forEach((crypto, index) => {
-        if (crypto) {
-          cryptoDetails.value.set(cryptoIds[index], crypto)
-        }
-      })
-    } catch (err) {
-      console.error('Erreur lors du chargement des détails des cryptos:', err)
-    }
-  }
-
-  async function fetchRecentTransactions() {
-    try {
-      const response = await api.admin.transactions.list({ limit: 5 })
-      recentTransactions.value = (response?.data || []).slice(0, 5)
-    } catch (err) {
-      console.error('Erreur lors du chargement des transactions:', err)
-    }
-  }
-
   async function fetchStats() {
     loading.value = true
     error.value = null
     try {
       const data = await api.admin.stats.global()
-      stats.value = data
+      stats.value = data?.data || {}
 
-      // Récupérer les détails des cryptos
-      if (data.top_traded?.length) {
-        const cryptoIds = data.top_traded.map((c: any) => c.cryptomoney_id)
-        await fetchCryptoDetails(cryptoIds)
+      // Mapper les cryptos dans cryptoDetails pour un accès facile
+      if (stats.value.top_cryptos?.length) {
+        stats.value.top_cryptos.forEach((crypto: any) => {
+          cryptoDetails.value.set(crypto.id, {
+            id: crypto.id,
+            name: crypto.name,
+            symbol: crypto.symbol,
+            image_url: getImageUrl(crypto.image),
+            total_qty: crypto.total_qty,
+            total_volume: crypto.total_volume
+          })
+        })
       }
 
-      // Récupérer les transactions récentes
-      await fetchRecentTransactions()
+      // Mapper et construire les URLs des images pour top_cryptos
+      if (stats.value.top_cryptos?.length) {
+        stats.value.top_cryptos = stats.value.top_cryptos.map((crypto: any) => ({
+          ...crypto,
+          image: getImageUrl(crypto.image)
+        }))
+      }
+
+      // Mapper les transactions récentes avec les images
+      if (stats.value.recent_transactions?.length) {
+        recentTransactions.value = stats.value.recent_transactions
+          .slice(0, 10)
+          .map((tx: any) => ({
+            ...tx,
+            // Créer un objet cryptomoney avec l'image
+            cryptomoney: {
+              name: tx.crypto_name,
+              image: getImageUrl(tx.crypto_image || '')
+            }
+          }))
+      }
+
     } catch (err: any) {
       error.value = err.message || String(err)
       console.error('Erreur chargement stats:', err)
@@ -70,26 +75,31 @@ export function useAdminStats() {
     }
   }
 
+  function getImageUrl(imagePath: string): string {
+    if (!imagePath) return ''
+    if (imagePath.startsWith('http')) return imagePath
+    // Construire l'URL complète depuis l'API
+    const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    return `${apiBaseUrl}/storage/${imagePath}`
+  }
+
   // Statistiques principales
   const cardStats = computed(() => ({
-    totalClients: stats.value?.total_clients || 0,
-    totalVolume: stats.value?.total_transaction_volume_eur || 0,
-    totalRevenue: stats.value?.estimated_revenue_eur || 0,
-    totalCryptos: stats.value?.top_traded?.length || 0,
+    totalClients: stats.value?.total_users || 0,
+    totalVolume: stats.value?.total_volume || 0,
+    totalRevenue: stats.value?.total_volume ? (Number(stats.value.total_volume) * 0.02) : 0, // 2% commission
+    totalCryptos: stats.value?.top_cryptos?.length || 0,
   }))
 
   // Données pour le graphique en barres
   const barChartData = computed(() => {
-    const topTraded = stats.value?.top_traded || []
+    const topCryptos = stats.value?.top_cryptos || []
     
     return {
-      labels: topTraded.map((c: any) => {
-        const crypto = cryptoDetails.value.get(c.cryptomoney_id)
-        return (crypto?.symbol || c.symbole || 'UNKNOWN').toUpperCase()
-      }),
+      labels: topCryptos.map((c: any) => (c.symbol || 'UNKNOWN').toUpperCase()),
       datasets: [{
         label: 'Quantité tradée',
-        data: topTraded.map((c: any) => Number(c.total_quantity || 0)),
+        data: topCryptos.map((c: any) => Number(c.total_qty || 0)),
         backgroundColor: [
           'rgba(1, 255, 25, 0.8)',
           'rgba(53, 167, 255, 0.8)',
@@ -136,15 +146,12 @@ export function useAdminStats() {
 
   // Données pour le graphique circulaire
   const doughnutChartData = computed(() => {
-    const topTraded = stats.value?.top_traded || []
+    const topCryptos = stats.value?.top_cryptos || []
     
     return {
-      labels: topTraded.map((c: any) => {
-        const crypto = cryptoDetails.value.get(c.cryptomoney_id)
-        return (crypto?.symbol || c.symbole || 'UNKNOWN').toUpperCase()
-      }),
+      labels: topCryptos.map((c: any) => (c.symbol || 'UNKNOWN').toUpperCase()),
       datasets: [{
-        data: topTraded.map((c: any) => Number(c.total_quantity || 0)),
+        data: topCryptos.map((c: any) => Number(c.total_volume || 0)),
         backgroundColor: [
           'rgba(1, 255, 25, 0.8)',
           'rgba(53, 167, 255, 0.8)',
@@ -217,7 +224,6 @@ export function useAdminStats() {
     formatCurrency,
     formatNumber,
     getRankColor,
-    fetchStats,
-    fetchRecentTransactions
+    fetchStats
   }
 }

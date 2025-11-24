@@ -14,8 +14,6 @@ return new class extends Migration
             $table->string('crypto_wallet_asset_id');
             $table->foreign('crypto_wallet_asset_id')->references('id')->on('crypto_wallet_assets')->onDelete('cascade');
 
-            $table->string('cryptomoney_id');
-            $table->foreign('cryptomoney_id')->references('id')->on('cryptomoney')->onDelete('cascade');
             $table->enum('type', ['ACHAT', 'VENTE']);
             $table->decimal('quantity', 20, 8);
             $table->decimal('price', 20, 8);
@@ -27,7 +25,7 @@ return new class extends Migration
             $table->softDeletes();
 
             // Index pour améliorer les performances des requêtes
-            $table->index(['crypto_wallet_asset_id', 'cryptomoney_id']);
+            $table->index(['crypto_wallet_asset_id']);
             $table->index(['created_at']);
         });
     }

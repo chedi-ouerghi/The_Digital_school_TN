@@ -16,7 +16,6 @@ class Transaction extends Model
 
     protected $fillable = [
         'crypto_wallet_asset_id',
-        'cryptomoney_id',
         'type',
         'quantity',
         'price',
@@ -41,7 +40,14 @@ class Transaction extends Model
 
     public function cryptomoney()
     {
-        return $this->belongsTo(Cryptomoney::class, 'cryptomoney_id');
+        return $this->hasOneThrough(
+            Cryptomoney::class,
+            CryptoWalletAsset::class,
+            'id',
+            'id',
+            'crypto_wallet_asset_id',
+            'cryptomoney_id'
+        );
     }
 
     public function getWalletAttribute()

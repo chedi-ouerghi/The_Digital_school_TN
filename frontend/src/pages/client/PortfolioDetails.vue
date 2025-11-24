@@ -91,9 +91,9 @@ async function fetchPositionData() {
       throw new Error('Position non trouvée')
     }
 
-    // Chercher les transactions pour cette crypto
+    // Chercher les transactions pour cet asset (pas par cryptomoney_id)
     const relatedTransactions = walletData.transactions?.filter(
-      (t: any) => t.cryptomoney_id === cryptoId && !t.deleted_at
+      (t: any) => t.crypto_wallet_asset_id === asset.id && !t.deleted_at
     ) || []
 
     position.value = {
@@ -373,7 +373,7 @@ function goToTrade() {
         </CardContent>
       </Card>
 
-      <!-- Performance Chart -->
+      <!-- Position Evolution Chart -->
       <Card>
         <CardHeader>
           <CardTitle class="text-lg font-semibold text-[#38618C]">
@@ -495,6 +495,15 @@ function goToTrade() {
               <span class="font-semibold text-[#38618C]">
                 {{ transactions.length > 0 
                   ? new Date(transactions[transactions.length - 1].created_at).toLocaleDateString('en-GB')
+                  : 'N/A' 
+                }}
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Last Transaction Date</span>
+              <span class="font-semibold text-[#38618C]">
+                {{ transactions.length > 0 
+                  ? new Date(transactions[0].created_at).toLocaleDateString('en-GB')
                   : 'N/A' 
                 }}
               </span>

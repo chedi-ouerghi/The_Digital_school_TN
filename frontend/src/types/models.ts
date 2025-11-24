@@ -99,7 +99,6 @@ export interface CryptoWalletAsset extends BaseModel {
 // Transaction model
 export interface Transaction extends BaseModel {
   crypto_wallet_asset_id: string;
-  cryptomoney_id: string;
   type: 'buy' | 'sell';
   quantity: number;
   price: number;
