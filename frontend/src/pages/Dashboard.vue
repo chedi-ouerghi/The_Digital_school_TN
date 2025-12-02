@@ -139,7 +139,6 @@ async function loadWalletData() {
   loadingWallet.value = true
   try {
     const response = await api.wallet.list()
-    console.log('Wallet API Response:', response)
     
     const walletData = response?.wallet || response?.data || response || {}
     

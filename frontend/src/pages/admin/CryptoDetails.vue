@@ -429,18 +429,7 @@ function goBack() {
                 {{ formatPercentage(crypto.change_24h_pct) }}%
               </Badge>
             </div>
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-500">Dernière maj</span>
-              <span class="text-gray-600">
-                {{ crypto.updated_at ? new Date(crypto.updated_at).toLocaleDateString('fr-FR', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }) : 'N/A' }}
-              </span>
-            </div>
+        
           </CardContent>
         </Card>
       </div>

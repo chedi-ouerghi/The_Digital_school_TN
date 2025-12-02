@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Select,
@@ -40,8 +40,8 @@ const isSelling = ref(false)
 // Format functions
 function formatCurrency(value: any): string {
   const n = Number(value ?? 0)
-  if (!isFinite(n) || isNaN(n)) return '0,00 €'
-  return n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  if (!isFinite(n) || isNaN(n)) return '$0.00'
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
 function formatNumber(value: any, decimals = 8): string {
@@ -59,7 +59,7 @@ async function loadTransactions() {
     const data = response?.wallet
 
     if (!data) {
-      throw new Error('Portefeuille non disponible')
+      throw new Error('Wallet not available')
     }
 
     wallet.value = data
@@ -95,8 +95,8 @@ async function loadTransactions() {
     )
 
   } catch (e: any) {
-    error.value = e.message || 'Erreur lors du chargement des transactions'
-    console.error('Erreur:', e)
+    error.value = e.message || 'Error loading transactions'
+    console.error('Error:', e)
   } finally {
     loading.value = false
   }
@@ -208,12 +208,12 @@ async function confirmSell() {
   const available = getAvailableQuantity(selectedAsset.value.crypto.symbol)
 
   if (!qty || qty <= 0) {
-    sellError.value = 'Veuillez entrer une quantité valide'
+    sellError.value = 'Please enter a valid quantity'
     return
   }
 
   if (qty > available) {
-    sellError.value = `Quantité insuffisante. Disponible: ${formatNumber(available, 8)} ${selectedAsset.value.crypto.symbol.toUpperCase()}`
+    sellError.value = `Insufficient quantity. Available: ${formatNumber(available, 8)} ${selectedAsset.value.crypto.symbol.toUpperCase()}`
     return
   }
 
@@ -227,14 +227,14 @@ async function confirmSell() {
       quantity: qty,
     })
 
-    sellSuccess.value = 'Vente effectuée avec succès!'
+    sellSuccess.value = 'Sale completed successfully!'
     setTimeout(async () => {
       await loadTransactions()
       closeSellDialog()
     }, 1500)
 
   } catch (e: any) {
-    sellError.value = e?.message || 'Erreur lors de la vente'
+    sellError.value = e?.message || 'Error during sale'
   } finally {
     isSelling.value = false
   }
@@ -244,11 +244,10 @@ async function confirmSell() {
 <template>
   <div class="space-y-6">
     <!-- Header -->
-  <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-[#38618C] mb-1">My Transactions</h1>
-        <p class="text-gray-500">Complete history of your buys and sells</p>
+        <h1 class="text-3xl font-bold text-[#38618C] mb-1">Transaction History</h1>
+        <p class="text-gray-500">Complete record of your trades</p>
       </div>
       <Button
         @click="loadTransactions"
@@ -259,15 +258,15 @@ async function confirmSell() {
       </Button>
     </div>
 
-    <!-- Statistics -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <!-- Quick Stats - Buy/Sell Only -->
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
       <Card class="border-gray-200 hover:border-[#01FF19] transition-colors bg-gradient-to-br from-[#01FF19]/10 to-transparent">
         <CardContent class="p-4">
           <div class="text-xs text-gray-500 mb-1">Total Buys</div>
           <div class="text-lg md:text-xl font-bold text-[#01FF19] truncate">
-            {{ formatCurrency(stats.totalBuys) }}
+            {{ stats.countBuys }}
           </div>
-          <div class="text-xs text-gray-500 mt-1">{{ stats.countBuys }} tx</div>
+          <div class="text-xs text-gray-500 mt-1">{{ formatCurrency(stats.totalBuys) }}</div>
         </CardContent>
       </Card>
 
@@ -275,88 +274,31 @@ async function confirmSell() {
         <CardContent class="p-4">
           <div class="text-xs text-gray-500 mb-1">Total Sells</div>
           <div class="text-lg md:text-xl font-bold text-[#FF5964] truncate">
-            {{ formatCurrency(stats.totalSells) }}
+            {{ stats.countSells }}
           </div>
-          <div class="text-xs text-gray-500 mt-1">{{ stats.countSells }} tx</div>
-        </CardContent>
-      </Card>
-
-      <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors bg-gradient-to-br from-[#35A7FF]/10 to-transparent">
-        <CardContent class="p-4">
-          <div class="text-xs text-gray-500 mb-1">Profit/Loss</div>
-          <div
-            class="text-lg md:text-xl font-bold truncate"
-            :class="stats.profit >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-          >
-            {{ stats.profit >= 0 ? '+' : '' }}{{ formatCurrency(stats.profit) }}
-          </div>
-          <Badge
-            :class="stats.profit >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-            class="text-white text-xs mt-1"
-          >
-            {{ stats.profit >= 0 ? '📈' : '📉' }}
-          </Badge>
+          <div class="text-xs text-gray-500 mt-1">{{ formatCurrency(stats.totalSells) }}</div>
         </CardContent>
       </Card>
 
       <Card class="border-gray-200 hover:border-[#38618C] transition-colors">
         <CardContent class="p-4">
-          <div class="text-xs text-gray-500 mb-1">Total</div>
+          <div class="text-xs text-gray-500 mb-1">Total Transactions</div>
           <div class="text-lg md:text-xl font-bold text-[#38618C]">
             {{ transactions.length }}
           </div>
           <div class="text-xs text-gray-500 mt-1">
-            {{ stats.countCancelled > 0 ? `${stats.countCancelled} cancelled` : 'Valid' }}
+            {{ stats.countCancelled > 0 ? `${stats.countCancelled} cancelled` : 'All valid' }}
           </div>
         </CardContent>
       </Card>
     </div>
 
-    <!-- Alert cancelled -->
+    <!-- Alert Cancelled Transactions -->
     <Alert v-if="stats.countCancelled > 0" class="border-[#FF5964] bg-[#FF5964]/10">
       <AlertDescription class="text-[#FF5964] text-sm">
-        ⚠️ {{ stats.countCancelled }} transaction{{ stats.countCancelled > 1 ? 's cancelled' : ' cancelled' }} by admin. Refund in 24h.
+        ⚠️ {{ stats.countCancelled }} transaction{{ stats.countCancelled > 1 ? 's' : '' }} cancelled. Refund in 24h.
       </AlertDescription>
     </Alert>
-
-    <!-- Available quantities -->
-    <div v-if="Object.keys(availableQuantities).length > 0">
-      <Card>
-        <CardHeader>
-          <CardTitle class="text-base md:text-lg font-semibold text-[#38618C]">
-            💼 Available Quantities
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            <div
-              v-for="(data, symbol) in availableQuantities"
-              :key="symbol"
-              class="border border-gray-200 rounded-lg p-3 hover:border-[#35A7FF] transition-colors text-center"
-            >
-              <div class="h-10 w-10 rounded-full border-2 border-gray-300 bg-gray-100 mx-auto mb-2 flex items-center justify-center flex-shrink-0">
-                <img
-                  v-if="data.image"
-                  :src="data.image"
-                  :alt="symbol"
-                  class="h-10 w-10 rounded-full object-cover"
-                  @error="(e) => e.target.style.display = 'none'"
-                />
-                <div v-if="!data.image" class="text-lg">💎</div>
-              </div>
-              <div class="text-sm font-semibold text-[#38618C] truncate">{{ data.name }}</div>
-              <div class="text-xs text-gray-500 font-mono mb-2">{{ String(symbol).toUpperCase() }}</div>
-              <Badge
-                :class="data.amount > 0 ? 'bg-[#01FF19]' : 'bg-gray-400'"
-                class="text-white font-mono text-xs"
-              >
-                {{ formatNumber(data.amount, 6) }}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
 
     <!-- Filters -->
     <Card>
@@ -365,26 +307,26 @@ async function confirmSell() {
           <div class="relative flex-1">
             <Input
               v-model="searchQuery"
-              placeholder="🔍 Search..."
+              placeholder="🔍 Search by name or symbol..."
               class="pl-3 border-[#38618C] focus:border-[#35A7FF] text-sm"
             />
           </div>
 
           <Select v-model="filterType">
             <SelectTrigger class="w-full sm:w-40 border-[#38618C] text-sm">
-              <SelectValue placeholder="Type" />
+              <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="buy">📈 Buys</SelectItem>
-              <SelectItem value="sell">📉 Sells</SelectItem>
+              <SelectItem value="all">All Transactions</SelectItem>
+              <SelectItem value="buy">📈 Buys Only</SelectItem>
+              <SelectItem value="sell">📉 Sells Only</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </CardContent>
     </Card>
 
-    <!-- Loading -->
+    <!-- Loading State -->
     <Card v-if="loading">
       <CardContent class="p-8 sm:p-12 text-center">
         <div class="animate-pulse text-gray-600">
@@ -394,7 +336,7 @@ async function confirmSell() {
       </CardContent>
     </Card>
 
-    <!-- Error -->
+    <!-- Error State -->
     <Card v-else-if="error" class="border-[#FF5964]">
       <CardContent class="p-8 sm:p-12 text-center">
         <div class="text-4xl mb-4">❌</div>
@@ -405,17 +347,17 @@ async function confirmSell() {
       </CardContent>
     </Card>
 
-    <!-- Empty -->
+    <!-- Empty State -->
     <Card v-else-if="filteredTransactions.length === 0">
       <CardContent class="p-8 sm:p-12 text-center">
         <div class="text-4xl sm:text-6xl mb-4">📋</div>
         <h3 class="text-lg sm:text-xl font-semibold text-[#38618C] mb-2">
-          {{ searchQuery || filterType !== 'all' ? 'No results' : 'No transactions' }}
+          {{ searchQuery || filterType !== 'all' ? 'No results' : 'No transactions yet' }}
         </h3>
         <p class="text-sm text-gray-500">
           {{ searchQuery || filterType !== 'all'
             ? 'Try adjusting your filters'
-            : 'Start investing to see your transactions'
+            : 'Start buying or selling crypto to see your transactions'
           }}
         </p>
       </CardContent>
@@ -450,10 +392,9 @@ async function confirmSell() {
                     :class="tx.type === 'buy' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
                     class="text-white text-xs font-semibold"
                   >
-                    {{ tx.type === 'buy' ? '📈 ACHAT' : '📉 VENTE' }}
+                    {{ tx.type === 'buy' ? '📈 BUY' : '📉 SELL' }}
                   </Badge>
-                  <Badge v-if="tx.cancelled" class="bg-[#FF5964] text-white text-xs">❌ Annulée</Badge>
-                  <Badge v-else-if="canSell(tx)" class="bg-[#01FF19] text-white text-xs">✓ Dispo</Badge>
+                  <Badge v-if="tx.cancelled" class="bg-[#FF5964] text-white text-xs">❌ Cancelled</Badge>
                 </div>
                 <div class="font-bold text-[#38618C] text-sm">{{ tx.crypto.name }}</div>
                 <div class="text-xs text-gray-500 font-mono">{{ String(tx.crypto.symbol).toUpperCase() }}</div>
@@ -462,18 +403,18 @@ async function confirmSell() {
               <div class="text-right">
                 <div class="text-sm font-bold text-[#35A7FF]">{{ formatCurrency(tx.total) }}</div>
                 <div class="text-xs text-gray-500">
-                  {{ new Date(tx.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) }}
+                  {{ new Date(tx.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) }}
                 </div>
               </div>
             </div>
 
             <div class="bg-gray-50 rounded p-3 space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-gray-500">Quantité</span>
+                <span class="text-gray-500">Quantity</span>
                 <span class="font-mono font-semibold text-[#38618C]">{{ formatNumber(tx.quantity, 8) }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-500">Prix unitaire</span>
+                <span class="text-gray-500">Price</span>
                 <span class="font-semibold text-[#35A7FF]">{{ formatCurrency(tx.price) }}</span>
               </div>
             </div>
@@ -489,199 +430,175 @@ async function confirmSell() {
             </div>
           </div>
 
-      <!-- Desktop Layout -->
-<div class="hidden md:grid md:grid-cols-12 md:items-center md:gap-4">
-  <!-- Crypto Info -->
-  <div class="md:col-span-3 flex items-center gap-3">
-    <div class="h-12 w-12 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
-      <img
-        v-if="tx.crypto.image_url"
-        :src="tx.crypto.image_url"
-        :alt="tx.crypto.name"
-        class="h-12 w-12 rounded-full object-cover"
-        @error="(e) => e.target.style.display = 'none'"
-      />
-      <div v-if="!tx.crypto.image_url" class="text-xl">💎</div>
-    </div>
+          <!-- Desktop Layout -->
+          <div class="hidden md:grid md:grid-cols-12 md:items-center md:gap-4">
+            <!-- Crypto Info -->
+            <div class="md:col-span-3 flex items-center gap-3">
+              <div class="h-12 w-12 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <img
+                  v-if="tx.crypto.image_url"
+                  :src="tx.crypto.image_url"
+                  :alt="tx.crypto.name"
+                  class="h-12 w-12 rounded-full object-cover"
+                  @error="(e) => e.target.style.display = 'none'"
+                />
+                <div v-if="!tx.crypto.image_url" class="text-xl">💎</div>
+              </div>
 
-    <div class="min-w-0">
-      <div class="flex items-center gap-2 mb-1">
-        <Badge
-          :class="tx.type === 'buy' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-          class="text-white text-xs font-semibold"
-        >
-          {{ tx.type === 'buy' ? '📈 BUY' : '📉 SELL' }}
-        </Badge>
-        <Badge v-if="tx.cancelled" class="bg-[#FF5964] text-white text-xs">❌ Cancelled</Badge>
-      </div>
-      <div class="font-bold text-[#38618C]">{{ tx.crypto.name }}</div>
-      <div class="text-xs text-gray-500 font-mono">{{ String(tx.crypto.symbol).toUpperCase() }} • TX #{{ tx.id.slice(0, 8) }}</div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="md:col-span-4 grid grid-cols-3 gap-4 text-center">
-    <div>
-      <div class="text-xs text-gray-500 mb-1">Quantity</div>
-      <div class="font-mono font-bold text-[#38618C] text-sm">{{ formatNumber(tx.quantity, 8) }}</div>
-    </div>
-    <div>
-      <div class="text-xs text-gray-500 mb-1">Unit Price</div>
-      <div class="font-bold text-[#35A7FF] text-sm">{{ formatCurrency(tx.price) }}</div>
-    </div>
-    <div>
-      <div class="text-xs text-gray-500 mb-1">Total</div>
-      <div class="font-bold text-[#38618C] text-sm">{{ formatCurrency(tx.total) }}</div>
-    </div>
-  </div>
-
-  <!-- Date -->
-  <div class="md:col-span-2 text-center">
-    <div class="text-xs text-gray-500 mb-1">Date</div>
-    <div class="text-sm font-semibold text-[#38618C]">
-      {{ new Date(tx.date).toLocaleDateString('en-GB', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) }}
-    </div>
-  </div>
-
-  <!-- Action -->
-  <div class="md:col-span-3 flex gap-2">
-    <Button
-      v-if="!tx.cancelled && canSell(tx)"
-      size="sm"
-      @click="openSellDialog(tx)"
-      class="flex-1 bg-[#FF5964] hover:bg-[#FF5964]/90 text-white text-sm"
-    >
-      💰 Sell
-    </Button>
-    <span v-else class="text-xs text-gray-400">Not available</span>
-  </div>
-</div>
-
-        </CardContent>
-      </Card>
-    </div>
-
-<!-- Sell Dialog -->
-<Dialog :open="showSellDialog" @update:open="closeSellDialog">
-  <DialogContent class="sm:max-w-md border-[#35A7FF]">
-    <DialogHeader>
-      <DialogTitle class="text-[#38618C] text-lg">
-        Sell {{ selectedAsset?.crypto.name }}
-      </DialogTitle>
-      <DialogDescription class="text-gray-600 text-sm">
-        Transaction #{{ selectedAsset?.id?.slice(0, 8) }}
-      </DialogDescription>
-    </DialogHeader>
-
-    <div class="space-y-4 py-4">
-      <!-- Crypto Info -->
-      <Card class="border-[#35A7FF] bg-gradient-to-br from-[#35A7FF]/5 to-transparent">
-        <CardContent class="p-4">
-          <div class="flex items-center gap-3">
-            <div class="h-12 w-12 rounded-full border-2 border-[#35A7FF] bg-gray-100 flex items-center justify-center flex-shrink-0">
-              <img
-                v-if="selectedAsset?.crypto.image_url"
-                :src="selectedAsset.crypto.image_url"
-                :alt="selectedAsset.crypto.name"
-                class="h-12 w-12 rounded-full object-cover"
-                @error="(e) => e.target.style.display = 'none'"
-              />
-              <div v-if="!selectedAsset?.crypto.image_url" class="text-xl">💎</div>
-            </div>
-
-            <div class="flex-1">
-              <div class="font-bold text-[#38618C]">{{ selectedAsset?.crypto.name }}</div>
-              <div class="text-sm text-gray-500 font-mono">{{ String(selectedAsset?.crypto.symbol).toUpperCase() }}</div>
-            </div>
-
-            <div class="text-right">
-              <div class="text-xs text-gray-500">Available</div>
-              <div class="font-bold text-[#01FF19] font-mono text-sm">
-                {{ formatNumber(selectedAsset ? getAvailableQuantity(selectedAsset.crypto.symbol) : 0, 8) }}
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <Badge
+                    :class="tx.type === 'buy' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+                    class="text-white text-xs font-semibold"
+                  >
+                    {{ tx.type === 'buy' ? '📈 BUY' : '📉 SELL' }}
+                  </Badge>
+                  <Badge v-if="tx.cancelled" class="bg-[#FF5964] text-white text-xs">❌ Cancelled</Badge>
+                </div>
+                <div class="font-bold text-[#38618C]">{{ tx.crypto.name }}</div>
+                <div class="text-xs text-gray-500 font-mono">{{ String(tx.crypto.symbol).toUpperCase() }}</div>
               </div>
             </div>
+
+            <!-- Stats -->
+            <div class="md:col-span-4 grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Quantity</div>
+                <div class="font-mono font-bold text-[#38618C] text-sm">{{ formatNumber(tx.quantity, 8) }}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Unit Price</div>
+                <div class="font-bold text-[#35A7FF] text-sm">{{ formatCurrency(tx.price) }}</div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Total</div>
+                <div class="font-bold text-[#38618C] text-sm">{{ formatCurrency(tx.total) }}</div>
+              </div>
+            </div>
+
+            <!-- Date -->
+            <div class="md:col-span-2 text-center">
+              <div class="text-xs text-gray-500 mb-1">Date</div>
+              <div class="text-sm font-semibold text-[#38618C]">
+                {{ new Date(tx.date).toLocaleDateString('en-GB', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                }) }}
+              </div>
+            </div>
+
+            <!-- Action -->
+            <div class="md:col-span-3 flex gap-2">
+              <Button
+                v-if="!tx.cancelled && canSell(tx)"
+                size="sm"
+                @click="openSellDialog(tx)"
+                class="flex-1 bg-[#FF5964] hover:bg-[#FF5964]/90 text-white text-sm"
+              >
+                💰 Sell
+              </Button>
+              <span v-else class="text-xs text-gray-400">Not available</span>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      <!-- Form -->
-      <div class="space-y-4">
-        <Alert v-if="sellError" class="border-[#FF5964] bg-[#FF5964]/10">
-          <AlertDescription class="text-[#FF5964] text-sm">❌ {{ sellError }}</AlertDescription>
-        </Alert>
-
-        <Alert v-if="sellSuccess" class="border-[#01FF19] bg-[#01FF19]/10">
-          <AlertDescription class="text-[#01FF19] text-sm">✅ {{ sellSuccess }}</AlertDescription>
-        </Alert>
-
-        <div class="space-y-2">
-          <Label for="sell_qty" class="text-[#38618C] font-semibold text-sm">Quantity to Sell</Label>
-          <Input
-            id="sell_qty"
-            v-model="sellQuantity"
-            type="number"
-            :min="0"
-            :max="selectedAsset ? getAvailableQuantity(selectedAsset.crypto.symbol) : 0"
-            step="0.00000001"
-            placeholder="0.00000000"
-            class="border-[#38618C] focus:border-[#35A7FF] font-mono text-sm"
-            :disabled="isSelling"
-          />
-          <div class="text-xs text-gray-500">
-            Max: {{ selectedAsset ? formatNumber(getAvailableQuantity(selectedAsset.crypto.symbol), 8) : '0' }} {{ selectedAsset?.crypto.symbol?.toUpperCase() }}
-          </div>
-        </div>
-
-        <!-- Summary -->
-        <Card class="border-gray-200 bg-gray-50">
-          <CardContent class="p-3 space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Estimated Price</span>
-              <span class="font-semibold text-[#38618C]">{{ formatCurrency(selectedAsset?.price || 0) }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Quantity</span>
-              <span class="font-mono font-semibold text-[#38618C]">{{ sellQuantity || '0' }}</span>
-            </div>
-            <div class="border-t border-gray-200 pt-2 flex justify-between">
-              <span class="font-semibold text-[#38618C]">Estimated Total</span>
-              <span class="font-bold text-[#35A7FF]">
-                {{ formatCurrency((parseFloat(sellQuantity) || 0) * (selectedAsset?.price || 0)) }}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
 
-    <DialogFooter class="flex gap-2">
-      <Button
-        variant="outline"
-        @click="closeSellDialog"
-        class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 text-sm"
-        :disabled="isSelling"
-      >
-        ✕ Cancel
-      </Button>
-      <Button
-        @click="confirmSell"
-        class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white font-semibold flex-1 text-sm"
-        :disabled="isSelling || !sellQuantity || parseFloat(sellQuantity) <= 0"
-      >
-        {{ isSelling ? '⏳ Selling...' : '✓ Confirm' }}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+    <!-- Sell Dialog -->
+    <Dialog :open="showSellDialog" @update:open="closeSellDialog">
+      <DialogContent class="sm:max-w-md border-[#35A7FF]">
+        <DialogHeader>
+          <DialogTitle class="text-[#38618C] text-lg">
+            Sell {{ selectedAsset?.crypto.name }}
+          </DialogTitle>
+          <DialogDescription class="text-gray-600 text-sm">
+            Transaction #{{ selectedAsset?.id?.slice(0, 8) }}
+          </DialogDescription>
+        </DialogHeader>
 
+        <div class="space-y-4 py-4">
+          <!-- Crypto Info -->
+          <Card class="border-[#35A7FF] bg-gradient-to-br from-[#35A7FF]/5 to-transparent">
+            <CardContent class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="h-12 w-12 rounded-full border-2 border-[#35A7FF] bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <img
+                    v-if="selectedAsset?.crypto.image_url"
+                    :src="selectedAsset.crypto.image_url"
+                    :alt="selectedAsset.crypto.name"
+                    class="h-12 w-12 rounded-full object-cover"
+                    @error="(e) => e.target.style.display = 'none'"
+                  />
+                  <div v-if="!selectedAsset?.crypto.image_url" class="text-xl">💎</div>
+                </div>
+
+                <div class="flex-1">
+                  <div class="font-bold text-[#38618C]">{{ selectedAsset?.crypto.name }}</div>
+                  <div class="text-sm text-gray-500 font-mono">{{ String(selectedAsset?.crypto.symbol).toUpperCase() }}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Available Quantity -->
+          <div class="bg-[#01FF19]/10 rounded-lg p-4 border border-[#01FF19]">
+            <div class="text-sm text-gray-600 mb-1">Available to Sell</div>
+            <div class="text-2xl font-bold text-[#01FF19]">
+              {{ formatNumber(getAvailableQuantity(selectedAsset?.crypto.symbol), 8) }}
+              <span class="text-sm text-gray-600 ml-2">{{ String(selectedAsset?.crypto.symbol).toUpperCase() }}</span>
+            </div>
+          </div>
+
+          <!-- Quantity Input -->
+          <div class="space-y-2">
+            <Label class="text-[#38618C]">Quantity to Sell</Label>
+            <Input
+              v-model="sellQuantity"
+              type="number"
+              placeholder="0.00000000"
+              step="0.00000001"
+              :max="getAvailableQuantity(selectedAsset?.crypto.symbol)"
+              class="border-[#38618C] focus:border-[#35A7FF]"
+            />
+          </div>
+
+          <!-- Error Alert -->
+          <Alert v-if="sellError" class="border-[#FF5964] bg-[#FF5964]/10">
+            <AlertDescription class="text-[#FF5964] text-sm">
+              {{ sellError }}
+            </AlertDescription>
+          </Alert>
+
+          <!-- Success Alert -->
+          <Alert v-if="sellSuccess" class="border-[#01FF19] bg-[#01FF19]/10">
+            <AlertDescription class="text-[#01FF19] text-sm">
+              ✅ {{ sellSuccess }}
+            </AlertDescription>
+          </Alert>
+        </div>
+
+        <DialogFooter class="gap-2">
+          <Button
+            @click="closeSellDialog"
+            variant="outline"
+            class="border-[#38618C] text-[#38618C]"
+          >
+            Cancel
+          </Button>
+          <Button
+            @click="confirmSell"
+            :disabled="isSelling || !sellQuantity"
+            class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white"
+          >
+            {{ isSelling ? '⏳ Selling...' : '💰 Confirm Sale' }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
+
 
 <style scoped>
 :deep(.border-\[#38618C\]) {

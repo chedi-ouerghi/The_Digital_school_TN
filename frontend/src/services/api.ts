@@ -281,9 +281,11 @@ export const cryptoApi = {
   async delete(id: string): Promise<void> {
     return await request<void>(`/admin/cryptos/${id}`, 'DELETE');
   },
-  
-  async syncAll(): Promise<ApiResponse<void>> {
-    return await request<ApiResponse<void>>('/admin/cryptos/sync', 'POST');
+
+
+  //  lance la synchronisation de l'historique 
+  async syncHistory(): Promise<ApiResponse<any>> {
+    return await request<ApiResponse<any>>('/admin/cryptos/sync-history', 'POST');
   },
 };
 

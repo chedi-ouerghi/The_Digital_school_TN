@@ -463,7 +463,7 @@ function buyCrypto() {
           <CardContent class="space-y-3">
             <div class="flex justify-between">
               <span class="text-gray-500">Nom complet</span>
-              <span class="font-semibold text-[#38618C]">{{ crypto.nom }}</span>
+              <span class="font-semibold text-[#38618C]">{{ crypto.name }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">Symbole</span>
@@ -473,13 +473,13 @@ function buyCrypto() {
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">Catégorie</span>
-              <span class="font-semibold text-[#38618C]">{{ crypto.categorie || 'N/A' }}</span>
+              <span class="font-semibold text-[#38618C]">{{ crypto.category || 'N/A' }}</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="text-gray-500">Site web</span>
               <a 
-                v-if="crypto.site_web"
-                :href="crypto.site_web" 
+                v-if="crypto.website"
+                :href="crypto.website" 
                 target="_blank"
                 class="text-[#35A7FF] hover:underline"
               >
@@ -519,18 +519,7 @@ function buyCrypto() {
                 {{ formatPercentage(crypto.change_24h_pct) }}%
               </Badge>
             </div>
-            <div class="flex justify-between text-xs">
-              <span class="text-gray-500">Dernière maj</span>
-              <span class="text-gray-600">
-                {{ crypto.updated_at ? new Date(crypto.updated_at).toLocaleDateString('fr-FR', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }) : 'N/A' }}
-              </span>
-            </div>
+     
           </CardContent>
         </Card>
       </div>

@@ -56,24 +56,7 @@ class AdminCryptoController extends Controller
         return response()->json(['message'=>'Crypto supprimée']);
     }
 
-    /**
-     * Synchroniser toutes les cryptos (si coingecko_id present)
-     */
-    public function sync(): JsonResponse
-    {
-        $results = ['updated' => 0, 'failed' => 0, 'errors' => []];
-        $cryptos = Cryptomoney::whereNotNull('coingecko_id')->get();
-        foreach ($cryptos as $c) {
-            try {
-                $this->cryptoService->addFromCoinGecko($c->coingecko_id);
-                $results['updated']++;
-            } catch (\Exception $e) {
-                $results['failed']++;
-                $results['errors'][] = ['id' => $c->id, 'error' => $e->getMessage()];
-            }
-        }
-        return response()->json($results);
-    }
+  
 
     /**
      * Récupérer une crypto pour modification
@@ -86,4 +69,34 @@ class AdminCryptoController extends Controller
         }
         return response()->json($crypto);
     }
+
+   /**
+     * Synchroniser toutes les cryptos (si coingecko_id present)
+     */
+    
+    public function syncHistory(): \Illuminate\Http\JsonResponse
+{
+    try {
+        \Artisan::call('crypto:sync-history');
+
+        $output = trim(\Artisan::output() ?? '');
+        $lines = $output === '' ? [] : array_values(array_filter(
+            explode("\n", $output),
+            fn($l) => trim($l) !== ''
+        ));
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Synchronisation de l’historique lancée',
+            'output' => $lines,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Erreur lors de l’exécution',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
 }

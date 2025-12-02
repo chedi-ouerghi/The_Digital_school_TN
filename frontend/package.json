@@ -19,6 +19,7 @@
     "lightweight-charts": "^5.0.9",
     "lottie-web": "^5.13.0",
     "lucide-vue-next": "^0.548.0",
+    "recharts": "^3.5.1",
     "reka-ui": "^2.6.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
@@ -38,10 +39,13 @@
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
+    "rollup-plugin-visualizer": "^6.0.5",
     "shadcn-vue": "^2.3.2",
     "tailwindcss": "^4.1.16",
     "typescript": "~5.9.3",
     "vite": "^7.1.12",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-imagemin": "^0.6.1",
     "vue-tsc": "^3.1.1"
   }
 }

@@ -6,12 +6,14 @@ import InvestorFeatures from '@/components/landing/InvestorFeatures.vue'
 import Newsletter from '@/components/landing/Newsletter.vue'
 import Footer from '@/components/landing/Footer.vue'
 import HowItWork from '../components/landing/HowItWork.vue'
+import CryptoShowcase from '../components/landing/CryptoShowcase.vue'
 </script>
 
 <template>
   <div class="min-h-screen bg-gradient-to-br from-[#071B2C] via-[#0B2E4E] to-[#071B2C]">
     <Header />
     <HeroSection id="hero" />
+    <CryptoShowcase id="crypto-tracker" />
     <FeaturesSection id="features" />
     <InvestorFeatures id="for-everyone" />
     <HowItWork id="how-it-works" />

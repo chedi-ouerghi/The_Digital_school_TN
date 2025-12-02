@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CryptoController;
 use App\Http\Controllers\PortefeuilleController;
@@ -54,7 +55,7 @@ Route::prefix('v1')->group(function () {
         Route::get('admin/cryptos/{id}/edit', [\App\Http\Controllers\AdminCryptoController::class, 'edit']);
         Route::put('admin/cryptos/{id}', [\App\Http\Controllers\AdminCryptoController::class, 'update']);
         Route::delete('admin/cryptos/{id}', [\App\Http\Controllers\AdminCryptoController::class, 'destroy']);
-        Route::post('admin/cryptos/sync', [\App\Http\Controllers\AdminCryptoController::class, 'sync']);
+        Route::post('admin/cryptos/sync-history', [\App\Http\Controllers\AdminCryptoController::class, 'syncHistory']);
 
         Route::get('admin/clients', [AdminUserController::class, 'index']);
         Route::post('admin/clients', [AdminUserController::class, 'store']);
@@ -74,6 +75,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/admin/account-requests/{id}/reject', [AdminUserController::class, 'rejectRequest']);
 
         Route::post('/admin/change-id', [AuthController::class, 'changeId']);
+
+
     });
 });
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, toRefs } from 'vue'
+import { ref, computed } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import api from '../../../services/api'; // ajouté pour la synchronisation d'historique
 
 interface Props {
   cryptos: any[]
@@ -30,10 +42,13 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-// States locaux
+// États locaux
 const query = ref('')
 const sortBy = ref<'name'|'price'|'change'>('price')
 const viewMode = ref<'grid'|'list'>('grid')
+
+// nouvel état pour sync-history
+const syncLoading = ref(false)
 
 // Fonctions utilitaires
 function formatCurrency(value: any): string {
@@ -84,6 +99,22 @@ const filteredCryptos = computed(() => {
 function handleImgError(e: Event) {
   const target = e.target as HTMLImageElement | null
   if (target) target.style.display = 'none'
+}
+
+// Nouvelle fonction : appeler l'API sync-history
+async function handleSyncHistory() {
+  if (syncLoading.value) return
+  syncLoading.value = true
+  try {
+    await api.crypto.syncHistory()
+    // rafraîchir la liste côté parent
+    emit('refresh')
+  } catch (err: any) {
+    const msg = err?.message || 'Erreur lors de la synchronisation'
+    window.alert(msg)
+  } finally {
+    syncLoading.value = false
+  }
 }
 </script>
 
@@ -141,6 +172,54 @@ function handleImgError(e: Event) {
             >
               🔄
             </Button>
+
+            <!-- Nouveau bouton avec AlertDialog pour Sync history -->
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button
+                  :disabled="loading || syncLoading"
+                  class="relative bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold overflow-hidden group"
+                  title="Synchroniser l'historique (admin)"
+                >
+                  <!-- Animation de pulsation en arrière-plan -->
+                  <div class="absolute inset-0 bg-gradient-to-r from-[#01FF19]/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                  
+                  <!-- Contenu du bouton -->
+                  <span class="relative flex items-center gap-2">
+                    <span v-if="syncLoading" class="animate-spin">⏳</span>
+                    <span v-else>🔁</span>
+                    <span>Sync history</span>
+                  </span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle class="text-[#38618C]">Synchronisation de l'historique</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action va synchroniser les données historiques pour toutes les cryptomonnaies.
+                    <br><br>
+                    <strong>Note :</strong> Cette opération peut prendre quelques instants.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white">
+                    Annuler
+                  </AlertDialogCancel>
+                  <AlertDialogAction 
+                    @click="handleSyncHistory"
+                    :disabled="syncLoading"
+                    class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+                  >
+                    <span v-if="syncLoading" class="flex items-center gap-2">
+                      <span class="animate-spin">⏳</span>
+                      Synchronisation...
+                    </span>
+                    <span v-else>Confirmer la synchronisation</span>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
           </div>
         </div>
       </CardContent>
@@ -419,5 +498,19 @@ function handleImgError(e: Event) {
 
 :deep(.hover\:text-white:hover) {
   color: white;
+}
+
+/* Animation de glow pour le bouton Sync */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px #01FF19;
+  }
+  50% {
+    box-shadow: 0 0 20px #01FF19;
+  }
+}
+
+:deep(.group:hover .bg-\[#01FF19\]) {
+  animation: pulse-glow 1.5s ease-in-out infinite;
 }
 </style>
