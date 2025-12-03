@@ -23,13 +23,10 @@ import CryptoShowcase from '../components/landing/CryptoShowcase.vue'
 </template>
 
 <style scoped>
-@font-face {
-  font-family: 'Celias';
-  src: url('/fonts/Celias.woff2') format('woff2');
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 * {
-  font-family: 'Celias', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .animate-in {

@@ -1,14 +1,14 @@
 import type {
-  AccountRequest,
-  ApiResponse,
-  CryptoHistory,
-  Cryptomoney,
-  Notification,
-  PaginatedResponse,
-  Transaction,
-  UpdateUserInput,
-  User,
-  Wallet
+    AccountRequest,
+    ApiResponse,
+    CryptoHistory,
+    Cryptomoney,
+    Notification,
+    PaginatedResponse,
+    Transaction,
+    UpdateUserInput,
+    User,
+    Wallet
 } from '@/types';
 import type { PortfolioResponse } from '../types';
 
@@ -335,6 +335,40 @@ export const walletApi = {
   
   async walletHistory(id: string): Promise<WalletHistoryResponse[]> {
     return await request<WalletHistoryResponse[]>(`/wallets/${id}/history`, 'GET');
+  },
+};
+
+// ------------------
+// 📰 Blog posts (public)
+// ------------------
+export interface BlogListParams {
+  page?: number;
+  search?: string;
+  category?: string;
+}
+
+export const blogApi = {
+  async list(params: BlogListParams = {}) {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.category) queryParams.append('category', params.category);
+
+    const queryString = queryParams.toString();
+    return await request<any>(`/blogs${queryString ? `?${queryString}` : ''}`, 'GET');
+  },
+
+  async show(slug: string) {
+    return await request<any>(`/blogs/${slug}`, 'GET');
+  },
+  async create(payload: any) {
+    return await request<any>('/admin/blogs', 'POST', payload);
+  },
+  async update(id: string | number, payload: any) {
+    return await request<any>(`/admin/blogs/${id}`, 'PUT', payload);
+  },
+  async delete(id: string | number) {
+    return await request<any>(`/admin/blogs/${id}`, 'DELETE');
   },
 };
 

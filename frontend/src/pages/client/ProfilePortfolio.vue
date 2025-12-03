@@ -11,21 +11,14 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  CheckCircle2, 
-  AlertCircle, 
-  TrendingUp, 
-  TrendingDown, 
-  Eye, 
+import {
+  CheckCircle2,
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Eye,
   EyeOff,
   User,
   Lock,
@@ -784,7 +777,7 @@ const profitTrend = computed(() => {
                 <Label>Banner</Label>
                 <div class="space-y-2">
                   <div class="w-full h-40 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                    <img v-if="bannerPreview" :src="bannerPreview" class="object-cover w-full h-full" />
+                    <img v-if="bannerPreview" :src="bannerPreview" class="object-cover w-full h-full " />
                     <div v-else class="text-gray-400">No banner</div>
                   </div>
                   <input type="file" accept="image/*" @change="handleBannerUpload" />

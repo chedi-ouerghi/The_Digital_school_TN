@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '../pages/Dashboard.vue'
 import Landing from '../pages/Landing.vue'
 import SignIn from '../pages/SignIn.vue'
+import Blog from '../pages/Blog.vue'
+import BlogPost from '../pages/BlogPost.vue'
 import AdminClients from '../pages/admin/Clients.vue'
 import CryptoDetails from '../pages/admin/CryptoDetails.vue'
 import Cryptos from '../pages/admin/Cryptos.vue'
@@ -22,6 +24,16 @@ const routes = [
     path: '/', 
     name: '/Bitchest',
     component: Landing,
+  },
+  {
+    path: '/blog',
+    name: 'Blog',
+    component: Blog,
+  },
+  {
+    path: '/blog/:slug',
+    name: 'BlogPost',
+    component: BlogPost,
   },
   { 
     path: '/signin', 

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CryptoController;
 use App\Http\Controllers\PortefeuilleController;
 use App\Http\Controllers\AdminTransactionController;
@@ -49,6 +50,17 @@ Route::prefix('v1')->group(function () {
     Route::get('cryptos', [CryptoController::class, 'index']);
     Route::get('cryptos/{id}', [CryptoController::class, 'show']);
     Route::get('cryptos/{id}/history', [CryptoController::class, 'history']);
+
+    // Public blog posts
+    Route::get('blogs', [BlogController::class, 'index']);
+    Route::get('blogs/{slug}', [BlogController::class, 'show']);
+    
+    // Admin blog management
+    Route::middleware(['auth:sanctum', 'role:ADMIN'])->group(function () {
+        Route::post('admin/blogs', [BlogController::class, 'store']);
+        Route::put('admin/blogs/{id}', [BlogController::class, 'update']);
+        Route::delete('admin/blogs/{id}', [BlogController::class, 'destroy']);
+    });
 
     Route::middleware(['auth:sanctum', 'role:ADMIN'])->group(function () {
         Route::post('cryptos', [CryptoController::class, 'store']);

@@ -21,6 +21,19 @@ export interface User extends BaseModel {
   accountRequest?: AccountRequest;
 }
 
+// Blog post model
+export interface BlogPost extends BaseModel {
+  title: string;
+  slug: string;
+  category?: string;
+  summary?: string;
+  content?: string;
+  tags?: string[];
+  image?: string;
+  published_at?: string;
+  author?: User | null;
+}
+
 export interface PortfolioResponse extends BaseModel {
   success: boolean;
   data: {

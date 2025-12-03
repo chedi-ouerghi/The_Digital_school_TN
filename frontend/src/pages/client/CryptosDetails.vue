@@ -386,7 +386,7 @@ function buyCrypto() {
         <CardHeader>
           <div class="flex items-center justify-between">
             <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📈 Évolution du Prix (30 jours)
+              📈 Evolution Price (30 days)
             </CardTitle>
             <div class="flex gap-2">
               <Badge class="bg-[#35A7FF] text-white">30J</Badge>

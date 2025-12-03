@@ -2,10 +2,7 @@
 import GetStartedDialog from './GetStartedDialog.vue';
 
 const navItems = [
-  { label: 'Home', href: '#hero' },
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'For Everyone', href: '#for-everyone' },
+  { label: 'Blog', href: '/blog' },
   { label: 'Contact', href: '#contact' }
 ]
 </script>

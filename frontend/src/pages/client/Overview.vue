@@ -483,8 +483,6 @@ const chartDataset = computed(() => ({
     data: chartData.value,
     fill: true,
     borderColor: '#01FF19',
-    // Use a valid Canvas color (Chart.js doesn't accept CSS linear-gradient strings)
-    // Previously a CSS gradient string caused the chart to render a solid black fill.
     backgroundColor: selectedChartType.value === 'portfolio'
       ? 'rgba(1, 255, 25, 0.15)'
       : 'rgba(1, 255, 25, 0.15)',

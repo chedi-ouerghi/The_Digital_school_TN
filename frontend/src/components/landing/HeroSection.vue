@@ -134,7 +134,7 @@ onUnmounted(() => {
               <span class="text-sm font-semibold text-white">PROFESSIONAL TRADING PLATFORM</span>
               <div class="flex items-center gap-1 mt-1">
                 <div class="h-px w-4 bg-gradient-to-r from-blue-500 to-emerald-500"></div>
-                <span class="text-xs text-gray-400">Enterprise-Grade Infrastructure</span>
+                <span class="text-xs text-gray-400">Bitchest</span>
               </div>
             </div>
           </div>
@@ -143,11 +143,10 @@ onUnmounted(() => {
           <div class="space-y-6">
             <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
               <span class="bg-gradient-to-r from-white via-white to-gray-300 bg-clip-text text-transparent">
-                Next-Gen
+                BIT
               </span>
-              <br>
               <span class="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Crypto Trading
+                CHEST
               </span>
             </h1>
             
