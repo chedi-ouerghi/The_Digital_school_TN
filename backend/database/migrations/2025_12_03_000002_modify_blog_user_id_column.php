@@ -12,6 +12,11 @@ return new class extends Migration
         $table = 'blog_posts';
         $column = 'user_id';
 
+        // Skip for SQLite as it doesn't support the same ALTER TABLE syntax
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         $row = DB::selectOne("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$table, $column]);
 
         if ($row) {

@@ -25,7 +25,6 @@ class TransactionFactory extends Factory
 
         return [
             'crypto_wallet_asset_id' => CryptoWalletAsset::factory(),
-            'cryptomoney_id' => Cryptomoney::factory(),
             'type' => $type,
             'quantity' => $quantity,
             'price' => $price,

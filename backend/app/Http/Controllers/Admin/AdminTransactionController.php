@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\TransactionService;
@@ -89,60 +90,65 @@ class AdminTransactionController extends Controller
     /**
      * Annuler une transaction
      */
-    public function cancel(Request $request, $id): JsonResponse
-    {
-        try {
-$transaction = Transaction::with(['cryptoWalletAsset.wallet.user', 'cryptomoney'])
-    ->findOrFail($id);
+public function cancel(Request $request, $id): JsonResponse
+{
+    try {
+        $transaction = Transaction::with([
+            'cryptoWalletAsset.wallet.user', 
+            'cryptomoney'
+        ])->findOrFail($id);
 
-            if ($transaction->cancelled_at) {
-                return response()->json(['error' => 'Cette transaction est déjà annulée.'], 400);
-            }
-
-            // Annuler la transaction via le service dédié
-            $result = $this->transactionService->cancelTransaction(
-                $transaction,
-                $request->reason ?? 'Annulation administrative'
-            );
-
-            // Notifier le client concerné
-            try {
-                $client = $transaction->wallet->user;
-                $clientName = $client->name ?? $client->email ?? "Utilisateur #{$client->id}";
-                
-                // Utiliser cryptomoney directement de la transaction
-                $cryptoSymbole = $transaction->cryptomoney->symbol ?? 'UNKNOWN';
-                
-                $title = 'Transaction annulée par un administrateur';
-                $message = "Bonjour {$clientName},\n"
-                         . "Votre transaction #{$transaction->id} "
-                         . "({$transaction->quantity} x {$cryptoSymbole} "
-                         . "à {$transaction->price}€/u, "
-                         . "total {$transaction->total_eur}€) "
-                         . "a été annulée par un administrateur.\n"
-                         . "Raison: " . ($request->reason ?? 'Annulation administrative');
-
-                Notification::create([
-                    'user_id' => $client->id,
-                    'title' => $title,
-                    'message' => $message,
-                    'type' => Notification::TYPE_ADMIN_ACTION,
-                ]);
-            } catch (\Exception $e) {
-                \Log::warning('Impossible d\'envoyer la notification d\'annulation: ' . $e->getMessage());
-            }
-
-            return response()->json([
-                'message' => 'Transaction annulée avec succès.',
-                'result' => $result
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Let Laravel handle the 404 response for non-existent models
-            throw $e;
-        } catch (\Exception $e) {
-            \Log::error('Erreur annulation transaction: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 400);
+        if ($transaction->cancelled_at) {
+            return response()->json(['error' => 'Cette transaction est déjà annulée.'], 400);
         }
-    }
 
+        // Vérifions l'accès au client plus simplement
+        $client = null;
+        
+        // Méthode directe
+        $client = User::whereHas('wallet.cryptoWalletAssets.transactions', function($q) use ($id) {
+            $q->where('id', $id);
+        })->first();
+
+        // Annuler la transaction via le service
+        $result = $this->transactionService->cancelTransaction(
+            $transaction,
+            $request->reason ?? 'Annulation administrative'
+        );
+
+        // Notifier le client
+        if ($client) {
+            $cryptoSymbole = $transaction->cryptomoney->symbol ?? 
+                            ($transaction->cryptoWalletAsset->cryptomoney->symbol ?? 'UNKNOWN');
+            
+            $clientName = $client->name ?? $client->email ?? "Utilisateur #{$client->id}";
+            
+            $title = 'Transaction annulée par un administrateur';
+            $message = "Bonjour {$clientName},\n"
+                     . "Votre transaction #{$transaction->id} "
+                     . "({$transaction->quantity} x {$cryptoSymbole} "
+                     . "à {$transaction->price}€/u, "
+                     . "total {$transaction->total_eur}€) "
+                     . "a été annulée par un administrateur.\n"
+                     . "Raison: " . ($request->reason ?? 'Annulation administrative');
+
+            Notification::create([
+                'user_id' => $client->id,
+                'title' => $title,
+                'message' => $message,
+                'type' => Notification::TYPE_ADMIN_ACTION,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Transaction annulée avec succès.',
+            'result' => $result
+        ]);
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        throw $e;
+    } catch (\Exception $e) {
+        \Log::error('Erreur annulation transaction: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 400);
+    }
+}
 }

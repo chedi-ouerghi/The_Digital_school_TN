@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminCreateClientRequest;
 use App\Http\Requests\AdminUpdateClientRequest;
 use App\Models\User;
@@ -217,8 +218,8 @@ public function show($id): JsonResponse
 		try {
 			$user = User::findOrFail($id);
 			
-			$transactions = Transaction::with(['wallet.user', 'cryptomoney'])
-				->whereHas('wallet', function($query) use ($id) {
+			$transactions = Transaction::with(['cryptoWalletAsset.wallet.user', 'cryptomoney'])
+				->whereHas('cryptoWalletAsset.wallet', function($query) use ($id) {
 					$query->where('user_id', $id);
 				})
 				->orderByDesc('created_at')

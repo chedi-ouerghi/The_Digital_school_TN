@@ -15,7 +15,7 @@ class DeleteTransactionJob implements ShouldQueue
 
     protected $transactionId;
 
-    public function __construct(int $transactionId)
+    public function __construct(string $transactionId)
     {
         $this->transactionId = $transactionId;
     }
