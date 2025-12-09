@@ -592,7 +592,7 @@ function goToDetails(cryptoId: string) {
 }
 
 function goToTransactions() {
-  router.push('/dashboard/history')
+  router.push('/dashboard/transactions')
 }
 </script>
 

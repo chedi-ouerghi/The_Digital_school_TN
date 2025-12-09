@@ -127,14 +127,26 @@ onMounted(fetchClientDetails)
 
 // Computed - Statistics
 const stats = computed(() => {
-  const totalTransactions = transactions.value.length
-  const totalBuy = transactions.value
-    .filter(t => t.type === 'ACHAT' && !t.cancelled_at)
-    .reduce((sum, t) => sum + Number(t.total_eur || 0), 0)
-  const totalSell = transactions.value
-    .filter(t => t.type === 'VENTE' && !t.cancelled_at)
-    .reduce((sum, t) => sum + Number(t.total_eur || 0), 0)
-  const cancelled = transactions.value.filter(t => t.cancelled_at).length
+  let totalTransactions = 0
+  let totalBuy = 0
+  let totalSell = 0
+  let cancelled = 0
+
+  transactions.value.forEach(t => {
+    totalTransactions += 1
+
+    const isCancelled = t.status?.toLowerCase() === 'annulée' || t.cancelled_at
+    if (isCancelled) {
+      cancelled += 1
+      return 
+    }
+
+    if (t.type === 'ACHAT') {
+      totalBuy += Number(t.total_eur || 0)
+    } else if (t.type === 'VENTE') {
+      totalSell += Number(t.total_eur || 0)
+    }
+  })
 
   return {
     totalTransactions,
@@ -150,7 +162,7 @@ const cryptoBreakdown = computed(() => {
   const breakdown: { [key: string]: { count: number; amount: number; name: string; image: string } } = {}
   
   transactions.value
-    .filter(t => !t.cancelled_at)
+    .filter(t => !(t.status?.toLowerCase() === 'annulée' || t.cancelled_at))
     .forEach(t => {
       const symbol = t.wallet?.cryptomoney?.symbole || 'Unknown'
       const name = t.wallet?.cryptomoney?.nom || 'Unknown'
@@ -412,10 +424,7 @@ function handleImgError(e: Event) {
 </div>
 
 
-              <div>
-                <div class="text-xs text-gray-500 mb-1">Member Since</div>
-                <div class="font-semibold text-[#38618C]">{{ formatDate(client.created_at) }}</div>
-              </div>
+             
             </div>
           </CardContent>
         </Card>
@@ -519,7 +528,7 @@ function handleImgError(e: Event) {
               v-for="tx in paginatedTransactions" 
               :key="tx.id"
               class="border-gray-200 hover:border-[#35A7FF] transition-all"
-              :class="tx.cancelled_at ? 'opacity-60' : ''"
+              :class="(tx.status?.toLowerCase() === 'annulée' || tx.cancelled_at) ? 'opacity-60' : ''"
             >
               <CardContent class="p-4">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -550,9 +559,9 @@ function handleImgError(e: Event) {
                           {{ tx.type === 'ACHAT' ? '📈 BUY' : '📉 SELL' }}
                         </Badge>
                         <Badge 
-                          v-if="tx.cancelled_at"
+                          v-if="tx.status?.toLowerCase() === 'annulée' || tx.cancelled_at"
                           class="bg-[#FF5964] text-white"
-                          :title="tx.cancel_reason"
+                          :title="tx.cancel_reason || 'Cancelled transaction'"
                         >
                           ❌ Cancelled
                         </Badge>
