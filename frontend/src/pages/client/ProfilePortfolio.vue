@@ -73,8 +73,8 @@ type UserProfile = {
 
 type PasswordForm = {
   current_password: string;
-  new_password: string;
-  new_password_confirmation: string;
+  password: string;
+  password_confirmation: string;
 };
 
 const router = useRouter()
@@ -96,8 +96,8 @@ const updatingProfile = ref(false)
 // Changement de mot de passe
 const passwordForm = ref<PasswordForm>({
   current_password: '',
-  new_password: '',
-  new_password_confirmation: ''
+  password: '',
+  password_confirmation: ''
 })
 const showCurrentPassword = ref(false)
 const showNewPassword = ref(false)
@@ -279,7 +279,7 @@ async function updateProfile() {
 
 // Changer le mot de passe
 async function changePassword() {
-  if (passwordForm.value.new_password !== passwordForm.value.new_password_confirmation) {
+  if (passwordForm.value.password !== passwordForm.value.password_confirmation) {
     error.value = 'Passwords do not match'
     return
   }
@@ -295,8 +295,8 @@ async function changePassword() {
     // Réinitialiser le formulaire
     passwordForm.value = {
       current_password: '',
-      new_password: '',
-      new_password_confirmation: ''
+      password: '',
+      password_confirmation: ''
     }
     
     setTimeout(() => {
@@ -828,11 +828,11 @@ const profitTrend = computed(() => {
               </div>
 
               <div class="space-y-2">
-                <Label for="new_password">New Password</Label>
+                <Label for="password">New Password</Label>
                 <div class="relative">
                   <Input
-                    id="new_password"
-                    v-model="passwordForm.new_password"
+                    id="password"
+                    v-model="passwordForm.password"
                     :type="showNewPassword ? 'text' : 'password'"
                     placeholder="••••••••"
                     required
@@ -850,11 +850,11 @@ const profitTrend = computed(() => {
               </div>
 
               <div class="space-y-2">
-                <Label for="confirm_password">Confirm New Password</Label>
+                <Label for="password_confirmation">Confirm New Password</Label>
                 <div class="relative">
                   <Input
-                    id="confirm_password"
-                    v-model="passwordForm.new_password_confirmation"
+                    id="password_confirmation"
+                    v-model="passwordForm.password_confirmation"
                     :type="showConfirmPassword ? 'text' : 'password'"
                     placeholder="••••••••"
                     required

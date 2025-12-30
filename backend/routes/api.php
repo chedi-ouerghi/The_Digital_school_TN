@@ -53,7 +53,7 @@ Route::prefix('v1')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('profile', [AuthController::class, 'profile']);
         Route::put('profile', [AuthController::class, 'update']);
-        Route::post('profile/password', [AuthController::class, 'changePassword']);
+        Route::put('profile/password', [AuthController::class, 'changePassword']);
 
         /*
         |--------------------------------------------------------------------------
@@ -114,7 +114,6 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
         Route::post('cryptos', [CryptoController::class, 'store']);
-        Route::get('cryptos/{id}/edit', [AdminCryptoController::class, 'edit']);
         Route::put('cryptos/{id}', [AdminCryptoController::class, 'update']);
         Route::delete('cryptos/{id}', [AdminCryptoController::class, 'destroy']);
         Route::post('cryptos/sync-history', [AdminCryptoController::class, 'syncHistory']);
@@ -161,7 +160,7 @@ Route::prefix('v1')->group(function () {
         | ADMIN – SPECIAL AUTH
         |--------------------------------------------------------------------------
         */
-        Route::post('change-id', [AuthController::class, 'changeId']);
+        Route::put('change-id', [AuthController::class, 'changeId']);
     });
 
     /*

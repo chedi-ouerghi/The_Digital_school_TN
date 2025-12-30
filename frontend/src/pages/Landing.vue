@@ -10,14 +10,16 @@ import CryptoShowcase from '../components/landing/CryptoShowcase.vue'
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#071B2C] via-[#0B2E4E] to-[#071B2C]">
+  <div class="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-black">
     <Header />
-    <HeroSection id="hero" />
-    <CryptoShowcase id="crypto-tracker" />
-    <FeaturesSection id="features" />
-    <InvestorFeatures id="for-everyone" />
-    <HowItWork id="how-it-works" />
-    <Newsletter id="contact" />
+    <main class="animate-in">
+      <HeroSection id="hero" />
+      <CryptoShowcase id="crypto-tracker" />
+      <FeaturesSection id="features" />
+      <InvestorFeatures id="for-everyone" />
+      <HowItWork id="how-it-works" />
+      <Newsletter id="contact" />
+    </main>
     <Footer />
   </div>
 </template>
@@ -45,11 +47,78 @@ import CryptoShowcase from '../components/landing/CryptoShowcase.vue'
   }
 }
 
-.slide-in-from-left {
-  animation-delay: calc(var(--index) * 0.1s);
+/* Responsive optimizations */
+@media (max-width: 640px) {
+  .animate-in {
+    animation-duration: 0.4s;
+    padding-top: 0;
+  }
 }
 
-.slide-in-from-right {
-  animation-delay: calc(var(--index) * 0.1s);
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .animate-in {
+    animation-duration: 0.5s;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1025px) {
+  .animate-in {
+    animation-duration: 0.6s;
+  }
+}
+
+/* Smooth scrolling for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  a, button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent horizontal overflow */
+body {
+  overflow-x: hidden;
+}
+
+/* Optimize font rendering */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Improve image loading */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Better focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Optimize section spacing for mobile */
+@media (max-width: 640px) {
+  section {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
 }
 </style>

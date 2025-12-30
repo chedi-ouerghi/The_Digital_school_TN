@@ -1,14 +1,14 @@
 import type {
-    AccountRequest,
-    ApiResponse,
-    CryptoHistory,
-    Cryptomoney,
-    Notification,
-    PaginatedResponse,
-    Transaction,
-    UpdateUserInput,
-    User,
-    Wallet
+  AccountRequest,
+  ApiResponse,
+  CryptoHistory,
+  Cryptomoney,
+  Notification,
+  PaginatedResponse,
+  Transaction,
+  UpdateUserInput,
+  User,
+  Wallet
 } from '@/types';
 import type { PortfolioResponse } from '../types';
 
@@ -181,7 +181,7 @@ export const authApi = {
   },
   
   async changePassword(payload: ChangePasswordRequest): Promise<void> {
-    return await request<void>('/profile/password', 'POST', payload);
+    return await request<void>('/profile/password', 'PUT', payload);
   },
 
     async getProfileStats(): Promise<PortfolioResponse> {
@@ -189,7 +189,7 @@ export const authApi = {
   },
 
   async changeId(payload: { new_id: string; confirmation: string }): Promise<{ message: string }> {
-    return await request<{ message: string }>('/admin/change-id', 'POST', payload);
+    return await request<{ message: string }>('/admin/change-id', 'PUT', payload);
   },
 
   async uploadProfilePicture(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
@@ -267,7 +267,7 @@ export const cryptoApi = {
   
   // Admin methods
   async createFromCoinGecko(payload: CreateCryptoFromCoinGeckoRequest): Promise<ApiResponse<Cryptomoney>> {
-    return await request<ApiResponse<Cryptomoney>>('/cryptos', 'POST', payload);
+    return await request<ApiResponse<Cryptomoney>>('/admin/cryptos', 'POST', payload);
   },
   
   async update(id: string, payload: UpdateCryptoRequest): Promise<ApiResponse<Cryptomoney>> {

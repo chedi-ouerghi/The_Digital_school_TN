@@ -1,220 +1,305 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
-import { BarChart3, Shield, Zap } from 'lucide-vue-next';
-import * as THREE from 'three';
+import { Shield, Zap, BarChart3, Lock, Globe, Cpu } from 'lucide-vue-next'
 
 const features = [
   {
     icon: Shield,
-    title: 'Secure Transactions',
-    description: 'Bank-grade security for all your crypto investments'
+    title: 'Bank-Grade Security',
+    description: 'Military-grade encryption and multi-signature wallets',
+    color: 'from-blue-500 to-cyan-500'
   },
   {
     icon: Zap,
     title: 'Lightning Fast',
-    description: 'Execute trades in milliseconds with our advanced platform'
+    description: 'Execute trades in milliseconds with low latency',
+    color: 'from-emerald-500 to-green-500'
   },
   {
     icon: BarChart3,
-    title: 'Advanced Analytics',
-    description: 'Real-time insights and powerful trading tools'
+    title: 'Smart Analytics',
+    description: 'AI-powered insights and real-time market data',
+    color: 'from-purple-500 to-pink-500'
+  },
+  {
+    icon: Lock,
+    title: 'Secure Storage',
+    description: 'Cold storage with insurance protection',
+    color: 'from-orange-500 to-red-500'
+  },
+  {
+    icon: Globe,
+    title: 'Global Access',
+    description: 'Trade 150+ cryptocurrencies worldwide',
+    color: 'from-blue-500 to-indigo-500'
+  },
+  {
+    icon: Cpu,
+    title: 'Advanced Tools',
+    description: 'Professional trading tools and APIs',
+    color: 'from-cyan-500 to-blue-500'
   }
-];
+]
 
-// Three.js animation
-let scene: any;
-let camera: any;
-let renderer: any;
-let particles: any;
-let animationFrameId: number;
-
-const threeContainer = ref<HTMLElement>();
-
-const initThree = () => {
-  if (!threeContainer.value) return;
-
-  // Create scene
-  scene = new THREE.Scene();
-  
-  // Create camera
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.z = 30;
-  
-  // Create renderer
-  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x000000, 0);
-  threeContainer.value.appendChild(renderer.domElement);
-  
-  // Create particles
-  createParticles();
-  
-  // Handle resize
-  window.addEventListener('resize', onWindowResize);
-  
-  // Start animation
-  animate();
-};
-
-const createParticles = () => {
-  const particlesGeometry = new THREE.BufferGeometry();
-  const particlesCount = 1500;
-  
-  const posArray = new Float32Array(particlesCount * 3);
-  const colorArray = new Float32Array(particlesCount * 3);
-  
-  for(let i = 0; i < particlesCount * 3; i++) {
-    // Random position
-    posArray[i] = (Math.random() - 0.5) * 100;
-    
-    // Colors in blue/green palette
-    if(i % 3 === 0) {
-      colorArray[i] = Math.random() * 0.2 + 0.2; // Blue
-    } else if(i % 3 === 1) {
-      colorArray[i] = Math.random() * 0.3 + 0.5; // Green/blue
-    } else {
-      colorArray[i] = Math.random() * 0.2 + 0.8; // Green
-    }
-  }
-  
-  particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-  particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
-  
-  const particlesMaterial = new THREE.PointsMaterial({
-    size: 0.1,
-    vertexColors: true,
-    transparent: true,
-    opacity: 0.8
-  });
-  
-  particles = new THREE.Points(particlesGeometry, particlesMaterial);
-  scene.add(particles);
-};
-
-const animate = () => {
-  animationFrameId = requestAnimationFrame(() => animate());
-  
-  // Particle animation
-  if(particles) {
-    particles.rotation.y += 0.001;
-    particles.rotation.x += 0.0005;
-    
-    // Subtle pulsing animation
-    const time = Date.now() * 0.001;
-    particles.scale.x = 1 + Math.sin(time) * 0.05;
-    particles.scale.y = 1 + Math.cos(time * 0.8) * 0.05;
-  }
-  
-  renderer.render(scene, camera);
-};
-
-const onWindowResize = () => {
-  if (!camera || !renderer) return;
-  
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-};
-
-const cleanupThree = () => {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-  window.removeEventListener('resize', onWindowResize);
-  
-  if (renderer && threeContainer.value) {
-    threeContainer.value.removeChild(renderer.domElement);
-    renderer.dispose();
-  }
-};
-
-// Stats animation
-const animateStats = () => {
-  const statValues = document.querySelectorAll('.stat-value');
-  
-  statValues.forEach(stat => {
-    const raw = stat.textContent || '0'
-    const hasPercent = raw.includes('%')
-    const target = parseInt(raw.replace(/[^0-9]/g, '') || '0');
-    let current = 0;
-    const increment = Math.max(1, Math.floor(target / 50));
-    const timer = setInterval(() => {
-      current += increment;
-      if(current >= target) {
-        current = target;
-        clearInterval(timer);
-      }
-      stat.textContent = hasPercent ? `${Math.floor(current)}%` : `${Math.floor(current)}`
-    }, 30);
-  });
-};
-
-onMounted(() => {
-  initThree();
-  setTimeout(animateStats, 1500);
-});
-
-onUnmounted(() => {
-  cleanupThree();
-});
+const stats = [
+  { value: '99.9%', label: 'Uptime', suffix: '' },
+  { value: '0.1s', label: 'Speed', suffix: '' },
+  { value: '500K+', label: 'Users', suffix: '' },
+  { value: '$10B+', label: 'Volume', suffix: '' }
+]
 </script>
 
 <template>
-    <!-- Features Section -->
-    <section class="relative py-24 lg:py-32 overflow-hidden bg-gradient-to-br from-[#071B2C] via-[#0B2E4E] to-[#071B2C] text-white font-[Celias]" id="features">
-      <!-- Éclat d'arrière-plan -->
-      <div class="absolute inset-0">
-        <div class="absolute top-20 right-20 w-96 h-96 bg-[#35A7FF]/20 rounded-full blur-[120px]"></div>
-        <div class="absolute bottom-20 left-20 w-96 h-96 bg-[#01FF19]/15 rounded-full blur-[120px]"></div>
+  <section class="py-20 md:py-28 bg-gradient-to-b from-black to-gray-900">
+    <div class="container mx-auto px-4 md:px-6">
+      
+      <!-- Header -->
+      <div class="text-center mb-16">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-6">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          <span class="text-sm font-medium text-white">WHY CHOOSE US</span>
+        </div>
+        
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+          Platform
+          <span class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+            Features
+          </span>
+        </h2>
+        
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          Built for professional traders with cutting-edge technology
+        </p>
       </div>
 
-      <div class="relative z-10 container mx-auto px-6 lg:px-16">
-        <div class="text-center mb-16 animate-fade-in">
-          <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#35A7FF]/10 border border-[#35A7FF]/30 text-[#35A7FF] font-medium text-sm tracking-wide mb-6">
-            <span class="text-lg">✨</span> Powerful Features
+      <!-- Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+        <div
+          v-for="(stat, index) in stats"
+          :key="stat.label"
+          class="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+          :style="{ animationDelay: `${index * 100}ms` }"
+        >
+          <div class="text-3xl font-bold text-white mb-2">
+            {{ stat.value }}<span class="text-lg">{{ stat.suffix }}</span>
           </div>
-          <h2 class="text-4xl md:text-5xl xl:text-6xl font-extrabold leading-tight mb-6">
-            Why Choose <span class="text-[#01FF19] drop-shadow-[0_0_10px_#01FF19]">BitChest</span>?
-          </h2>
-          <p class="text-white/80 text-lg max-w-2xl mx-auto">
-            Experience the future of crypto trading with cutting-edge technology and unmatched security
+          <div class="text-gray-400 text-sm">{{ stat.label }}</div>
+        </div>
+      </div>
+
+      <!-- Features Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          v-for="(feature, index) in features"
+          :key="feature.title"
+          class="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:scale-[1.02]"
+          :style="{ animationDelay: `${index * 50}ms` }"
+        >
+          <!-- Icon -->
+          <div class="mb-6">
+            <div class="relative inline-block">
+              <div
+                class="absolute -inset-2 rounded-lg opacity-20 blur"
+                :class="`bg-gradient-to-r ${feature.color}`"
+              ></div>
+              <div
+                class="relative w-14 h-14 rounded-xl flex items-center justify-center backdrop-blur-sm"
+                :class="`bg-gradient-to-r ${feature.color}`"
+              >
+                <component
+                  :is="feature.icon"
+                  class="w-7 h-7 text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <h3 class="text-xl font-bold text-white mb-3">
+            {{ feature.title }}
+          </h3>
+          
+          <p class="text-gray-400 mb-6">
+            {{ feature.description }}
           </p>
+
+          <!-- Hover Indicator -->
+          <div class="flex items-center text-sm text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>Learn more</span>
+            <div class="w-0 group-hover:w-16 h-px bg-gradient-to-r from-blue-400 to-transparent ml-2 transition-all"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demo Visual -->
+      <div class="mt-20 relative">
+        <!-- Background Elements -->
+        <div class="absolute inset-0">
+          <div class="absolute top-1/2 left-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl"></div>
+          <div class="absolute top-1/2 right-1/4 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl"></div>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <div 
-            v-for="(feature, index) in features" 
-            :key="feature.title"
-            class="relative p-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[#01FF19]/40 hover:bg-white/10 transition-all duration-300 group animate-fade-in"
-            :style="{ animationDelay: `${0.2 + index * 0.1}s` }"
-          >
-            <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#01FF19]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="relative z-10">
-              <component 
-                :is="feature.icon"
-                class="w-14 h-14 text-[#01FF19] mb-6 group-hover:scale-110 group-hover:drop-shadow-[0_0_15px_#01FF19] transition-all duration-300"
-              />
-              <h3 class="text-xl md:text-2xl font-semibold text-white mb-4">
-                {{ feature.title }}
-              </h3>
-              <p class="text-white/70 text-base leading-relaxed">{{ feature.description }}</p>
+        <!-- Demo Card -->
+        <div class="relative backdrop-blur-sm bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+          <!-- Header -->
+          <div class="p-6 border-b border-white/10">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+                <div class="text-white font-semibold">Live Trading Dashboard</div>
+              </div>
+              <div class="text-sm text-gray-400">Demo Preview</div>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <!-- Trading Chart -->
+              <div class="lg:col-span-2">
+                <div class="h-64 relative rounded-lg overflow-hidden bg-black/50">
+                  <!-- Simplified chart -->
+                  <div class="absolute inset-0">
+                    <svg class="w-full h-full" viewBox="0 0 400 200">
+                      <path
+                        d="M0,150 Q50,120 100,140 T200,100 T300,80 T400,60"
+                        fill="none"
+                        stroke="url(#chart-gradient)"
+                        stroke-width="2"
+                      />
+                      <defs>
+                        <linearGradient id="chart-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#3b82f6" />
+                          <stop offset="100%" stop-color="#10b981" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  
+                  <!-- Data points -->
+                  <div class="absolute bottom-4 left-4 right-4 flex justify-between text-sm">
+                    <div class="text-gray-400">BTC/USDT</div>
+                    <div class="text-white font-bold">$63,842</div>
+                    <div class="text-emerald-400">+2.4%</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Order Book -->
+              <div class="space-y-4">
+                <div class="text-white font-semibold mb-4">Order Book</div>
+                
+                <!-- Buy Orders -->
+                <div class="space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <div class="text-emerald-400">Bid</div>
+                    <div class="text-gray-400">Size</div>
+                  </div>
+                  <div
+                    v-for="i in 3"
+                    :key="'buy-' + i"
+                    class="flex justify-between text-sm"
+                  >
+                    <div class="text-emerald-300">$63,8{{ 4 - i }}.{{ 10 + i * 5 }}</div>
+                    <div class="text-gray-300">0.{{ 5 + i }}2</div>
+                  </div>
+                </div>
+
+                <!-- Current Price -->
+                <div class="py-4 border-y border-white/10 text-center">
+                  <div class="text-2xl font-bold text-white mb-1">$63,842.15</div>
+                  <div class="text-sm text-emerald-400">Current Price</div>
+                </div>
+
+                <!-- Sell Orders -->
+                <div class="space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <div class="text-red-400">Ask</div>
+                    <div class="text-gray-400">Size</div>
+                  </div>
+                  <div
+                    v-for="i in 3"
+                    :key="'sell-' + i"
+                    class="flex justify-between text-sm"
+                  >
+                    <div class="text-red-300">$63,8{{ 4 + i }}.{{ 20 + i * 5 }}</div>
+                    <div class="text-gray-300">0.{{ 3 + i }}8</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="p-6 border-t border-white/10">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div class="text-sm text-gray-400">
+                Experience the full platform with real trading tools
+              </div>
+              <button class="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-all">
+                Start Free Trial
+              </button>
             </div>
           </div>
         </div>
-
-        <!-- Three.js canvas container -->
-        <div ref="threeContainer" class="absolute inset-0 pointer-events-none" aria-hidden="true"></div>
       </div>
-    </section>
+
+      <!-- CTA -->
+      <div class="text-center mt-16">
+        <div class="inline-flex flex-col sm:flex-row items-center gap-6 p-8 rounded-2xl bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm border border-white/10">
+          <div class="text-left">
+            <h3 class="text-2xl font-bold text-white mb-2">Ready to start trading?</h3>
+            <p class="text-gray-400">Join thousands of successful traders today</p>
+          </div>
+          <div class="flex gap-4">
+            <button class="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-all">
+              Get Started
+            </button>
+            <button class="px-8 py-3 rounded-xl bg-white/5 text-white font-semibold hover:bg-white/10 transition-all border border-white/10">
+              Contact Sales
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </template>
 
 <style scoped>
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(25px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Simple fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.animate-fade-in { 
-  opacity: 0; 
-  animation: fade-in 1s ease forwards; 
+
+.grid > div,
+.stats > div {
+  animation: fadeIn 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Stagger animation delays */
+.grid > div:nth-child(1) { animation-delay: 0.1s; }
+.grid > div:nth-child(2) { animation-delay: 0.2s; }
+.grid > div:nth-child(3) { animation-delay: 0.3s; }
+.grid > div:nth-child(4) { animation-delay: 0.4s; }
+.grid > div:nth-child(5) { animation-delay: 0.5s; }
+.grid > div:nth-child(6) { animation-delay: 0.6s; }
+
+.stats > div:nth-child(1) { animation-delay: 0.1s; }
+.stats > div:nth-child(2) { animation-delay: 0.2s; }
+.stats > div:nth-child(3) { animation-delay: 0.3s; }
+.stats > div:nth-child(4) { animation-delay: 0.4s; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

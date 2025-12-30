@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import ChartsSection from './_componentsOverview/ChartsSection.vue'
 import { useAdminStats } from './_componentsOverview/composables/useAdminStats'
 import StatsCards from './_componentsOverview/StatsCards.vue'
-import ChartsSection from './_componentsOverview/ChartsSection.vue'
 
 // Import des composants shadcn-vue
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 const router = useRouter()
 const {
@@ -24,7 +24,6 @@ const {
   formatNumber,
   getRankColor,
   fetchStats,
-  fetchRecentTransactions
 } = useAdminStats()
 
 function goToCryptos() {

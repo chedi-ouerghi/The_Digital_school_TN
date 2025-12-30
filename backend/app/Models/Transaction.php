@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 class Transaction extends Model
 {
     use HasFactory;
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -33,32 +34,21 @@ class Transaction extends Model
         'cancelled_at' => 'datetime',
     ];
 
+    protected $with = ['cryptoWalletAsset.cryptomoney'];
+
+    /* ===================== RELATIONS ===================== */
+
     public function cryptoWalletAsset()
     {
         return $this->belongsTo(CryptoWalletAsset::class, 'crypto_wallet_asset_id');
-    }
-
-    public function cryptomoney()
-    {
-        return $this->hasOneThrough(
-            Cryptomoney::class,
-            CryptoWalletAsset::class,
-            'id',
-            'id',
-            'crypto_wallet_asset_id',
-            'cryptomoney_id'
-        );
-    }
-
-    public function getWalletAttribute()
-    {
-        return $this->cryptoWalletAsset ? $this->cryptoWalletAsset->wallet : null;
     }
 
     public function wallet()
     {
         return $this->cryptoWalletAsset ? $this->cryptoWalletAsset->wallet : null;
     }
+
+    /* ===================== BOOT ===================== */
 
     protected static function boot()
     {
@@ -71,3 +61,4 @@ class Transaction extends Model
         });
     }
 }
+

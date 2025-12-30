@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../../services/api'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -15,6 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../../services/api'
 
 const router = useRouter()
 const transactions = ref<any[]>([])
@@ -126,16 +126,22 @@ function viewDetails(id: number) {
 
 function openCancelDialog(transaction: any) {
   selectedTransaction.value = transaction
+  cancelReason.value = ''
   confirmDialog.value = true
 }
 
 async function handleCancel() {
   if (!selectedTransaction.value) return
   
+  if (!cancelReason.value.trim()) {
+    error.value = 'Please provide a cancellation reason'
+    return
+  }
+  
   try {
     await api.admin.transactions.cancel(
       selectedTransaction.value.id,
-      cancelReason.value || 'Administrative cancellation'
+      cancelReason.value.trim()
     )
     await fetchTransactions()
     confirmDialog.value = false
@@ -577,13 +583,53 @@ onMounted(fetchTransactions)
     </div>
 
     <!-- Cancel Confirmation Dialog -->
-    <ConfirmDialog
-      :open="confirmDialog"
-      title="⚠️ Cancel Transaction"
-      :message="`Are you sure you want to cancel transaction #${selectedTransaction?.id}? This action cannot be undone.`"
-      @close="confirmDialog = false"
-      @confirm="handleCancel"
-    />
+    <Dialog :open="confirmDialog" @update:open="confirmDialog = false">
+      <DialogContent class="sm:max-w-md border-[#FF5964]">
+        <DialogHeader>
+          <DialogTitle class="text-[#FF5964] text-xl font-bold">
+            ⚠️ Cancel Transaction
+          </DialogTitle>
+          <DialogDescription class="text-gray-600">
+            Are you sure you want to cancel transaction #{{ selectedTransaction?.id }}? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <!-- Cancellation Reason Input -->
+        <div class="space-y-4 py-4">
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-[#38618C]">
+              Cancellation Reason <span class="text-[#FF5964]">*</span>
+            </label>
+            <Input
+              v-model="cancelReason"
+              placeholder="Enter the reason for cancellation..."
+              class="border-[#FF5964] focus:border-[#FF5964]"
+              @keydown.enter="handleCancel"
+            />
+            <p class="text-xs text-gray-500">
+              Please provide a clear reason for the cancellation. This will be shown to the client.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter class="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            @click="confirmDialog = false"
+            class="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </Button>
+          <Button
+            @click="handleCancel"
+            :disabled="!cancelReason.trim()"
+            class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            🗑️ Confirm Cancellation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
 

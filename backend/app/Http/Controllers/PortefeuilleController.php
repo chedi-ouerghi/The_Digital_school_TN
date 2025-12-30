@@ -44,7 +44,12 @@ class PortefeuilleController extends Controller
                 ], 403);
             }
 
-            $wallet = Wallet::with(['cryptoWalletAssets.cryptomoney', 'transactions.cryptomoney'])
+            $wallet = Wallet::with([
+                'cryptoWalletAssets.cryptomoney',
+                'transactions' => function($query) {
+                    $query->with('cryptoWalletAsset.cryptomoney');
+                }
+            ])
                 ->where('user_id', $user->id)
                 ->first();
             
@@ -226,7 +231,12 @@ class PortefeuilleController extends Controller
     {
         try {
             $user = Auth::user();
-            $wallet = Wallet::with(['cryptoWalletAssets.cryptomoney', 'transactions.cryptomoney'])
+            $wallet = Wallet::with([
+                'cryptoWalletAssets.cryptomoney',
+                'transactions' => function($query) {
+                    $query->with('cryptoWalletAsset.cryptomoney');
+                }
+            ])
                 ->where('id', $id)
                 ->first();
 

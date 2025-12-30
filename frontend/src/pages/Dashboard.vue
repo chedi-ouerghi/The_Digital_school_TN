@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import auth from '../services/auth';
-import api from '../services/api';
 import CustomSidebar from '@/components/CustomSidebar.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, LogOut, Menu, X, TrendingUp, TrendingDown, RefreshCw, User, Settings, ChevronDown } from 'lucide-vue-next';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Bell, ChevronDown, LogOut, Menu, RefreshCw, Settings, TrendingDown, TrendingUp, User, X } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import api from '../services/api';
+import auth from '../services/auth';
 
 const router = useRouter()
 const user = ref(auth.getUser())
@@ -469,76 +468,136 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
     <Drawer :open="showNotifications" @update:open="v => showNotifications = v" direction="right">
       <DrawerContent class="w-full sm:w-96 lg:w-[420px] h-full ml-auto border-l border-slate-200 bg-white shadow-xl flex flex-col">
 
-        <div class="p-6 border-b border-slate-200 bg-white">
-          <div class="flex items-center justify-between">
+        <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+          <div class="flex items-center justify-between mb-4">
             <div>
               <h2 class="text-lg font-bold text-slate-900">Notifications</h2>
-              <p class="text-sm text-slate-500 mt-1">{{ unreadCount }} unread</p>
+              <p class="text-sm text-slate-500 mt-1">
+                <span class="font-semibold text-blue-600">{{ unreadCount }}</span> unread • 
+                <span class="font-semibold text-slate-700">{{ notifications.length }}</span> total
+              </p>
             </div>
-
-            <button @click="showNotifications = false" class="p-2 hover:bg-slate-100 rounded-xl">
+            <button @click="showNotifications = false" class="p-2 hover:bg-white rounded-xl transition-colors">
               <X class="w-5 h-5 text-slate-700" />
             </button>
           </div>
+
+          <!-- Mark all as read button -->
+          <Button
+            v-if="unreadCount > 0"
+            @click="markAllAsRead"
+            size="sm"
+            class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg h-9"
+          >
+            ✓ Mark as read
+          </Button>
         </div>
 
-        <ScrollArea class="flex-1 p-6">
-
+        <ScrollArea class="flex-1">
           <!-- Loading -->
-          <div v-if="loadingNotifications" class="text-center py-16">
+          <div v-if="loadingNotifications" class="text-center py-16 px-6">
             <div class="animate-spin h-10 w-10 border-b-2 border-blue-500 rounded-full mx-auto"></div>
-            <p class="text-slate-600 mt-4">Loading...</p>
+            <p class="text-slate-600 mt-4 text-sm">Loading notifications...</p>
           </div>
 
           <!-- Empty -->
-          <div v-else-if="notifications.length === 0" class="text-center py-20">
-            <div class="text-6xl opacity-40">📭</div>
-            <p class="text-lg font-semibold text-slate-700 mt-3">No notifications</p>
+          <div v-else-if="notifications.length === 0" class="text-center py-20 px-6">
+            <div class="text-6xl opacity-40 mb-3">📭</div>
+            <p class="text-lg font-semibold text-slate-700">No notifications yet</p>
+            <p class="text-sm text-slate-500 mt-2">You're all caught up!</p>
           </div>
 
-          <!-- LIST -->
-          <div v-else class="space-y-4">
+          <!-- NOTIFICATIONS LIST -->
+          <div v-else class="divide-y divide-slate-200">
             <div
               v-for="n in notifications"
               :key="n.id"
               @click="!n.is_read && markNotificationAsRead(n)"
-              class="p-5 rounded-2xl border cursor-pointer transition-all bg-white hover:shadow-md"
-              :class="n.is_read ? 'border-slate-200' : 'border-blue-200 bg-blue-50'"
+              class="p-4 transition-all duration-200 cursor-pointer hover:bg-slate-50/60 group"
+              :class="n.is_read ? 'bg-white' : 'bg-blue-50/40 border-l-4 border-blue-500'"
             >
-              <div class="flex gap-4">
+              <!-- Header with icon, type badge and timestamp -->
+              <div class="flex gap-4 mb-3">
+                <!-- Icon -->
                 <div
-                  class="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-                  :class="n.is_read ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-600'"
+                  class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl font-semibold transition-transform group-hover:scale-110"
+                  :class="n.is_read 
+                    ? 'bg-slate-100 text-slate-600' 
+                    : 'bg-blue-100 text-blue-600 shadow-md'"
                 >
                   {{ getNotificationIcon(n.type) }}
                 </div>
 
-                <div class="flex-1">
-                  <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-semibold text-slate-900">{{ n.title }}</h3>
-                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                      {{ formatNotificationDate(n.created_at) }}
-                    </span>
+                <!-- Type badge and read status -->
+                <div class="flex-1 min-w-0 flex items-start justify-between gap-2">
+                  <div class="flex gap-2 flex-wrap items-center">
+                    <!-- Type Badge -->
+                    <Badge
+                      class="text-xs font-semibold px-2.5 py-1 rounded-full"
+                      :class="n.type === 'transaction' 
+                        ? 'bg-emerald-100 text-emerald-700 border-emerald-200' 
+                        : n.type === 'security'
+                        ? 'bg-orange-100 text-orange-700 border-orange-200'
+                        : n.type === 'alert'
+                        ? 'bg-red-100 text-red-700 border-red-200'
+                        : n.type === 'success'
+                        ? 'bg-green-100 text-green-700 border-green-200'
+                        : 'bg-slate-100 text-slate-700 border-slate-200'"
+                    >
+                      {{ n.type?.toUpperCase() || 'INFO' }}
+                    </Badge>
+
+                    <!-- Read status indicator -->
+                    <div v-if="!n.is_read" class="flex items-center gap-1">
+                      <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span class="text-xs font-medium text-blue-600">New</span>
+                    </div>
                   </div>
 
-                  <p class="text-slate-600 text-sm line-clamp-3">
-                    {{ n.message }}
-                  </p>
+                  <!-- Timestamp -->
+                  <span class="text-xs text-slate-500 whitespace-nowrap flex-shrink-0 bg-white/60 px-2 py-1 rounded-full">
+                    {{ formatNotificationDate(n.created_at) }}
+                  </span>
                 </div>
+              </div>
+
+              <!-- Title (always bold and visible) -->
+              <h3 class="font-bold text-slate-900 mb-2 text-sm leading-snug pr-2">
+                {{ n.title }}
+              </h3>
+
+              <!-- Message (full text, separated from title) -->
+              <p class="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mb-3 bg-white/40 p-3 rounded-lg border-l-2 border-slate-200">
+                {{ n.message }}
+              </p>
+
+              <!-- Additional Info Row (if needed) -->
+              <div v-if="n.metadata || n.related_id" class="flex items-center justify-between pt-2 border-t border-slate-200/50 mt-2">
+                <span v-if="n.metadata" class="text-xs text-slate-500 font-mono">
+                  ID: {{ n.metadata }}
+                </span>
+                <span v-else-if="n.related_id" class="text-xs text-slate-500 font-mono">
+                  Ref: {{ n.related_id }}
+                </span>
+              </div>
+
+              <!-- Action button for unread -->
+              <div v-if="!n.is_read" class="mt-3 flex gap-2">
+                <Button
+                  @click.stop="markNotificationAsRead(n)"
+                  size="sm"
+                  class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs h-8 rounded-lg"
+                >
+                  Mark as read
+                </Button>
+              </div>
+              <div v-else class="mt-2">
+                <span class="text-xs text-slate-400 italic">✓ Read</span>
               </div>
             </div>
           </div>
 
         </ScrollArea>
-
-        <div class="p-6 border-t border-slate-200" v-if="notifications.length > 0">
-          <Button
-            @click="markAllAsRead"
-            class="w-full border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 rounded-xl h-12"
-          >
-            Mark all as read
-          </Button>
-        </div>
 
       </DrawerContent>
     </Drawer>

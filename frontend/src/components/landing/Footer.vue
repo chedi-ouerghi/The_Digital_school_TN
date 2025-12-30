@@ -1,52 +1,66 @@
-<script setup lang="ts">
-</script>
-
 <template>
-  <footer class="relative bg-gradient-to-br from-[#071B2C] via-[#0B2E4E] to-[#071B2C] text-white py-16 border-t border-white/10 font-[Celias]">
-    <!-- Éclat d'arrière-plan -->
+  <footer class="relative bg-gradient-to-b from-gray-900 to-black pt-12 pb-8 border-t border-white/10">
+    
+    <!-- Background Effect -->
     <div class="absolute inset-0">
-      <div class="absolute bottom-0 left-0 w-96 h-96 bg-[#35A7FF]/10 rounded-full blur-[120px]"></div>
+      <div class="absolute bottom-10 left-10 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl"></div>
     </div>
 
-    <div class="relative z-10 container mx-auto px-6 lg:px-16">
-      <div class="grid md:grid-cols-4 gap-8 mb-12">
-        <div class="animate-fade-in">
-          <img src="/assets/bitchest_logo.png" alt="BitChest" class="h-8 mb-4" />
-          <p class="text-sm text-white/70 max-w-xs">
-            Your trusted crypto investment platform. Trade smarter, invest better.
+    <div class="relative container mx-auto px-4 md:px-6">
+      
+      <!-- Main Content -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <!-- Logo & Description -->
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-36 h-14 rounded-lg  flex items-center justify-center">
+          <img src="/assets/bitchest_logo.png" alt="BitChest" class="h-20" />
+            </div>
+            
+          </div>
+          <p class="text-gray-400 text-sm max-w-xs">
+            Advanced cryptocurrency trading platform for modern investors.
           </p>
         </div>
         
-        <div class="animate-fade-in delay-100">
-          <h3 class="font-semibold mb-4 text-white">Quick Links</h3>
-          <ul class="space-y-3">
-            <li><a href="#" class="text-white/70 hover:text-[#01FF19] transition-colors duration-300">About</a></li>
-            <li><a href="#" class="text-white/70 hover:text-[#01FF19] transition-colors duration-300">Careers</a></li>
-            <li><a href="#" class="text-white/70 hover:text-[#01FF19] transition-colors duration-300">Blog</a></li>
+        <!-- Quick Links -->
+        <div>
+          <h3 class="text-white font-semibold mb-4">Trading</h3>
+          <ul class="space-y-2">
+            <li><a href="#markets" class="text-gray-400 hover:text-white transition-colors text-sm">Markets</a></li>
+            <li><a href="#features" class="text-gray-400 hover:text-white transition-colors text-sm">Features</a></li>
+            <li><a href="#how-it-works" class="text-gray-400 hover:text-white transition-colors text-sm">How It Works</a></li>
           </ul>
         </div>
         
-        <div class="animate-fade-in delay-200">
-          <h3 class="font-semibold mb-4 text-white">Legal</h3>
-          <ul class="space-y-3">
-            <li><a href="#" class="text-white/70 hover:text-[#01FF19] transition-colors duration-300">Privacy Policy</a></li>
-            <li><a href="#" class="text-white/70 hover:text-[#01FF19] transition-colors duration-300">Terms of Service</a></li>
-            <li><a href="#" class="text-white/70 hover:text-[#01FF19] transition-colors duration-300">Cookie Policy</a></li>
+        <!-- Legal -->
+        <div>
+          <h3 class="text-white font-semibold mb-4">Legal</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors text-sm">Terms</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors text-sm">Cookie Policy</a></li>
           </ul>
         </div>
         
-        <div class="animate-fade-in delay-300">
-          <h3 class="font-semibold mb-4 text-white">Contact</h3>
-          <ul class="space-y-3">
-            <li class="text-white/70">support@bitchest.com</li>
-            <li class="text-white/70">+216 25 02 59 17</li>
+        <!-- Contact -->
+        <div>
+          <h3 class="text-white font-semibold mb-4">Contact</h3>
+          <ul class="space-y-2">
+            <li class="text-gray-400 text-sm">support@bitchest.com</li>
+            <li class="text-gray-400 text-sm">+1 (555) 123-4567</li>
           </ul>
         </div>
       </div>
       
-      <div class="border-t border-white/10 pt-8 text-center">
-        <p class="text-sm text-white/60">
-          © 2025 BitChest. All rights reserved.
+      <!-- Bottom Bar -->
+      <div class="border-t border-white/10 pt-6 text-center">
+        <p class="text-gray-500 text-sm">
+          © 2026 BitChest. All rights reserved.
+        </p>
+        <p class="text-gray-600 text-xs mt-2">
+          Cryptocurrency trading involves risk.
         </p>
       </div>
     </div>
@@ -54,15 +68,26 @@
 </template>
 
 <style scoped>
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(25px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Simple fade-in animation for grid items */
+.grid > div {
+  animation: fadeIn 0.5s ease-out forwards;
+  animation-fill-mode: both;
+  opacity: 0;
 }
-.animate-fade-in { 
-  opacity: 0; 
-  animation: fade-in 1s ease forwards; 
+
+.grid > div:nth-child(1) { animation-delay: 0.1s; }
+.grid > div:nth-child(2) { animation-delay: 0.2s; }
+.grid > div:nth-child(3) { animation-delay: 0.3s; }
+.grid > div:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.delay-100 { animation-delay: 0.1s; }
-.delay-200 { animation-delay: 0.2s; }
-.delay-300 { animation-delay: 0.3s; }
 </style>

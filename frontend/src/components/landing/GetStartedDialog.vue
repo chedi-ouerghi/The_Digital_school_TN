@@ -119,15 +119,18 @@ const handleCancel = () => {
 <template>
   <Dialog v-model:open="isOpen">
     <DialogTrigger as-child>
-      <Button class="bg-[#01FF19] hover:bg-[#00e617] text-[#071B2C] font-semibold px-6 py-2 rounded-full shadow-lg hover:shadow-[#01FF19]/40 transition-all duration-300">
-        Get Started
-        <ArrowRight class="ml-2 h-4 w-4" />
-      </Button>
+       <button 
+      @click="isOpen = true"
+      class="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-all flex items-center gap-2"
+    >
+      Get Started
+      <ArrowRight class="w-4 h-4" />
+    </button>
     </DialogTrigger>
     
     <DialogContent class="sm:max-w-md bg-[#071B2C] border border-white/20 text-white">
       <DialogHeader>
-        <DialogTitle class="text-2xl font-bold text-center text-[#01FF19]">
+        <DialogTitle class="text-2xl font-bold text-center text-blue-500 ">
           {{ currentStep === 'initial' ? 'Welcome to BitChest' : 'Create an Account' }}
         </DialogTitle>
         <DialogDescription class="text-center text-white/80 mt-2">
@@ -158,7 +161,7 @@ const handleCancel = () => {
         <div v-if="currentStep === 'initial'" class="space-y-4">
           <Button 
             @click="handleSignIn"
-            class="w-full bg-[#01FF19] hover:bg-[#00e617] text-[#071B2C] font-semibold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
+            class="w-full bg-blue-500 hover:bg-blue-900 text-[#071B2C] font-semibold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
           >
             <LogIn class="h-4 w-4" />
             Log In
@@ -212,7 +215,7 @@ const handleCancel = () => {
             </Button>
             <Button
               @click="handleSignUp"
-              class="flex-1 bg-[#01FF19] hover:bg-[#00e617] text-[#071B2C] font-semibold"
+              class="flex-1 bg-blue-500 hover:bg-blue-900  text-[#071B2C] font-semibold"
               :disabled="isLoading"
             >
               <ArrowRight class="h-4 w-4 mr-2" />

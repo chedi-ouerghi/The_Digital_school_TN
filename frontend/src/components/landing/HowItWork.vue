@@ -1,244 +1,412 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { CreditCard, Banknote, BarChart3, TrendingUp, Shield, Zap, Globe } from 'lucide-vue-next'
 
 const features = [
   {
-    title: 'Buy Crypto with Credit Card',
-    text: 'Instant purchases with Visa or Mastercard. Simple, fast, and secure.',
-    color: '#35A7FF',
-    icon: '💳',
+    icon: CreditCard,
+    title: 'Instant Card Purchases',
+    description: 'Buy crypto instantly with Visa/Mastercard',
+    color: 'from-blue-500 to-cyan-500'
   },
   {
-    title: 'Bank Transfer & Deposits',
-    text: 'Direct bank deposits with low fees and fast processing times.',
-    color: '#01FF19',
-    icon: '🏦',
+    icon: Banknote,
+    title: 'Bank Transfers',
+    description: 'Direct deposits with minimal fees',
+    color: 'from-emerald-500 to-green-500'
   },
   {
-    title: 'Advanced Portfolio Tools',
-    text: 'Diversify and manage your assets with professional-grade analytics.',
-    color: '#FF5964',
-    icon: '📈',
+    icon: BarChart3,
+    title: 'Portfolio Management',
+    description: 'Advanced analytics & tracking tools',
+    color: 'from-purple-500 to-pink-500'
   },
   {
-    title: 'Spot Market Trading',
-    text: 'Access deep liquidity and trade hundreds of cryptocurrency pairs.',
-    color: '#38618C',
-    icon: '🪙',
+    icon: TrendingUp,
+    title: 'Spot Trading',
+    description: 'Trade 100+ crypto pairs instantly',
+    color: 'from-orange-500 to-red-500'
   },
+  {
+    icon: Shield,
+    title: 'Secure Storage',
+    description: 'Institutional-grade security',
+    color: 'from-blue-500 to-indigo-500'
+  },
+  {
+    icon: Globe,
+    title: 'Global Access',
+    description: 'Available in 150+ countries',
+    color: 'from-cyan-500 to-blue-500'
+  }
 ]
 
-// Données du dashboard
 const timeframe = ref<'1H' | '24H' | '7D' | '1M'>('24H')
+const timeframes = [
+  { label: '1H', value: '1H' },
+  { label: '24H', value: '24H' },
+  { label: '7D', value: '7D' },
+  { label: '1M', value: '1M' }
+]
+
 const chartData = {
-  '1H': { points: '0,36 8,34 16,35 24,33 32,31 40,29 48,28 56,27 64,25 72,24 80,23 88,22 96,21 100,20', delta: '+0.6%' },
-  '24H': { points: '0,35 8,28 16,30 24,22 32,18 40,20 48,15 56,18 64,12 72,10 80,8 88,6 96,4 100,3', delta: '+2.4%' },
-  '7D': { points: '0,37 8,34 16,31 24,28 32,26 40,24 48,20 56,18 64,22 72,19 80,16 88,14 96,12 100,11', delta: '+5.8%' },
-  '1M': { points: '0,38 8,35 16,33 24,30 32,27 40,25 48,22 56,20 64,18 72,16 80,14 88,12 96,10 100,9', delta: '+12.2%' }
+  '1H': { 
+    points: [63.2, 62.8, 63.5, 62.9, 63.8, 64.2, 63.5, 63.9, 64.5, 65.1, 64.8, 64.3],
+    delta: '+0.8%',
+    volume: '$1.2B'
+  },
+  '24H': { 
+    points: [61.5, 62.1, 63.8, 62.9, 63.2, 63.9, 63.5, 64.2, 64.8, 65.3, 64.9, 63.8],
+    delta: '+2.4%',
+    volume: '$32.4B'
+  },
+  '7D': { 
+    points: [58.2, 59.1, 60.3, 61.2, 62.4, 63.1, 63.8, 64.2, 63.9, 64.5, 64.1, 63.8],
+    delta: '+5.8%',
+    volume: '$185B'
+  },
+  '1M': { 
+    points: [52.1, 54.3, 56.8, 58.2, 59.4, 60.8, 62.1, 63.4, 64.2, 64.8, 64.3, 63.8],
+    delta: '+12.2%',
+    volume: '$780B'
+  }
 }
 
 const portfolioStats = [
-  { symbol: 'BTC', price: '48,927', change: '+2.4%' },
-  { symbol: 'ETH', price: '3,120', change: '+1.2%' },
-  { symbol: 'SOL', price: '142', change: '+5.8%' }
+  { symbol: 'BTC', name: 'Bitcoin', price: 63842, change: 2.4, holding: 0.1785, value: 11392 },
+  { symbol: 'ETH', name: 'Ethereum', price: 3456, change: 1.2, holding: 3.25, value: 11232 },
+  { symbol: 'SOL', name: 'Solana', price: 142, change: 5.8, holding: 85.2, value: 12101 }
+]
+
+const marketStats = [
+  { label: '24h Volume', value: '$68.4B', change: '+12.8%' },
+  { label: 'Market Cap', value: '$1.87T', change: '+2.4%' },
+  { label: 'BTC Dominance', value: '52.8%', change: '-0.2%' },
+  { label: 'Fear & Greed', value: '72', subtext: 'Greed' }
 ]
 </script>
 
 <template>
-  <section class="relative py-20 lg:py-28 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
-    
-    <!-- Background Elements -->
-    <div class="absolute inset-0">
-      <div class="absolute top-20 left-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
-      <div class="absolute bottom-20 right-10 w-96 h-96 bg-green-500/5 rounded-full blur-3xl"></div>
-    </div>
-
-    <div class="relative container mx-auto px-6">
-      <div class="grid lg:grid-cols-2 gap-16 lg:gap-20 items-start">
+  <section class="py-20 md:py-28 bg-gradient-to-b from-black to-gray-900">
+    <div class="container mx-auto px-4 md:px-6">
+      
+      <!-- Header -->
+      <div class="text-center mb-16">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-6">
+          <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+          <span class="text-sm font-medium text-white">PROFESSIONAL TRADING</span>
+        </div>
         
-        <!-- Left Content -->
-        <div class="space-y-10">
-          <!-- Header Section -->
-          <div class="space-y-6">
-            <div class="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20">
-              <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span class="text-sm font-medium text-blue-400">PROFESSIONAL TRADING PLATFORM</span>
-            </div>
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+          Complete Crypto
+          <span class="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+            Platform
+          </span>
+        </h2>
+        
+        <p class="text-gray-400 max-w-2xl mx-auto">
+          Everything you need to trade, invest, and manage cryptocurrencies in one secure platform
+        </p>
+      </div>
 
-            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              Advanced Crypto Trading
-              <span class="text-blue-500 block">Made Simple</span>
-            </h2>
-
-            <p class="text-lg text-gray-300 leading-relaxed max-w-xl">
-              Experience institutional-grade trading tools with an intuitive interface. 
-              Buy, sell, and manage your digital assets with confidence on our secure platform.
-            </p>
+      <!-- Market Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <div
+          v-for="(stat, index) in marketStats"
+          :key="stat.label"
+          class="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+        >
+          <div class="text-sm text-gray-400 mb-2">{{ stat.label }}</div>
+          <div class="text-2xl font-bold text-white mb-1">{{ stat.value }}</div>
+          <div 
+            v-if="stat.change" 
+            :class="stat.change.startsWith('+') ? 'text-emerald-400' : 'text-red-400'"
+            class="text-sm font-medium"
+          >
+            {{ stat.change }}
           </div>
-
-          <!-- Features Grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div
-              v-for="(feature, index) in features"
-              :key="index"
-              class="group p-5 rounded-xl bg-white/5 backdrop-blur-sm border border-gray-700 hover:border-blue-500/40 transition-all duration-300 hover:transform hover:-translate-y-1"
-            >
-              <div class="flex items-start gap-4">
-                <div 
-                  class="w-12 h-12 rounded-lg flex items-center justify-center text-xl transition-transform group-hover:scale-110"
-                  :style="{ 
-                    backgroundColor: `${feature.color}15`,
-                    border: `1px solid ${feature.color}30`
-                  }"
-                >
-                  {{ feature.icon }}
-                </div>
-                <div class="flex-1">
-                  <h3 class="text-white font-semibold mb-2 leading-tight">
-                    {{ feature.title }}
-                  </h3>
-                  <p class="text-gray-400 text-sm leading-relaxed">
-                    {{ feature.text }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- CTA Section -->
-          <div class="flex flex-col sm:flex-row gap-4 pt-4">
-            <button class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-blue-500/25">
-              Start Trading Now
-            </button>
-            <button class="px-8 py-4 border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white font-semibold rounded-lg transition-all duration-200">
-              View Live Demo
-            </button>
+          <div v-if="stat.subtext" class="text-sm text-emerald-400 font-medium">
+            {{ stat.subtext }}
           </div>
         </div>
+      </div>
 
-        <!-- Right: Dashboard Demo -->
-        <div class="relative">
-          <!-- Main Dashboard Card -->
-          <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
-            
-            <!-- Dashboard Header -->
-            <div class="px-6 py-4 bg-gray-900/80 border-b border-gray-700">
-              <div class="flex items-center justify-between">
+      <div class="grid lg:grid-cols-2 gap-12">
+        
+        <!-- Left: Features -->
+        <div class="space-y-8">
+          <!-- Features Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              v-for="(feature, index) in features"
+              :key="feature.title"
+              class="group p-5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:scale-[1.02]"
+            >
+              <!-- Icon -->
+              <div class="mb-4">
+                <div class="relative inline-block">
+                  <div
+                    class="absolute -inset-2 rounded-lg opacity-20 blur"
+                    :class="`bg-gradient-to-r ${feature.color}`"
+                  ></div>
+                  <div
+                    class="relative w-12 h-12 rounded-lg flex items-center justify-center backdrop-blur-sm"
+                    :class="`bg-gradient-to-br ${feature.color}`"
+                  >
+                    <component
+                      :is="feature.icon"
+                      class="w-6 h-6 text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Content -->
+              <h3 class="text-lg font-bold text-white mb-2">
+                {{ feature.title }}
+              </h3>
+              
+              <p class="text-gray-400 text-sm">
+                {{ feature.description }}
+              </p>
+
+              <!-- Hover line -->
+              <div class="w-0 group-hover:w-full h-px mt-3 bg-gradient-to-r from-transparent via-current to-transparent transition-all duration-300"></div>
+            </div>
+          </div>
+
+          <!-- Portfolio Summary -->
+          <div class="p-6 rounded-xl bg-white/5 border border-white/10">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-bold text-white">Your Portfolio</h3>
+              <div class="text-emerald-400 text-sm font-medium">+4.8% Today</div>
+            </div>
+
+            <!-- Holdings -->
+            <div class="space-y-4">
+              <div
+                v-for="crypto in portfolioStats"
+                :key="crypto.symbol"
+                class="flex items-center justify-between"
+              >
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
-                    <span class="text-blue-400 font-bold text-lg">BC</span>
+                  <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                    <div class="text-lg font-bold text-white">{{ crypto.symbol.charAt(0) }}</div>
                   </div>
                   <div>
-                    <div class="text-white font-semibold">Trading Account</div>
-                    <div class="text-gray-400 text-sm">Live Portfolio</div>
+                    <div class="text-white font-semibold">{{ crypto.name }}</div>
+                    <div class="text-gray-400 text-sm">{{ crypto.holding }} {{ crypto.symbol }}</div>
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-white font-bold text-lg">0.1785 BTC</div>
-                  <div class="text-green-400 text-sm font-medium">+2.4% Today</div>
+                  <div class="text-white font-semibold">${{ crypto.value.toLocaleString() }}</div>
+                  <div 
+                    :class="crypto.change >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                    class="text-sm font-medium"
+                  >
+                    {{ crypto.change >= 0 ? '+' : '' }}{{ crypto.change }}%
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Dashboard Content -->
-            <div class="p-6 space-y-6">
-              
-              <!-- Portfolio Summary -->
-              <div class="grid grid-cols-2 gap-4">
-                <div class="p-4 rounded-xl bg-gray-700/30 border border-gray-600">
-                  <div class="text-gray-400 text-sm mb-1">Available Balance</div>
-                  <div class="text-white font-semibold">0.0875 BTC</div>
+            <!-- Total Value -->
+            <div class="mt-6 pt-6 border-t border-white/10">
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="text-gray-400 text-sm">Total Value</div>
+                  <div class="text-2xl font-bold text-white">$34,725</div>
                 </div>
-                <div class="p-4 rounded-xl bg-gray-700/30 border border-gray-600">
-                  <div class="text-gray-400 text-sm mb-1">In Orders</div>
-                  <div class="text-green-400 font-semibold">0.0542 BTC</div>
+                <button class="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-all">
+                  Add Funds
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Dashboard -->
+        <div>
+          <!-- Dashboard Card -->
+          <div class="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+            <!-- Header -->
+            <div class="p-6 border-b border-white/10">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-500 to-emerald-500 flex items-center justify-center">
+                    <Zap class="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold text-white">Live Trading</h3>
+                    <div class="text-gray-400 text-sm">Real-time market data</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                  <span class="text-sm text-emerald-400">LIVE</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="p-6">
+              <!-- Chart Header -->
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <div class="text-2xl font-bold text-white">$63,842.15</div>
+                  <div class="text-emerald-400 font-medium">BTC/USDT</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-bold text-emerald-400">+2.4%</div>
+                  <div class="text-gray-400 text-sm">24h change</div>
                 </div>
               </div>
 
-              <!-- Chart Section -->
-              <div class="bg-gray-900/50 rounded-xl border border-gray-700 p-4">
-                <div class="flex items-center justify-between mb-4">
-                  <div class="text-white font-semibold">BTC/USD</div>
-                  <div class="flex gap-2">
-                    <button
-                      v-for="tf in ['1H', '24H', '7D', '1M']"
-                      :key="tf"
-                      @click="timeframe = tf as any"
-                      class="px-3 py-1 rounded-full text-sm font-medium transition-all duration-200"
-                      :class="timeframe === tf 
-                        ? 'bg-blue-600 text-white shadow-lg' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
-                    >
-                      {{ tf }}
-                    </button>
-                  </div>
-                </div>
+              <!-- Timeframe Selector -->
+              <div class="flex gap-2 mb-6">
+                <button
+                  v-for="tf in timeframes"
+                  :key="tf.value"
+                  @click="timeframe = tf.value"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  :class="timeframe === tf.value
+                    ? 'bg-white/10 text-white border border-white/20'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                >
+                  {{ tf.label }}
+                </button>
+              </div>
 
-                <!-- Chart Container -->
-                <div class="relative h-40 bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg border border-gray-700 overflow-hidden">
-                  <!-- Chart SVG -->
-                  <svg viewBox="0 0 100 40" preserveAspectRatio="none" class="absolute inset-0 w-full h-full">
+              <!-- Chart Visualization -->
+              <div class="relative h-48 mb-6">
+                <!-- Chart lines -->
+                <div class="absolute inset-0">
+                  <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <!-- Area fill -->
                     <defs>
-                      <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.3" />
-                        <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.1" />
+                      <linearGradient id="area-fill" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.2" />
+                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
                       </linearGradient>
                     </defs>
-                    <path 
-                      :d="`M ${chartData[timeframe].points}`" 
-                      fill="url(#chartGradient)"
-                      stroke="#3B82F6"
-                      stroke-width="0.8"
+                    
+                    <!-- Chart area -->
+                    <path
+                      :d="`M 0,100 ${chartData[timeframe].points.map((p, i) => `L ${i * (100 / (chartData[timeframe].points.length - 1))},${100 - p}`).join(' ')} L 100,100 Z`"
+                      fill="url(#area-fill)"
+                    />
+                    
+                    <!-- Chart line -->
+                    <path
+                      :d="`M 0,${100 - chartData[timeframe].points[0]} ${chartData[timeframe].points.slice(1).map((p, i) => `L ${(i + 1) * (100 / (chartData[timeframe].points.length - 1))},${100 - p}`).join(' ')}`"
+                      fill="none"
+                      stroke="#3b82f6"
+                      stroke-width="2"
+                      stroke-linecap="round"
                       stroke-linejoin="round"
                     />
                   </svg>
-                  
-                  <!-- Performance Badge -->
-                  <div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-                    {{ chartData[timeframe].delta }}
+                </div>
+
+                <!-- Volume indicator -->
+                <div class="absolute bottom-0 left-0 right-0 h-8 opacity-10">
+                  <div class="w-full h-full bg-gradient-to-r from-blue-500 to-emerald-500"></div>
+                </div>
+
+                <!-- Current price indicator -->
+                <div class="absolute top-2 right-2 bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-semibold backdrop-blur-sm border border-emerald-500/30">
+                  {{ chartData[timeframe].delta }}
+                </div>
+              </div>
+
+              <!-- Volume & Time -->
+              <div class="flex justify-between text-sm text-gray-400">
+                <span>9:00 AM</span>
+                <span>Volume: {{ chartData[timeframe].volume }}</span>
+                <span>9:00 PM</span>
+              </div>
+            </div>
+
+            <!-- Order Book Preview -->
+            <div class="p-6 border-t border-white/10">
+              <div class="grid grid-cols-2 gap-6">
+                <!-- Buy Orders -->
+                <div>
+                  <div class="text-emerald-400 font-semibold mb-3">Buy Orders</div>
+                  <div class="space-y-2">
+                    <div
+                      v-for="i in 3"
+                      :key="'buy-' + i"
+                      class="flex justify-between items-center"
+                    >
+                      <div class="text-emerald-300">$63,8{{ 4 - i }}.{{ 10 + i * 5 }}</div>
+                      <div class="text-gray-300">0.{{ 5 + i }}2 BTC</div>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Market Stats -->
-                <div class="grid grid-cols-3 gap-3 mt-4">
-                  <div
-                    v-for="crypto in portfolioStats"
-                    :key="crypto.symbol"
-                    class="p-3 rounded-lg bg-gray-700/30 border border-gray-600 text-center"
-                  >
-                    <div class="text-white font-semibold text-sm">{{ crypto.symbol }}</div>
-                    <div class="text-gray-300 text-xs mt-1">${{ crypto.price }}</div>
-                    <div 
-                      class="text-xs font-medium mt-1"
-                      :class="crypto.change.startsWith('+') ? 'text-green-400' : 'text-red-400'"
+                <!-- Sell Orders -->
+                <div>
+                  <div class="text-red-400 font-semibold mb-3">Sell Orders</div>
+                  <div class="space-y-2">
+                    <div
+                      v-for="i in 3"
+                      :key="'sell-' + i"
+                      class="flex justify-between items-center"
                     >
-                      {{ crypto.change }}
+                      <div class="text-red-300">$63,8{{ 4 + i }}.{{ 20 + i * 5 }}</div>
+                      <div class="text-gray-300">0.{{ 3 + i }}8 BTC</div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <!-- Platform Stats -->
-              <div class="grid grid-cols-3 gap-4 text-center">
-                <div class="p-3 rounded-xl bg-gray-700/30 border border-gray-600">
-                  <div class="text-gray-400 text-sm">24h Volume</div>
-                  <div class="text-white font-semibold text-lg">1.2M BTC</div>
-                </div>
-                <div class="p-3 rounded-xl bg-gray-700/30 border border-gray-600">
-                  <div class="text-gray-400 text-sm">Active Users</div>
-                  <div class="text-white font-semibold text-lg">50K+</div>
-                </div>
-                <div class="p-3 rounded-xl bg-gray-700/30 border border-gray-600">
-                  <div class="text-gray-400 text-sm">Uptime</div>
-                  <div class="text-green-400 font-semibold text-lg">99.99%</div>
-                </div>
+            <!-- Quick Actions -->
+            <div class="p-6 border-t border-white/10">
+              <div class="flex gap-4">
+                <button class="flex-1 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 font-semibold hover:bg-emerald-500/20 transition-all border border-emerald-500/20">
+                  Buy BTC
+                </button>
+                <button class="flex-1 py-3 rounded-lg bg-red-500/10 text-red-400 font-semibold hover:bg-red-500/20 transition-all border border-red-500/20">
+                  Sell BTC
+                </button>
+                <button class="flex-1 py-3 rounded-lg bg-white/5 text-white font-semibold hover:bg-white/10 transition-all border border-white/10">
+                  Set Limit
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- Floating Elements -->
-          <div class="absolute -top-4 -right-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl"></div>
-          <div class="absolute -bottom-4 -left-4 w-32 h-32 bg-green-500/5 rounded-full blur-xl"></div>
+          <!-- Platform Features -->
+          <div class="grid grid-cols-2 gap-4 mt-6">
+            <div class="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+              <div class="text-2xl font-bold text-white mb-1">0.1s</div>
+              <div class="text-gray-400 text-sm">Execution Speed</div>
+            </div>
+            <div class="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+              <div class="text-2xl font-bold text-white mb-1">99.9%</div>
+              <div class="text-gray-400 text-sm">Platform Uptime</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="text-center mt-16">
+        <div class="inline-flex flex-col sm:flex-row items-center gap-8 p-8 rounded-2xl bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm border border-white/10">
+          <div class="text-left">
+            <h3 class="text-2xl font-bold text-white mb-2">Ready to trade like a pro?</h3>
+            <p class="text-gray-400">Join 500K+ traders worldwide</p>
+          </div>
+          <div class="flex gap-4">
+            <button class="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-all">
+              Get Started Free
+            </button>
+            <button class="px-8 py-3 rounded-xl bg-white/5 text-white font-semibold hover:bg-white/10 transition-all border border-white/10">
+              Schedule Demo
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -246,28 +414,35 @@ const portfolioStats = [
 </template>
 
 <style scoped>
-/* Smooth animations */
-* {
-  transition-property: color, background-color, border-color, transform, box-shadow;
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+/* Simple fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Custom scrollbar for webkit */
-::-webkit-scrollbar {
-  width: 6px;
+.grid > div {
+  animation: fadeIn 0.5s ease-out forwards;
+  animation-fill-mode: both;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
+/* Stagger animation delays */
+.grid > div:nth-child(1) { animation-delay: 0.1s; }
+.grid > div:nth-child(2) { animation-delay: 0.2s; }
+.grid > div:nth-child(3) { animation-delay: 0.3s; }
+.grid > div:nth-child(4) { animation-delay: 0.4s; }
+.grid > div:nth-child(5) { animation-delay: 0.5s; }
+.grid > div:nth-child(6) { animation-delay: 0.6s; }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

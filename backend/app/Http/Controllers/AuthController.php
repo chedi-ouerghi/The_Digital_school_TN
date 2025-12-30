@@ -175,13 +175,23 @@ class AuthController extends Controller
             $user = $request->user();
             $validated = $request->validate([
                 'current_password' => ['required', 'string'],
-                'password' => ['required', 'string', 'min:8', 'confirmed'],
+                'password' => ['required', 'string', 'min:8', 'confirmed:password_confirmation'],
+            ], [
+                'current_password.required' => 'The current password field is required.',
+                'password.required' => 'The password field is required.',
+                'password.confirmed' => 'The password confirmation does not match.',
             ]);
 
-            // Ici on limite le changement via cette route aux CLIENT (conformément à la spec)
-            if (isset($user->role) && strtoupper($user->role) !== 'CLIENT') {
-                return response()->json(['error' => 'Seuls les clients peuvent changer leur mot de passe via ce endpoint.'], 403);
-            }
+          // Autoriser uniquement ADMIN et CLIENT
+if (
+    !isset($user->role) ||
+    !in_array(strtoupper($user->role), ['ADMIN', 'CLIENT'])
+) {
+    return response()->json([
+        'error' => 'Vous n’êtes pas autorisé à changer le mot de passe via ce endpoint.'
+    ], 403);
+}
+
 
             if (!\Illuminate\Support\Facades\Hash::check($validated['current_password'], $user->password)) {
                 return response()->json(['error' => 'Mot de passe actuel invalide.'], 400);

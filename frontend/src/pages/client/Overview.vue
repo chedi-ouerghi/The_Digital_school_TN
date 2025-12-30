@@ -1,43 +1,58 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import api from '../../services/api'
-import { useRouter } from 'vue-router'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, BarElement } from 'chart.js'
-import { Line, Bar } from 'vue-chartjs'
-import {
-  TrendingUp,
-  ShoppingCart,
-  ArrowUpRight,
-  Wallet,
-  PieChart,
-  BarChart3,
-  ChevronRight,
-  TrendingDown,
-  DollarSign,
-  Coins,
-  Activity
-} from 'lucide-vue-next'
-
-// Import des composants shadcn-vue
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import router from '@/router'
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip
+} from 'chart.js'
+import {
+  Activity, ArrowUpRight,
+  BarChart3,
+  ChevronRight, Coins,
+  DollarSign, PieChart, ShoppingCart, TrendingDown,
+  TrendingUp,
+  Wallet
+} from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { Bar, Line } from 'vue-chartjs'
+import api from '../../services/api'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, BarElement)
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+)
 
-const router = useRouter()
+// State variables
+const activeTab = ref('overview')
+const loading = ref(false)
+const error = ref<string | null>(null)
+const chartLoading = ref(false)
 const wallet = ref<any>(null)
 const cryptos = ref<any[]>([])
-const loading = ref(false)
-const chartLoading = ref(false)
-const error = ref<string | null>(null)
-
+const selectedChartType = ref('portfolio')
+const selectedChartPeriod = ref('30d')
+const selectedCryptoForChart = ref<string | null>(null)
 const chartData = ref<number[]>([])
 const chartLabels = ref<string[]>([])
-const selectedChartPeriod = ref<string>('7d')
-const selectedChartType = ref<string>('portfolio')
-const selectedCryptoForChart = ref<string>('')
 
 const timePeriods = [
   { value: '24h', label: '24H' },
@@ -895,7 +910,7 @@ function goToTransactions() {
           </CardHeader>
           <CardContent class="space-y-4">
             <div v-if="stats.bestPerformer" class="bg-[#01FF19]/5 rounded-xl p-4">
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
                   <TrendingUp class="w-4 h-4 text-[#01FF19]" />
                   <span class="text-sm font-medium text-gray-700">Best Performer</span>
@@ -904,11 +919,23 @@ function goToTransactions() {
                   {{ formatPercent(stats.bestPerformer.pnlPercent) }}
                 </Badge>
               </div>
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-white border flex items-center justify-center">
-                  <span class="font-bold text-xs">{{ stats.bestPerformer.symbol.toUpperCase() }}</span>
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                  <div class="w-10 h-10 rounded-xl border-2 border-gray-100 bg-white flex items-center justify-center shadow-sm">
+                    <img
+                      v-if="makeImageUrl(stats.bestPerformer.image_url)"
+                      :src="makeImageUrl(stats.bestPerformer.image_url) || ''"
+                      :alt="stats.bestPerformer.name"
+                      class="w-9 h-9 rounded-lg object-cover"
+                      @error="(e: any) => {
+                        const target = e.target as HTMLImageElement
+                        if (target) target.style.display = 'none'
+                      }"
+                    />
+                    <div v-else class="text-lg">💎</div>
+                  </div>
                 </div>
-                <div>
+                <div class="flex-1 min-w-0">
                   <div class="font-semibold text-gray-900">{{ stats.bestPerformer.name }}</div>
                   <div class="text-xs text-gray-500">
                     {{ formatCurrency(stats.bestPerformer.pnl) }} profit
@@ -918,7 +945,7 @@ function goToTransactions() {
             </div>
 
             <div v-if="stats.worstPerformer" class="bg-[#FF5964]/5 rounded-xl p-4">
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
                   <TrendingDown class="w-4 h-4 text-[#FF5964]" />
                   <span class="text-sm font-medium text-gray-700">Worst Performer</span>
@@ -927,11 +954,23 @@ function goToTransactions() {
                   {{ formatPercent(stats.worstPerformer.pnlPercent) }}
                 </Badge>
               </div>
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-white border flex items-center justify-center">
-                  <span class="font-bold text-xs">{{ stats.worstPerformer.symbol.toUpperCase() }}</span>
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                  <div class="w-10 h-10 rounded-xl border-2 border-gray-100 bg-white flex items-center justify-center shadow-sm">
+                    <img
+                      v-if="makeImageUrl(stats.worstPerformer.image_url)"
+                      :src="makeImageUrl(stats.worstPerformer.image_url) || ''"
+                      :alt="stats.worstPerformer.name"
+                      class="w-9 h-9 rounded-lg object-cover"
+                      @error="(e: any) => {
+                        const target = e.target as HTMLImageElement
+                        if (target) target.style.display = 'none'
+                      }"
+                    />
+                    <div v-else class="text-lg">💎</div>
+                  </div>
                 </div>
-                <div>
+                <div class="flex-1 min-w-0">
                   <div class="font-semibold text-gray-900">{{ stats.worstPerformer.name }}</div>
                   <div class="text-xs text-gray-500">
                     {{ formatCurrency(stats.worstPerformer.pnl) }} loss
@@ -995,7 +1034,7 @@ function goToTransactions() {
               </div>
               <div>
                 <div class="font-medium text-gray-900">
-                  {{ transaction.type === 'ACHAT' ? 'Buy' : 'Sell' }} {{ transaction.crypto?.symbol?.toUpperCase() }}
+                  {{ transaction.type === 'ACHAT' ? 'Buy' : 'Sell' }} {{ transaction.crypto_wallet_asset?.cryptomoney?.symbol?.toUpperCase() || 'Unknown' }}
                 </div>
                 <div class="text-sm text-gray-500">
                   {{ new Date(transaction.created_at).toLocaleDateString() }}
@@ -1008,7 +1047,7 @@ function goToTransactions() {
                 {{ formatCurrency(transaction.total_eur) }}
               </div>
               <div class="text-sm text-gray-500">
-                {{ formatNumber(transaction.quantity) }} {{ transaction.crypto?.symbol?.toUpperCase() }}
+                {{ formatNumber(transaction.quantity) }} {{ transaction.crypto_wallet_asset?.cryptomoney?.symbol?.toUpperCase() || 'UNKNOWN' }}
               </div>
             </div>
           </div>

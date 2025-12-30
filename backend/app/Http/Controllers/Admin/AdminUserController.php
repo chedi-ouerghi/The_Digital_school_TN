@@ -50,19 +50,15 @@ public function index(): JsonResponse
 }
 
 
-    /**
-     * Détails d'un client
-     */
+/**
+ * Détails d'un client
+ */
 public function show($id): JsonResponse
 {
     $user = User::with([
         'wallet.cryptoWalletAssets.cryptomoney',
-        'wallet.transactions.cryptomoney'
-    ])->find($id);
-
-    if (!$user) {
-        return response()->json(['error' => 'Utilisateur non trouvé'], 404);
-    }
+        'wallet.transactions.cryptoWalletAsset.cryptomoney',
+    ])->findOrFail($id);
 
     $wallet = $user->wallet;
 
@@ -86,6 +82,7 @@ public function show($id): JsonResponse
         $quantity = (float) $asset->quantity;
         $avgPrice = (float) $asset->average_buy_price;
         $currentPrice = (float) ($asset->cryptomoney?->price_eur ?? 0);
+
         $currentValue = $quantity * $currentPrice;
         $invested = $quantity * $avgPrice;
         $pnl = $currentValue - $invested;
@@ -105,7 +102,8 @@ public function show($id): JsonResponse
         ];
     });
 
-    $accountBalance = $positions->sum('current_value') + (float) $wallet->balance_eur;
+    $accountBalance =
+        $positions->sum('current_value') + (float) $wallet->balance_eur;
 
     // 🧾 Transactions récentes
     $transactions = $wallet->transactions
@@ -115,7 +113,7 @@ public function show($id): JsonResponse
             return [
                 'id' => $tx->id,
                 'type' => $tx->type,
-                'crypto' => $tx->cryptomoney?->symbol,
+                'crypto' => $tx->cryptoWalletAsset?->cryptomoney?->symbol,
                 'quantity' => (float) $tx->quantity,
                 'price' => (float) $tx->price,
                 'total_eur' => (float) $tx->total_eur,
@@ -130,9 +128,8 @@ public function show($id): JsonResponse
         'name' => $user->name,
         'email' => $user->email,
         'role' => $user->role,
-                    'profile_picture' => $user->profile_picture,
-            'profile_banner' => $user->profile_banner,
-
+        'profile_picture' => $user->profile_picture,
+        'profile_banner' => $user->profile_banner,
         'balance_eur' => (float) $wallet->balance_eur,
         'account_balance' => $accountBalance,
         'positions' => $positions,
@@ -218,7 +215,7 @@ public function show($id): JsonResponse
 		try {
 			$user = User::findOrFail($id);
 			
-			$transactions = Transaction::with(['cryptoWalletAsset.wallet.user', 'cryptomoney'])
+			$transactions = Transaction::with(['cryptoWalletAsset.cryptomoney', 'cryptoWalletAsset.wallet.user'])
 				->whereHas('cryptoWalletAsset.wallet', function($query) use ($id) {
 					$query->where('user_id', $id);
 				})
@@ -240,10 +237,10 @@ public function show($id): JsonResponse
 						'total_eur' => $transaction->total_eur,
 						'created_at' => $transaction->created_at,
 						'crypto' => [
-							'id' => $transaction->cryptomoney->id,
-							'nom' => $transaction->cryptomoney->nom,
-							'symbole' => $transaction->cryptomoney->symbole,
-							'price_eur' => $transaction->cryptomoney->price_eur,
+							'id' => $transaction->cryptoWalletAsset?->cryptomoney?->id,
+							'name' => $transaction->cryptoWalletAsset?->cryptomoney?->name,
+							'symbol' => $transaction->cryptoWalletAsset?->cryptomoney?->symbol,
+							'price_eur' => $transaction->cryptoWalletAsset?->cryptomoney?->price_eur,
 						]
 					];
 				})
@@ -262,7 +259,10 @@ public function show($id): JsonResponse
 		$user = \App\Models\User::find($id);
 		if (!$user) return response()->json(['error' => 'Utilisateur non trouvé'], 404);
 
-		$portfolio = \App\Models\wallet::with('cryptomoney','transactions')
+		$portfolio = \App\Models\Wallet::with([
+			'cryptoWalletAssets.cryptomoney',
+			'transactions.cryptoWalletAsset.cryptomoney'
+		])
 			->where('user_id', $id)
 			->get();
 

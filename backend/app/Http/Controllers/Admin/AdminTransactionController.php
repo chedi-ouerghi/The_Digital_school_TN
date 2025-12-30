@@ -24,7 +24,7 @@ class AdminTransactionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Transaction::with(['cryptoWalletAsset.wallet.user', 'cryptomoney'])
+        $query = Transaction::with(['cryptoWalletAsset.cryptomoney', 'cryptoWalletAsset.wallet.user'])
             ->orderBy('created_at', 'desc');
 
         // Filtres optionnels
@@ -50,8 +50,8 @@ class AdminTransactionController extends Controller
      */
     public function show($id): JsonResponse
     {
-        $transaction = Transaction::with(['cryptoWalletAsset.wallet.user', 'cryptomoney'])
-    ->findOrFail($id);
+        $transaction = Transaction::with(['cryptoWalletAsset.cryptomoney', 'cryptoWalletAsset.wallet.user'])
+            ->findOrFail($id);
         return response()->json($transaction);
     }
 
@@ -94,8 +94,8 @@ public function cancel(Request $request, $id): JsonResponse
 {
     try {
         $transaction = Transaction::with([
-            'cryptoWalletAsset.wallet.user', 
-            'cryptomoney'
+            'cryptoWalletAsset.cryptomoney',
+            'cryptoWalletAsset.wallet.user'
         ])->findOrFail($id);
 
         if ($transaction->cancelled_at) {
@@ -118,8 +118,7 @@ public function cancel(Request $request, $id): JsonResponse
 
         // Notifier le client
         if ($client) {
-            $cryptoSymbole = $transaction->cryptomoney->symbol ?? 
-                            ($transaction->cryptoWalletAsset->cryptomoney->symbol ?? 'UNKNOWN');
+            $cryptoSymbole = $transaction->cryptoWalletAsset?->cryptomoney?->symbol ?? 'UNKNOWN';
             
             $clientName = $client->name ?? $client->email ?? "Utilisateur #{$client->id}";
             

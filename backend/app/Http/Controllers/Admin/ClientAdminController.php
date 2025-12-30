@@ -23,7 +23,7 @@ class ClientAdminController extends Controller
             // Charger le wallet et ses relations (cryptos, transactions, etc.)
             $portfolio = Wallet::with([
                 'user:id,name,email',
-                'transactions.cryptomoney',
+                'transactions.cryptoWalletAsset.cryptomoney',
                 'cryptoWalletAssets.cryptomoney'
             ])
             ->where('user_id', $user->id)
@@ -60,7 +60,7 @@ class ClientAdminController extends Controller
                             'quantity' => $transaction->quantity,
                             'price' => $transaction->price,
                             'total_eur' => $transaction->total_eur,
-                            'crypto' => $transaction->cryptomoney->symbole ?? '',
+                            'crypto' => $transaction->cryptoWalletAsset?->cryptomoney?->symbol ?? '',
                             'date' => $transaction->created_at->format('Y-m-d H:i:s'),
                         ];
                     }),

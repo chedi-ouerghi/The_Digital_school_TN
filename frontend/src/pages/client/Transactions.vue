@@ -69,7 +69,9 @@ async function loadTransactions() {
     const walletTxs = data.transactions || []
 
     walletTxs.forEach((tx: any) => {
-      const crypto = tx.cryptomoney || {}
+      // Access crypto via the double relation: Transaction -> CryptoWalletAsset -> Cryptomoney
+      const cryptoWalletAsset = tx.crypto_wallet_asset || {}
+      const crypto = cryptoWalletAsset.cryptomoney || {}
       
       mapped.push({
         id: tx.id,
@@ -82,10 +84,10 @@ async function loadTransactions() {
         cancelled: !!tx.cancelled_at,
         cancelReason: tx.cancel_reason,
         crypto: {
-          id: crypto.id,
-          name: crypto.name,
-          symbol: crypto.symbol,
-          image_url: crypto.image_url,
+          id: crypto.id || 'unknown',
+          name: crypto.name || 'Unknown Crypto',
+          symbol: crypto.symbol || 'N/A',
+          image_url: crypto.image_url || '',
         },
       })
     })
