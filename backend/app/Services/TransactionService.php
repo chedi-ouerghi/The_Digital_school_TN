@@ -23,6 +23,11 @@ class TransactionService
         float $quantity
     ): string {
         return DB::transaction(function () use ($user, $symbol, $type, $quantity) {
+            // CORRECTION: Validations complètes dès le départ
+            if ($quantity <= 0) {
+                throw new \Exception('La quantité doit être positive');
+            }
+
             $crypto = Cryptomoney::where('symbol', $symbol)->firstOrFail();
 
             $wallet = $user->wallets()->first();
@@ -34,6 +39,11 @@ class TransactionService
             }
 
             $currentPrice = (float)$crypto->price_eur;
+            // CORRECTION: Validation du prix
+            if ($currentPrice <= 0) {
+                throw new \Exception('Le prix de la crypto est invalide');
+            }
+            
             $totalAmount = (float)$quantity * $currentPrice;
 
             $asset = CryptoWalletAsset::firstOrNew([
@@ -63,13 +73,27 @@ class TransactionService
                 if (!$asset->exists || (float)$asset->quantity < (float)$quantity) {
                     throw new \Exception('Quantité insuffisante pour cette vente');
                 }
+                
+                // CORRECTION: Validation du solde EUR après la vente (pour éviter solde négatif)
+                $newBalance = (float)$wallet->balance_eur + $totalAmount;
+                if ($newBalance < 0) {
+                    throw new \Exception('Solde EUR invalide après cette vente');
+                }
 
-                $wallet->balance_eur = (float)$wallet->balance_eur + $totalAmount;
+                $wallet->balance_eur = $newBalance;
                 $wallet->save();
 
                 $newQuantity = (float)$asset->quantity - (float)$quantity;
                 // Conserver l'asset même à 0 pour l'historique des transactions
                 $asset->quantity = max(0, $newQuantity);
+                
+                // CORRECTION: Recalcul du prix moyen d'achat après une vente
+                // Le prix moyen ne change que si la quantité restante est > 0
+                if ($newQuantity <= 0) {
+                    $asset->average_buy_price = 0;
+                }
+                // Sinon, le prix moyen reste inchangé (on vend au prix moyen courant)
+                
                 $asset->save();
             }
 

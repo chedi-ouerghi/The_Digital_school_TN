@@ -11,7 +11,12 @@ return new class extends Migration
         // Only add the column if it does not already exist (avoid duplicate column errors)
         if (! Schema::hasColumn('blog_posts', 'user_id')) {
             Schema::table('blog_posts', function (Blueprint $table) {
-                $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete()->after('id');
+                // Utiliser string() au lieu de foreignId() car users.id est une string
+                $table->string('user_id', 64)->nullable()->after('id');
+                $table->foreign('user_id')
+                    ->references('id')
+                    ->on('users')
+                    ->cascadeOnDelete();
             });
         }
     }
@@ -20,8 +25,8 @@ return new class extends Migration
     {
         if (Schema::hasColumn('blog_posts', 'user_id')) {
             Schema::table('blog_posts', function (Blueprint $table) {
-                // dropConstrainedForeignId will remove FK and column
-                $table->dropConstrainedForeignId('user_id');
+                $table->dropForeign(['user_id']);
+                $table->dropColumn('user_id');
             });
         }
     }

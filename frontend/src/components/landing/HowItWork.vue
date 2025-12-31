@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Banknote, BarChart3, CreditCard, Globe, Shield, TrendingUp, Zap } from 'lucide-vue-next'
 import { ref } from 'vue'
-import { CreditCard, Banknote, BarChart3, TrendingUp, Shield, Zap, Globe } from 'lucide-vue-next'
 
 const features = [
   {
@@ -112,7 +112,7 @@ const marketStats = [
       <!-- Market Stats -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
         <div
-          v-for="(stat, index) in marketStats"
+          v-for="stat in marketStats"
           :key="stat.label"
           class="p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
         >
@@ -138,7 +138,7 @@ const marketStats = [
           <!-- Features Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
-              v-for="(feature, index) in features"
+              v-for="feature in features"
               :key="feature.title"
               class="group p-5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:scale-[1.02]"
             >
@@ -267,11 +267,11 @@ const marketStats = [
                 <button
                   v-for="tf in timeframes"
                   :key="tf.value"
-                  @click="timeframe = tf.value"
                   class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                   :class="timeframe === tf.value
                     ? 'bg-white/10 text-white border border-white/20'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                  @click="timeframe = tf.value"
                 >
                   {{ tf.label }}
                 </button>

@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Markets', href: '#crypto-tracker' },
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Blog', href: '/blog', external: true },
   { label: 'Contact', href: '#contact' }
 ]
 
@@ -29,15 +30,16 @@ const isMenuOpen = ref(false)
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-1">
-          <a
+          <router-link
             v-for="item in navItems"
             :key="item.label"
-            :href="item.href"
+            :to="item.href"
             class="relative px-3 py-2 text-sm text-gray-300 hover:text-white transition-colors group"
+            :target="item.external ? '_self' : undefined"
           >
             {{ item.label }}
             <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-emerald-500 group-hover:w-4/5 transition-all duration-300"></div>
-          </a>
+          </router-link>
         </nav>
 
         <!-- Right Side -->
@@ -49,8 +51,8 @@ const isMenuOpen = ref(false)
 
           <!-- Mobile Menu Button -->
           <button
-            @click="isMenuOpen = !isMenuOpen"
             class="md:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+            @click="isMenuOpen = !isMenuOpen"
           >
             <Menu v-if="!isMenuOpen" class="w-5 h-5" />
             <X v-else class="w-5 h-5" />
@@ -88,15 +90,15 @@ const isMenuOpen = ref(false)
       class="md:hidden absolute top-full left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-white/10 p-6 rounded-b-2xl"
     >
       <div class="space-y-3">
-        <a
+        <router-link
           v-for="item in navItems"
           :key="item.label"
-          :href="item.href"
-          @click="isMenuOpen = false"
+          :to="item.href"
           class="block py-2 px-4 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+          @click="isMenuOpen = false"
         >
           {{ item.label }}
-        </a>
+        </router-link>
         <div class="pt-3 border-t border-white/10">
           <GetStartedDialog />
         </div>

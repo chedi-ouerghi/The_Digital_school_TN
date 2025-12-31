@@ -7,36 +7,44 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use App\Models\CryptoHistory;
-use App\Services\CotationService;
 
 class CryptoService
 {
+    protected $cotationService;
+
+    public function __construct()
+    {
+        $this->cotationService = new CotationService();
+    }
+
     /**
      * Add or update a cryptocurrency from CoinGecko
      * @throws \Exception
      */
     public function addFromCoinGecko(string $cryptoId): string
     {
-        $cotationPath = 'c:\\Users\\USER\\Downloads\\bitchest\\documents\\cotation_generator.php';
-        if (!function_exists('getFirstCotation') && file_exists($cotationPath)) {
-            require_once $cotationPath;
-        }
+        $response = Http::withOptions(['verify' => false])
+            ->get("https://api.coingecko.com/api/v3/coins/{$cryptoId}");
 
-        $response = Http::withOptions(['verify' => false])->get("https://api.coingecko.com/api/v3/coins/{$cryptoId}");
         if (!$response->ok()) {
             throw new \Exception('Crypto non trouvée sur CoinGecko.');
         }
+
         $data = $response->json();
+        
+        // ✅ Essayer d'abord CoinGecko
         $priceEur = $data['market_data']['current_price']['eur'] ?? null;
-        if ($priceEur === null && function_exists('getFirstCotation')) {
+
+        // ✅ Si CoinGecko n'a pas le prix, utiliser le générateur local
+        if ($priceEur === null) {
             $symbolForGen = $data['symbol'] ?? $data['id'] ?? $cryptoId;
-            $priceEur = (float) getFirstCotation($symbolForGen);
+            $priceEur = $this->cotationService->getInitialPrice($symbolForGen);
         }
 
         $cryptodata = [
             'name' => $data['name'] ?? null,
             'symbol' => $data['symbol'] ?? null,
-            'image' => null, // L'image sera gérée par l'upload dans le frontend
+            'image' => null,
             'category' => $data['categories'][0] ?? null,
             'website' => $data['links']['homepage'][0] ?? null,
             'price_eur' => $priceEur,
@@ -46,17 +54,18 @@ class CryptoService
             'updated_at_api' => isset($data['last_updated']) ? Carbon::parse($data['last_updated']) : now(),
             'coingecko_id' => $data['id'] ?? null,
         ];
+
         $crypto = Cryptomoney::updateOrCreate(
             ['symbol' => $cryptodata['symbol']],
             $cryptodata
         );
+
         return $crypto->id;
     }
 
     /**
-     * Get market chart (last X days) from CoinGecko.
-     * Returns CoinGecko 'prices' raw array: [[timestamp_ms, price], ...]
-     * @throws \Exception
+     * Get market chart (last X days) from CoinGecko
+     * Fallback to synthetic prices if CoinGecko fails
      */
     public function getMarketChart(string $coingeckoId, int $days = 30): array
     {
@@ -64,36 +73,24 @@ class CryptoService
         $ttl = 60 * 60 * 24 * 30;
 
         return Cache::remember($cacheKey, $ttl, function () use ($coingeckoId, $days) {
-            $cotation = new CotationService();
-
-            // Fallback: generate synthetic prices if CoinGecko id is empty or API fails
+            // Cas 1: Pas de coingecko_id → Générer les prix localement
             if (empty($coingeckoId)) {
-                $prices = [];
-                $current = null;
-                $cryptoModel = Cryptomoney::where('coingecko_id', $coingeckoId)->first();
-                if ($cryptoModel) $current = $cryptoModel->price_eur;
-                if ($current === null) $current = $cotation->getInitialPrice($coingeckoId);
-                $p = (float)$current;
-                for ($i = $days; $i >= 0; $i--) {
-                    $ts = Carbon::now()->subDays($i)->timestamp * 1000;
-                    if ($i !== $days) {
-                        $deltaArr = $cotation->getDailyVariation($coingeckoId, $p);
-                        $delta = $deltaArr['delta'] ?? 0;
-                        $p = max(0.01, $p + $delta);
-                    }
-                    $prices[] = [$ts, round($p, 2)];
-                }
+                $prices = $this->cotationService->generatePriceHistory($coingeckoId, $days);
                 return $prices;
             }
 
+            // Cas 2: Essayer CoinGecko d'abord
             $url = "https://api.coingecko.com/api/v3/coins/{$coingeckoId}/market_chart";
             $response = Http::withOptions(['verify' => false])->get($url, [
                 'vs_currency' => 'eur',
                 'days' => $days,
             ]);
+
             if (!$response->ok()) {
-                return $this->getMarketChart('', $days);
+                // ❌ CoinGecko a échoué → Fallback au générateur local
+                return $this->cotationService->generatePriceHistory($coingeckoId, $days);
             }
+
             $data = $response->json();
             $prices = $data['prices'] ?? [];
 
@@ -121,18 +118,19 @@ class CryptoService
     }
 
     /**
-     * Ensure import/sync of a list of cryptos (e.g., top 10)
-     * and generate/persist their history for $days days.
+     * Import and sync top 10 cryptos
      */
     public function ensureTopCryptos(array $coingeckoIds = [], int $days = 30): array
     {
         $results = ['imported' => 0, 'failed' => 0, 'errors' => []];
+
         if (empty($coingeckoIds)) {
             $coingeckoIds = [
-                'bitcoin','ethereum','tether','binancecoin','usd-coin',
-                'ripple','cardano','dogecoin','polygon','solana'
+                'bitcoin', 'ethereum', 'tether', 'binancecoin', 'usd-coin',
+                'ripple', 'cardano', 'dogecoin', 'polygon', 'solana'
             ];
         }
+
         foreach ($coingeckoIds as $id) {
             try {
                 $this->addFromCoinGecko($id);
@@ -143,6 +141,7 @@ class CryptoService
                 $results['errors'][] = ['id' => $id, 'error' => $e->getMessage()];
             }
         }
+
         return $results;
     }
 }

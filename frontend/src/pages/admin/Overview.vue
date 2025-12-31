@@ -47,28 +47,28 @@ function refreshData() {
   <div class="space-y-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-[#38618C] mb-1">Admin Dashboard</h1>
-        <p class="text-sm sm:text-base text-gray-500">Platform overview and analytics</p>
+      <div class="space-y-1">
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#38618C] tracking-tight">Admin Dashboard</h1>
+        <p class="text-sm sm:text-base text-gray-500 leading-relaxed">Platform overview and analytics</p>
       </div>
-      <div class="flex flex-wrap gap-2 sm:gap-3">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <Button 
-          @click="refreshData"
           :disabled="loading"
           variant="outline"
-          class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white text-sm sm:text-base"
+          class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white text-sm sm:text-base px-3 sm:px-4 h-9 sm:h-10"
+          @click="refreshData"
         >
           🔄 Refresh
         </Button>
         <Button 
+          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
           @click="goToClients"
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold text-sm sm:text-base"
         >
           👥 Clients
         </Button>
         <Button 
+          class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
           @click="goToCryptos"
-          class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold text-sm sm:text-base"
         >
           💎 Cryptos
         </Button>
@@ -80,9 +80,10 @@ function refreshData() {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card v-for="i in 4" :key="i">
           <CardContent class="p-4 sm:p-6">
-            <div class="animate-pulse">
-              <div class="h-3 sm:h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div class="h-6 sm:h-8 bg-gray-200 rounded w-3/4"></div>
+            <div class="animate-pulse space-y-3">
+              <div class="h-4 bg-gray-200 rounded w-1/2 mb-1"></div>
+              <div class="h-7 bg-gray-200 rounded w-3/4"></div>
+              <div class="h-3 bg-gray-200 rounded w-full mt-2"></div>
             </div>
           </CardContent>
         </Card>
@@ -91,13 +92,13 @@ function refreshData() {
 
     <!-- Error State -->
     <Card v-else-if="error" class="border-[#FF5964]">
-      <CardContent class="p-6 sm:p-8 lg:p-12 text-center">
-        <div class="text-4xl sm:text-6xl mb-4">❌</div>
-        <h3 class="text-lg sm:text-xl font-semibold text-[#FF5964] mb-2">Loading Error</h3>
-        <div class="text-sm sm:text-base text-gray-600 mb-4">{{ error }}</div>
+      <CardContent class="p-6 text-center">
+        <div class="text-5xl mb-4">❌</div>
+        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Loading Error</h3>
+        <p class="text-gray-600 mb-6">{{ error }}</p>
         <Button 
+          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white px-6 h-10"
           @click="fetchStats"
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
         >
           Try Again
         </Button>
@@ -132,3 +133,26 @@ function refreshData() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Améliorations de l'alignement */
+.btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+</style>

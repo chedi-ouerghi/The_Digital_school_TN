@@ -7,8 +7,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, useAttrs } from 'vue'
-import * as THREE from 'three'
+import * as THREE from 'three';
+import { onMounted, onUnmounted, ref, useAttrs, watch } from 'vue';
 
 // Props
 interface Props {
@@ -68,7 +68,6 @@ const initThreeJS = () => {
   containerRef.value.appendChild(renderer.domElement)
 
   // Création des particules
-  const particles: THREE.Points[] = []
   const positions: number[] = []
   const colors: number[] = []
 

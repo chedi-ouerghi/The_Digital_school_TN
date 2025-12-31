@@ -92,8 +92,7 @@ class AdminUserControllerTest extends TestCase
         $response = $this->withHeader('Authorization', "Bearer $token")
             ->getJson('/api/v1/admin/clients/99999');
 
-        $response->assertStatus(404)
-            ->assertJson(['error' => 'Utilisateur non trouvé']);
+        $response->assertStatus(404);
     }
 
     /**

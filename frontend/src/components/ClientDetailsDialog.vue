@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, watch, defineProps, defineEmits } from 'vue'
-import api from '../services/api'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
+import { ref, watch } from 'vue'
+import api from '../services/api'
 
 const props = defineProps<{ 
   open: boolean
-  clientId: number | null 
+  clientId: number | null
 }>()
 
 const emit = defineEmits<{
@@ -37,14 +37,15 @@ watch(() => props.clientId, async (id) => {
   if (id) {
     loading.value = true
     try {
+      const idString = String(id)
       const [clientData, portfolioData, transactionsData] = await Promise.all([
-        api.admin.clients.show(id),
-        api.admin.clients.portfolio(id),
-        api.admin.clients.transactions(id)
+        api.admin.clients.show(idString),
+        api.admin.clients.getPortfolio(idString),
+        api.admin.clients.transactions(idString)
       ])
       client.value = clientData
-      portfolio.value = portfolioData.portfolio
-      transactions.value = transactionsData.transactions?.slice(0, 5) || []
+      portfolio.value = (portfolioData as any)?.portfolio || (portfolioData as any)
+      transactions.value = (transactionsData as any)?.transactions?.slice(0, 5) || []
     } catch (err: any) {
       console.error('Error fetching client details:', err)
     } finally {
@@ -162,8 +163,8 @@ watch(() => props.clientId, async (id) => {
       <div class="mt-6 flex justify-end">
         <Button 
           variant="outline"
-          @click="emit('close')"
           class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+          @click="emit('close')"
         >
           Fermer
         </Button>

@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../../services/api'
 import { Chart, registerables } from 'chart.js'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import api, { API_BASE } from '../../services/api'
 
 // Import des composants shadcn-vue
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  CheckCircle2,
   AlertCircle,
-  TrendingUp,
-  TrendingDown,
+  CheckCircle2,
   Eye,
   EyeOff,
-  User,
   Lock,
-  Wallet,
-  RefreshCw
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+  User,
+  Wallet
 } from 'lucide-vue-next'
 
 // Enregistrer Chart.js
@@ -106,6 +106,7 @@ const changingPassword = ref(false)
 
 // Données du portfolio
 const portfolioStats = ref<PortfolioResponse['data'] | null>(null)
+const userBalance = ref(0)
 
 // Graphiques
 const growthChart = ref<Chart | null>(null)
@@ -242,6 +243,15 @@ async function fetchPortfolioStats() {
   try {
     const response = await api.auth.getProfileStats()
     portfolioStats.value = response.data
+    
+    // Récupérer le solde disponible
+    try {
+      const walletResponse = await api.wallet.list()
+      const walletData = walletResponse?.wallet || {}
+      userBalance.value = Number(walletData.balance_eur ?? walletResponse?.solde_eur ?? 0)
+    } catch (walletError) {
+      console.error('Error loading wallet balance:', walletError)
+    }
     
     // Recréer les graphiques après un court délai pour s'assurer que le DOM est mis à jour
     setTimeout(() => {
@@ -507,9 +517,9 @@ const profitTrend = computed(() => {
       </div>
       <Button 
         variant="outline" 
-        @click="fetchPortfolioStats"
         :disabled="loading"
         class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white transition-colors"
+        @click="fetchPortfolioStats"
       >
         <RefreshCw class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
         {{ loading ? 'Refreshing...' : 'Refresh' }}
@@ -578,21 +588,23 @@ const profitTrend = computed(() => {
             </CardContent>
           </Card>
 
-          <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-300 bg-gradient-to-br from-[#35A7FF]/5 to-transparent hover-lift">
+          <Card class="border-gray-200 hover:border-[#01FF19] transition-all duration-300 bg-gradient-to-br from-[#01FF19]/5 to-transparent hover-lift">
             <CardContent class="p-4 sm:p-6">
-              <div class="text-xs sm:text-sm text-gray-500 mb-1">Current Value</div>
-              <div class="text-xl sm:text-2xl font-bold text-[#35A7FF]">
-                {{ loading ? '...' : formatCurrency(stats?.current_value || 0) }}
+              <div class="text-xs sm:text-sm text-gray-500 mb-1">Available Balance</div>
+              <div class="text-xl sm:text-2xl font-bold text-[#01FF19]">
+                {{ loading ? '...' : formatCurrency(userBalance || 0) }}
               </div>
-              <div class="text-xs text-gray-400 mt-1">Portfolio value</div>
+              <div class="text-xs text-gray-400 mt-1">Available for investment</div>
             </CardContent>
           </Card>
 
-          <Card class="border-gray-200 transition-all duration-300 bg-gradient-to-br hover-lift" 
+          <Card
+class="border-gray-200 transition-all duration-300 bg-gradient-to-br hover-lift" 
                 :class="profitTrend === 'up' ? 'hover:border-[#01FF19] from-[#01FF19]/5' : 'hover:border-[#FF5964] from-[#FF5964]/5'">
             <CardContent class="p-4 sm:p-6">
               <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Profit</div>
-              <div class="text-xl sm:text-2xl font-bold flex items-center gap-1" 
+              <div
+class="text-xl sm:text-2xl font-bold flex items-center gap-1" 
                    :class="profitTrend === 'up' ? 'text-[#01FF19]' : 'text-[#FF5964]'">
                 {{ loading ? '...' : formatCurrency(stats?.total_profit || 0) }}
                 <TrendingUp v-if="profitTrend === 'up'" class="w-5 h-5" />
@@ -659,37 +671,60 @@ const profitTrend = computed(() => {
           </Card>
         </div>
 
-        <!-- Détails de distribution -->
-        <Card v-if="distributionData.length > 0 && !loading" class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
+        <!-- Détails de distribution - Tableau moderne -->
+        <Card v-if="distributionData.length > 0 && !loading" class="border-gray-200 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg hover-lift transition-all duration-300">
           <CardHeader>
-            <CardTitle class="text-[#38618C]">Distribution Details</CardTitle>
+            <CardTitle class="text-[#38618C] flex items-center gap-2">
+              <span>📊</span>
+              Portfolio Distribution Details
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div class="space-y-3">
-              <div
-                v-for="item in distributionData"
-                :key="item.crypto_symbol"
-                class="border border-gray-200 rounded-xl p-4 hover:border-[#35A7FF] transition-all duration-300 hover:shadow-md"
-              >
-                <div class="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <div class="font-semibold text-[#38618C]">{{ item.crypto_name }}</div>
-                    <div class="text-sm text-gray-500">{{ item.crypto_symbol }}</div>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-semibold text-[#38618C]">{{ formatCurrency(item.value) }}</div>
-                    <div class="text-sm text-gray-500">{{ formatNumber(item.percentage) }}%</div>
-                  </div>
-                </div>
-                <div class="mt-2 pt-2 border-t border-gray-100">
-                  <div class="text-sm text-gray-600">
-                    Quantity: <span class="font-medium">{{ formatNumber(parseFloat(item.quantity), 6) }}</span>
-                  </div>
-                </div>
-              </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b-2 border-indigo-200">
+                    <th class="text-left py-3 px-4 font-semibold text-[#38618C]">Asset</th>
+                    <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Quantity</th>
+                    <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Value</th>
+                    <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Distribution %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    v-for="item in distributionData" 
+                    :key="item.crypto_symbol"
+                    class="border-b border-gray-200 hover:bg-white transition-colors"
+                  >
+                    <td class="py-4 px-4">
+                      <div>
+                        <div class="font-semibold text-[#38618C]">{{ item.crypto_name }}</div>
+                        <div class="text-xs text-gray-500">{{ item.crypto_symbol }}</div>
+                      </div>
+                    </td>
+                    <td class="text-right py-4 px-4 font-mono text-sm">{{ formatNumber(parseFloat(item.quantity), 8) }}</td>
+                    <td class="text-right py-4 px-4 font-bold text-[#35A7FF]">{{ formatCurrency(item.value) }}</td>
+                    <td class="text-right py-4 px-4">
+                      <Badge class="bg-indigo-100 text-indigo-900 font-semibold">
+                        {{ formatNumber(item.percentage) }}%
+                      </Badge>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
+
+        <!-- Bouton Transaction History -->
+        <div v-if="distributionData.length > 0 && !loading" class="flex justify-center">
+          <Button 
+            class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-8 py-3 transition-all hover:shadow-lg hover:scale-105"
+            @click="$router.push('/dashboard/transactions')"
+          >
+            📋 View Complete Transaction History
+          </Button>
+        </div>
       </TabsContent>
 
       <!-- Onglet Profil -->
@@ -699,7 +734,7 @@ const profitTrend = computed(() => {
             <CardTitle class="text-[#38618C]">Profile Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <form @submit.prevent="updateProfile" class="space-y-4">
+            <form class="space-y-4" @submit.prevent="updateProfile">
               <div class="space-y-2">
                 <Label for="name">Name</Label>
                 <Input
@@ -767,7 +802,7 @@ const profitTrend = computed(() => {
                   <div class="space-y-2">
                     <input type="file" accept="image/*" @change="handleAvatarUpload" />
                     <div class="flex gap-2">
-                      <Button @click="removeAvatarPreview" variant="outline">Remove</Button>
+                      <Button variant="outline" @click="removeAvatarPreview">Remove</Button>
                     </div>
                   </div>
                 </div>
@@ -782,7 +817,7 @@ const profitTrend = computed(() => {
                   </div>
                   <input type="file" accept="image/*" @change="handleBannerUpload" />
                   <div class="flex gap-2">
-                    <Button @click="removeBannerPreview" variant="outline">Remove</Button>
+                    <Button variant="outline" @click="removeBannerPreview">Remove</Button>
                   </div>
                 </div>
               </div>
@@ -804,7 +839,7 @@ const profitTrend = computed(() => {
             <CardTitle class="text-[#38618C]">Change Password</CardTitle>
           </CardHeader>
           <CardContent>
-            <form @submit.prevent="changePassword" class="space-y-4">
+            <form class="space-y-4" @submit.prevent="changePassword">
               <div class="space-y-2">
                 <Label for="current_password">Current Password</Label>
                 <div class="relative">
@@ -818,8 +853,8 @@ const profitTrend = computed(() => {
                   />
                   <button
                     type="button"
-                    @click="showCurrentPassword = !showCurrentPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    @click="showCurrentPassword = !showCurrentPassword"
                   >
                     <Eye v-if="showCurrentPassword" class="w-4 h-4" />
                     <EyeOff v-else class="w-4 h-4" />
@@ -840,8 +875,8 @@ const profitTrend = computed(() => {
                   />
                   <button
                     type="button"
-                    @click="showNewPassword = !showNewPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    @click="showNewPassword = !showNewPassword"
                   >
                     <Eye v-if="showNewPassword" class="w-4 h-4" />
                     <EyeOff v-else class="w-4 h-4" />
@@ -862,8 +897,8 @@ const profitTrend = computed(() => {
                   />
                   <button
                     type="button"
-                    @click="showConfirmPassword = !showConfirmPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    @click="showConfirmPassword = !showConfirmPassword"
                   >
                     <Eye v-if="showConfirmPassword" class="w-4 h-4" />
                     <EyeOff v-else class="w-4 h-4" />

@@ -1,22 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import api from '../../services/api'
-import { useRouter } from 'vue-router'
 
 // UI Components
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-
-const router = useRouter()
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Profile state
 const profile = ref<any>(null)
@@ -59,28 +54,21 @@ const changeIdSuccess = ref('')
 const confirmationValid = ref(false)
 const newIdValid = ref(false)
 // Available options
-const languages = [
-  { value: 'en', label: 'English' },
-  { value: 'fr', label: 'Français' },
-  { value: 'es', label: 'Español' },
-  { value: 'de', label: 'Deutsch' }
-]
+// const languages = [
+//   { value: 'en', label: 'English' },
+//   { value: 'fr', label: 'Français' },
+//   { value: 'es', label: 'Español' },
+//   { value: 'de', label: 'Deutsch' }
+// ]
 
-const timezones = [
-  'Europe/Paris',
-  'Europe/London', 
-  'America/New_York',
-  'America/Los_Angeles',
-  'Asia/Tokyo',
-  'Australia/Sydney'
-]
-
-const dateFormats = [
-  'DD/MM/YYYY',
-  'MM/DD/YYYY', 
-  'YYYY-MM-DD',
-  'DD MMM YYYY'
-]
+// const timezones = [
+//   'Europe/Paris',
+//   'Europe/London', 
+//   'America/New_York',
+//   'America/Los_Angeles',
+//   'Asia/Tokyo',
+//   'Australia/Sydney'
+// ]
 
 async function fetchProfile() {
   loading.value = true
@@ -222,7 +210,7 @@ function removeBanner() {
   bannerFile.value = null
 }
 
-async function deleteProfilePicture() {
+async function _deleteProfilePicture() {
   try {
     await api.auth.deleteProfilePicture()
     avatarPreview.value = ''
@@ -233,7 +221,7 @@ async function deleteProfilePicture() {
   }
 }
 
-async function deleteProfileBanner() {
+async function _deleteProfileBanner() {
   try {
     await api.auth.deleteProfileBanner()
     bannerPreview.value = ''
@@ -331,7 +319,7 @@ onMounted(fetchProfile)
       <AlertDescription class="text-red-800">
         {{ error }}
       </AlertDescription>
-      <Button @click="fetchProfile" variant="outline" class="mt-3 border-red-300 text-red-700 hover:bg-red-100">
+      <Button variant="outline" class="mt-3 border-red-300 text-red-700 hover:bg-red-100" @click="fetchProfile">
         Retry Loading
       </Button>
     </Alert>
@@ -391,9 +379,9 @@ onMounted(fetchProfile)
 
                 <div class="flex gap-3 pt-2">
                   <Button 
-                    @click="updateProfile" 
-                    :disabled="updateLoading"
+                    :disabled="updateLoading" 
                     class="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                    @click="updateProfile"
                   >
                     <span v-if="updateLoading" class="flex items-center gap-2">
                       <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -403,9 +391,9 @@ onMounted(fetchProfile)
                   </Button>
                   <Button 
                     variant="outline" 
-                    @click="fetchProfile" 
-                    :disabled="updateLoading"
+                    :disabled="updateLoading" 
                     class="border-gray-300 text-gray-700"
+                    @click="fetchProfile"
                   >
                     Reset
                   </Button>
@@ -448,9 +436,9 @@ onMounted(fetchProfile)
 
                 <div class="flex gap-3 pt-2">
                   <Button 
-                    @click="changePassword" 
-                    :disabled="passLoading"
+                    :disabled="passLoading" 
                     class="bg-green-600 hover:bg-green-700 text-white flex-1"
+                    @click="changePassword"
                   >
                     <span v-if="passLoading" class="flex items-center gap-2">
                       <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -460,9 +448,9 @@ onMounted(fetchProfile)
                   </Button>
                   <Button 
                     variant="outline" 
-                    @click="() => { currentPassword=''; newPassword=''; confirmPassword='' }" 
-                    :disabled="passLoading"
+                    :disabled="passLoading" 
                     class="border-gray-300 text-gray-700"
+                    @click="() => { currentPassword=''; newPassword=''; confirmPassword='' }"
                   >
                     Clear
                   </Button>
@@ -495,23 +483,23 @@ onMounted(fetchProfile)
                     <Input 
                       type="file" 
                       accept="image/*" 
-                      @change="handleAvatarUpload"
                       class="cursor-pointer"
+                      @change="handleAvatarUpload"
                     />
                     <div class="flex gap-2">
                       <Button 
-                        @click="uploadImages" 
-                        :disabled="!avatarFile || uploadLoading"
+                        :disabled="!avatarFile || uploadLoading" 
                         size="sm"
                         class="bg-blue-600 hover:bg-blue-700 text-white"
+                        @click="uploadImages"
                       >
                         {{ uploadLoading ? 'Uploading...' : 'Save Avatar' }}
                       </Button>
                       <Button 
-                        @click="removeAvatar" 
                         variant="outline" 
-                        size="sm"
+                        size="sm" 
                         class="border-gray-300 text-gray-700"
+                        @click="removeAvatar"
                       >
                         Remove
                       </Button>
@@ -544,24 +532,24 @@ onMounted(fetchProfile)
                   <Input 
                     type="file" 
                     accept="image/*" 
-                    @change="handleBannerUpload"
                     class="cursor-pointer"
+                    @change="handleBannerUpload"
                   />
                   
                   <div class="flex gap-2">
                     <Button 
-                      @click="uploadImages" 
-                      :disabled="!bannerFile || uploadLoading"
+                      :disabled="!bannerFile || uploadLoading" 
                       size="sm"
                       class="bg-blue-600 hover:bg-blue-700 text-white"
+                      @click="uploadImages"
                     >
                       {{ uploadLoading ? 'Uploading...' : 'Save Banner' }}
                     </Button>
                     <Button 
-                      @click="removeBanner" 
                       variant="outline" 
-                      size="sm"
+                      size="sm" 
                       class="border-gray-300 text-gray-700"
+                      @click="removeBanner"
                     >
                       Remove
                     </Button>
@@ -606,8 +594,8 @@ onMounted(fetchProfile)
 
               <div class="flex gap-3 pt-2">
                 <Button
-                  @click="showChangeIdDialog = true"
                   class="bg-red-600 hover:bg-red-700 text-white"
+                  @click="showChangeIdDialog = true"
                 >
                   Change Administrator ID
                 </Button>
@@ -636,12 +624,12 @@ onMounted(fetchProfile)
     placeholder="Enter 14-character alphanumeric ID (e.g., RWW60MGY2NDVSF)"
     :disabled="changeIdLoading"
     maxlength="14"
-    @input="newId = $event.target.value.toUpperCase()"
     :class="{
       'border-green-500': newIdValid && newId,
       'border-red-500': !newIdValid && newId,
       'border-gray-300': !newId
     }"
+    @input="newId = $event.target.value.toUpperCase()"
   />
   <div class="flex items-center gap-2">
     <p class="text-xs text-gray-500">
@@ -696,15 +684,15 @@ onMounted(fetchProfile)
           <DialogFooter class="gap-2">
             <Button
               variant="outline"
-              @click="cancelChangeId"
               :disabled="changeIdLoading"
+              @click="cancelChangeId"
             >
               Cancel
             </Button>
           <Button
-  @click="confirmChangeId"
   :disabled="changeIdLoading || !newIdValid || !confirmationValid"
   class="bg-red-600 hover:bg-red-700 text-white"
+  @click="confirmChangeId"
 >
   <span v-if="changeIdLoading" class="flex items-center gap-2">
     <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import api from '../../services/api'
 import type { Wallet } from '../../types'
 
 // UI components
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -252,9 +252,9 @@ async function confirmSell() {
         <p class="text-gray-500">Complete record of your trades</p>
       </div>
       <Button
-        @click="loadTransactions"
         :disabled="loading"
         class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold w-full sm:w-auto"
+        @click="loadTransactions"
       >
         🔄 Refresh
       </Button>
@@ -343,7 +343,7 @@ async function confirmSell() {
       <CardContent class="p-8 sm:p-12 text-center">
         <div class="text-4xl mb-4">❌</div>
         <div class="text-sm text-[#FF5964] mb-4">{{ error }}</div>
-        <Button @click="loadTransactions" class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white text-sm">
+        <Button class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white text-sm" @click="loadTransactions">
           Retry
         </Button>
       </CardContent>
@@ -424,8 +424,8 @@ async function confirmSell() {
             <div v-if="!tx.cancelled && canSell(tx)">
               <Button
                 size="sm"
-                @click="openSellDialog(tx)"
                 class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white w-full text-sm"
+                @click="openSellDialog(tx)"
               >
                 💰 Sell
               </Button>
@@ -495,8 +495,8 @@ async function confirmSell() {
               <Button
                 v-if="!tx.cancelled && canSell(tx)"
                 size="sm"
-                @click="openSellDialog(tx)"
                 class="flex-1 bg-[#FF5964] hover:bg-[#FF5964]/90 text-white text-sm"
+                @click="openSellDialog(tx)"
               >
                 💰 Sell
               </Button>
@@ -582,16 +582,16 @@ async function confirmSell() {
 
         <DialogFooter class="gap-2">
           <Button
-            @click="closeSellDialog"
             variant="outline"
             class="border-[#38618C] text-[#38618C]"
+            @click="closeSellDialog"
           >
             Cancel
           </Button>
           <Button
-            @click="confirmSell"
             :disabled="isSelling || !sellQuantity"
             class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white"
+            @click="confirmSell"
           >
             {{ isSelling ? '⏳ Selling...' : '💰 Confirm Sale' }}
           </Button>

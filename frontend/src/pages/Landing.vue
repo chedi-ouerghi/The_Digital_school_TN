@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import FeaturesSection from '@/components/landing/FeaturesSection.vue'
+import Footer from '@/components/landing/Footer.vue'
 import Header from '@/components/landing/Header.vue'
 import HeroSection from '@/components/landing/HeroSection.vue'
-import FeaturesSection from '@/components/landing/FeaturesSection.vue'
 import InvestorFeatures from '@/components/landing/InvestorFeatures.vue'
 import Newsletter from '@/components/landing/Newsletter.vue'
-import Footer from '@/components/landing/Footer.vue'
-import HowItWork from '../components/landing/HowItWork.vue'
 import CryptoShowcase from '../components/landing/CryptoShowcase.vue'
+import HowItWork from '../components/landing/HowItWork.vue'
 </script>
 
 <template>

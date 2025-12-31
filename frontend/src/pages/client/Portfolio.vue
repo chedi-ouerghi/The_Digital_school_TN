@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
 
 // Import des composants shadcn-vue
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import type { Wallet } from '@/types'
 
 const router = useRouter()
 const portfolio = ref<any[]>([])
@@ -59,25 +60,35 @@ const makeImageUrl = (imagePath) => {
 async function fetchPortfolioData() {
   loading.value = true
   error.value = null
+
   try {
-    // Récupération des données du portefeuille
-    const response = await api.wallet.list()
-    const walletData = response?.wallet || {}
-    
-    // Mettre à jour le solde depuis le portefeuille
-    userBalance.value = Number(walletData.balance_eur ?? response?.solde_eur ?? 0)
-    
-    // Mapper les crypto_wallet_assets correctement
-    portfolio.value = (walletData.crypto_wallet_assets || [])
-      .filter((asset: any) => Number(asset.quantity || 0) > 0)
-      .map((asset: any) => {
+    const response = await api.wallet.list() as Wallet[]
+
+    // 🔹 Sécurité
+    if (!response || response.length === 0) {
+      throw new Error('Aucun wallet trouvé')
+    }
+
+    const walletData = response[0]
+
+    // 🔹 Solde
+    userBalance.value = Number(walletData.balance_eur ?? 0)
+
+    // 🔹 Assets
+    portfolio.value = (walletData.cryptoWalletAssets || [])
+      .filter(asset => Number(asset.quantity || 0) > 0)
+      .map(asset => {
         const crypto = asset.cryptomoney || {}
         const quantity = Number(asset.quantity || 0)
         const currentPrice = Number(crypto.price_eur || 0)
         const avgBuyPrice = Number(asset.average_buy_price || 0)
+
         const currentValue = quantity * currentPrice
-        const plusValue = quantity * (currentPrice - avgBuyPrice)
-        const plusValuePercent = avgBuyPrice > 0 ? (plusValue / (quantity * avgBuyPrice)) * 100 : 0
+        const profitAmount = quantity * (currentPrice - avgBuyPrice)
+        const profitPercent =
+          avgBuyPrice > 0
+            ? (profitAmount / (quantity * avgBuyPrice)) * 100
+            : 0
 
         return {
           assetId: asset.id,
@@ -89,34 +100,37 @@ async function fetchPortfolioData() {
           currentPrice,
           currentValue,
           avgBuyPrice,
-          profitAmount: plusValue,
-          profitPercent: plusValuePercent,
-          // Keep full objects for reference
+          profitAmount,
+          profitPercent,
           asset,
           crypto,
         }
       })
 
-    // Calculer les totaux
-    totalValue.value = portfolio.value.reduce((sum, p) => sum + p.currentValue, 0)
-    totalProfit.value = portfolio.value.reduce((sum, p) => sum + p.profitAmount, 0)
+    // 🔹 Totaux
+    totalValue.value = portfolio.value.reduce((s, p) => s + p.currentValue, 0)
+    totalProfit.value = portfolio.value.reduce((s, p) => s + p.profitAmount, 0)
 
   } catch (e: any) {
     error.value = e.message || String(e)
-    console.error('Erreur lors du chargement du portefeuille:', e)
+    console.error('Erreur portefeuille:', e)
   } finally {
     loading.value = false
   }
 }
 
+
 onMounted(() => {
   fetchPortfolioData()
 })
 
-// Profit percent total
-const totalProfitPercent = computed(() => {
-  const invested = totalValue.value - totalProfit.value
-  return invested > 0 ? (totalProfit.value / invested) * 100 : 0
+
+// Distribution des actifs avec pourcentages
+const portfolioDistribution = computed(() => {
+  return portfolio.value.map(asset => ({
+    ...asset,
+    percentageOfPortfolio: totalValue.value > 0 ? (asset.currentValue / totalValue.value) * 100 : 0
+  }))
 })
 
 // Filtrage et tri
@@ -162,6 +176,10 @@ function goToBuy() {
 function refreshData() {
   fetchPortfolioData()
 }
+
+function goToTransactionHistory() {
+  router.push('/dashboard/history')
+}
 </script>
 
 <template>
@@ -175,15 +193,15 @@ function refreshData() {
       <div class="flex gap-3">
         <Button 
           variant="outline" 
-          @click="refreshData"
           :disabled="loading"
           class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white"
+          @click="refreshData"
         >
           🔄 Refresh
         </Button>
         <Button 
-          @click="goToBuy"
           class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+          @click="goToBuy"
         >
           + Buy Cryptos
         </Button>
@@ -206,7 +224,7 @@ function refreshData() {
       <!-- Total portfolio value -->
       <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors bg-gradient-to-br from-[#35A7FF]/10 to-transparent">
         <CardContent class="p-6">
-          <div class="text-sm text-gray-500 mb-1">Portfolio Value</div>
+          <div class="text-sm text-gray-500 mb-1">Invested Amount</div>
           <div class="text-3xl font-bold text-[#35A7FF]">
             {{ formatCurrency(totalValue) }}
           </div>
@@ -236,6 +254,68 @@ function refreshData() {
         </CardContent>
       </Card>
     </div>
+
+    <!-- Distribution Details Section -->
+    <Card v-if="portfolio.length > 0" class="border-gray-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+      <CardContent class="p-6">
+        <div class="flex items-center gap-2 mb-6">
+          <span class="text-2xl">📊</span>
+          <h2 class="text-xl font-bold text-[#38618C]">Portfolio Distribution</h2>
+        </div>
+        
+        <!-- Responsive table -->
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b-2 border-indigo-200">
+                <th class="text-left py-3 px-4 font-semibold text-[#38618C]">Asset</th>
+                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Quantity</th>
+                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Current Price</th>
+                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Value</th>
+                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Portfolio %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="asset in portfolioDistribution" 
+                :key="asset.assetId"
+                class="border-b border-gray-200 hover:bg-white transition-colors cursor-pointer"
+                @click="goDetails(asset)"
+              >
+                <td class="py-4 px-4">
+                  <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full border-2 border-gray-300 bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <img 
+                        v-if="asset.image_url"
+                        :src="makeImageUrl(asset.image_url)" 
+                        :alt="asset.name"
+                        class="h-8 w-8 rounded-full object-cover"
+                        @error="(e) => e.target.style.display = 'none'"
+                      />
+                      <div v-if="!asset.image_url" class="text-sm">💎</div>
+                    </div>
+                    <div>
+                      <div class="font-semibold text-[#38618C]">{{ asset.name }}</div>
+                      <div class="text-xs text-gray-500">{{ String(asset.symbol || '').toUpperCase() }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right py-4 px-4 font-mono text-sm">{{ formatNumber(asset.quantity, 8) }}</td>
+                <td class="text-right py-4 px-4 font-semibold text-[#38618C]">{{ formatCurrency(asset.currentPrice) }}</td>
+                <td class="text-right py-4 px-4 font-bold text-[#35A7FF]">{{ formatCurrency(asset.currentValue) }}</td>
+                <td class="text-right py-4 px-4">
+                  <Badge 
+                    class="bg-indigo-100 text-indigo-900 font-semibold"
+                  >
+                    {{ asset.percentageOfPortfolio.toFixed(1) }}%
+                  </Badge>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
 
     <!-- Filters and search -->
     <Card>
@@ -308,14 +388,24 @@ function refreshData() {
         </p>
         <Button 
           v-if="!searchQuery && filterBy === 'all'"
-          @click="goToBuy"
           class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+          @click="goToBuy"
         >
           🚀 Start Investing
         </Button>
       </CardContent>
     </Card>
     
+    <!-- Transaction History Button -->
+    <div v-if="portfolio.length > 0" class="flex justify-center">
+      <Button 
+        class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-8 py-3 transition-all hover:shadow-lg hover:scale-105"
+        @click="goToTransactionHistory"
+      >
+        📋 View Complete Transaction History
+      </Button>
+    </div>
+
     <!-- Portfolio list -->
     <div v-else class="grid grid-cols-1 gap-4">
       <Card 
@@ -363,7 +453,7 @@ function refreshData() {
                 </div>
               </div>
               <div>
-                <div class="text-xs text-gray-500">Current Value</div>
+                <div class="text-xs text-gray-500">Current Value ss</div>
                 <div class="text-sm font-bold text-[#35A7FF]">
                   {{ formatCurrency(p.currentValue) }}
                 </div>

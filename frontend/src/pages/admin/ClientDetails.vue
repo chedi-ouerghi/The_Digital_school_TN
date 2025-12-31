@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ArcElement, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Title, Tooltip } from 'chart.js'
+import { computed, onMounted, ref } from 'vue'
+import { Bar, Doughnut } from 'vue-chartjs'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
-import { Bar, Doughnut } from 'vue-chartjs'
 
 // Import des composants shadcn-vue
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
 
@@ -17,7 +17,7 @@ const router = useRouter()
 const client = ref<any>(null)
 const transactions = ref<any[]>([])
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref<string | undefined>(undefined)
 
 // Pagination
 const currentPage = ref(1)
@@ -47,13 +47,13 @@ function formatNumber(value: any, decimals = 8): string {
 }
 
 // Add helper to build a usable image URL when backend returns a relative path
-function makeImageUrl(path: string | undefined | null): string | null {
-  if (!path) return null
+function makeImageUrl(path: string | undefined | null): string | undefined {
+  if (!path) return undefined
   const p = String(path)
   if (p.startsWith('http://') || p.startsWith('https://')) return p
 
   // Ton backend sert probablement les fichiers sous /storage/
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const baseUrl = 'http://localhost:8000'
   const cleanPath = p.startsWith('/storage/') ? p : `/storage/${p}`
   return `${baseUrl}${cleanPath}`
 }
@@ -61,20 +61,19 @@ function makeImageUrl(path: string | undefined | null): string | null {
 
 // Fetch data
 async function fetchClientDetails() {
-  const id = route.params.id
+  const id = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
   if (!id) return
 
   loading.value = true
-  error.value = null
+  error.value = undefined
   
   try {
     // Fetch single endpoint which contains client + transactions + positions
     const clientData = await api.admin.clients.show(id)
 
     client.value = clientData
-    // console.log("Client Data:", clientData)
     // Build a quick map of positions by symbol to enrich transactions
-    const positions = clientData.positions || []
+    const positions = (clientData as any).positions || []
     const posMap: Record<string, any> = {}
     positions.forEach((p: any) => {
       const sym = String(p.symbol || p.symbole || '').toLowerCase()
@@ -87,7 +86,7 @@ async function fetchClientDetails() {
       }
     })
 
-    const rawTxs = clientData.transactions || []
+    const rawTxs = (clientData as any).transactions || []
 
     // Normalize transactions to expected shape used in template (wallet.cryptomoney.*)
     transactions.value = (rawTxs || []).map((tx: any) => {
@@ -208,7 +207,7 @@ const barChartData = computed(() => ({
   }]
 }))
 
-const barChartOptions = {
+const barChartOptions: any = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -226,13 +225,16 @@ const barChartOptions = {
   },
   scales: {
     x: { 
-      ticks: { color: '#38618C', font: { weight: 'bold' } },
+      ticks: { 
+        color: '#38618C',
+        font: { weight: 'bold' as const }
+      },
       grid: { display: false }
     },
     y: { 
       ticks: { 
         color: '#38618C',
-        callback: (value: number) => formatCurrency(value)
+        callback: (value: any) => formatCurrency(value)
       },
       grid: { color: '#E5E7EB' }
     }
@@ -257,7 +259,7 @@ const doughnutChartOptions = {
       position: 'bottom' as const,
       labels: {
         color: '#38618C',
-        font: { size: 12, weight: 'bold' },
+        font: { size: 12, weight: 'bold' as const },
         padding: 15
       }
     },
@@ -272,7 +274,7 @@ const doughnutChartOptions = {
       }
     }
   }
-}
+} as const
 
 function goBack() {
   router.push('/dashboard/admin/clients')
@@ -303,9 +305,9 @@ function handleImgError(e: Event) {
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
         <Button 
-          @click="goBack"
           variant="outline"
           class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+          @click="goBack"
         >
           ← Back
         </Button>
@@ -315,9 +317,9 @@ function handleImgError(e: Event) {
         </div>
       </div>
       <Button 
-        @click="fetchClientDetails"
         :disabled="loading"
         class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+        @click="fetchClientDetails"
       >
         🔄 Refresh
       </Button>
@@ -340,8 +342,8 @@ function handleImgError(e: Event) {
         <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Error Loading Data</h3>
         <div class="text-gray-600 mb-4">{{ error }}</div>
         <Button 
-          @click="fetchClientDetails"
           class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+          @click="fetchClientDetails"
         >
           Try Again
         </Button>
@@ -405,23 +407,14 @@ function handleImgError(e: Event) {
            
 
                <div>
-                <div class="text-xs text-gray-500 mb-1">Solde</div>
+                <div class="text-xs text-gray-500 mb-1">balance </div>
                 <Badge class="bg-[#38618C] text-white">{{ formatCurrency(client.balance_eur)}}</Badge>
               </div>
               <div>
-                <div class="text-xs text-gray-500 mb-1">Account Balance</div>
+                <div class="text-xs text-gray-500 mb-1">Account Value</div>
                 <div class="text-2xl font-bold text-[#01FF19]">{{ formatCurrency(client.account_balance) }}</div>
               </div>
 
-             <div>
-  <div class="text-xs text-gray-500 mb-1">Email Status</div>
-  <Badge
-    :class="client.email_verified_at === null ? 'bg-[#FF5964]' : 'bg-[#01FF19]'"
-    class="text-white"
-  >
-    {{ client.email_verified_at === null ? '⏳ Pending' : '✓ Verified' }}
-  </Badge>
-</div>
 
 
              
@@ -617,8 +610,8 @@ function handleImgError(e: Event) {
                   variant="outline"
                   size="sm"
                   :disabled="currentPage <= 1"
-                  @click="prevPage"
                   class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white disabled:opacity-50"
+                  @click="prevPage"
                 >
                   ← Previous
                 </Button>
@@ -631,8 +624,8 @@ function handleImgError(e: Event) {
                   variant="outline"
                   size="sm"
                   :disabled="currentPage >= totalPages"
-                  @click="nextPage"
                   class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white disabled:opacity-50"
+                  @click="nextPage"
                 >
                   Next →
                 </Button>

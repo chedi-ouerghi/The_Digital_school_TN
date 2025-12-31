@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
 
 // Import des composants shadcn-vue
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -23,8 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const router = useRouter()
 const cryptos = ref<any[]>([])
@@ -50,8 +50,8 @@ const portfolio = ref<any[]>([])
 const ownedSymbols = ref<Set<string>>(new Set())
 
 // Helper function to build proper image URLs
-function makeImageUrl(path: string | undefined | null): string | null {
-  if (!path) return null
+function makeImageUrl(path: string | undefined | null): string | undefined {
+  if (!path) return undefined
   const p = String(path)
   if (p.startsWith('http://') || p.startsWith('https://')) return p
 
@@ -85,8 +85,9 @@ function formatLargeNumber(value: any): string {
 async function fetchList() {
   loading.value = true
   try {
-    const res = await api.crypto.list(page.value)
-    cryptos.value = res.data || res.items || res || []
+    const res = await api.crypto.list({ page: page.value })
+    const data = res.data || []
+    cryptos.value = Array.isArray(data) ? data : []
     totalPages.value = Math.ceil((res.total || cryptos.value.length) / itemsPerPage)
   } catch (err: any) {
     console.error(err)
@@ -311,9 +312,9 @@ function changePage(newPage: number) {
 
             <!-- Actualiser -->
             <Button 
-              @click="fetchList" 
-              :disabled="loading"
+              :disabled="loading" 
               class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+              @click="fetchList"
             >
               🔄
             </Button>
@@ -327,7 +328,7 @@ function changePage(newPage: number) {
       <CardContent class="p-12 text-center">
         <div class="animate-pulse text-gray-600">
           <div class="text-4xl mb-4">⏳</div>
-          <div>Chargement des cryptomonnaies...</div>
+          <div>Loading cryptos...</div>
         </div>
       </CardContent>
     </Card>
@@ -413,15 +414,15 @@ function changePage(newPage: number) {
 
           <div class="flex gap-2">
             <Button 
-              @click.stop="openBuyModal(crypto)"
               class="flex-1 bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+              @click.stop="openBuyModal(crypto)"
             >
               💰 Buy
             </Button>
             <Button 
               variant="outline"
-              @click.stop="goDetails(crypto)"
               class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+              @click.stop="goDetails(crypto)"
             >
               📊 Details
             </Button>
@@ -496,16 +497,16 @@ function changePage(newPage: number) {
             <div class="flex gap-2 w-full sm:w-auto">
               <Button 
                 size="sm"
-                @click.stop="openBuyModal(crypto)"
                 class="flex-1 sm:flex-none bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+                @click.stop="openBuyModal(crypto)"
               >
                 💰 Buy
               </Button>
               <Button 
                 size="sm"
                 variant="outline"
-                @click.stop="goDetails(crypto)"
                 class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+                @click.stop="goDetails(crypto)"
               >
                 📊
               </Button>
@@ -521,8 +522,8 @@ function changePage(newPage: number) {
         variant="outline"
         size="sm"
         :disabled="page === 1"
-        @click="changePage(page - 1)"
         class="border-[#38618C] text-[#38618C]"
+        @click="changePage(page - 1)"
       >
         ← Précédent
       </Button>
@@ -533,8 +534,8 @@ function changePage(newPage: number) {
           :key="p"
           :variant="p === page ? 'default' : 'outline'"
           size="sm"
-          @click="changePage(p)"
           :class="p === page ? 'bg-[#35A7FF] text-white' : 'border-[#38618C] text-[#38618C]'"
+          @click="changePage(p)"
         >
           {{ p }}
         </Button>
@@ -544,8 +545,8 @@ function changePage(newPage: number) {
         variant="outline"
         size="sm"
         :disabled="page === totalPages"
-        @click="changePage(page + 1)"
         class="border-[#38618C] text-[#38618C]"
+        @click="changePage(page + 1)"
       >
         Suivant →
       </Button>
@@ -645,16 +646,16 @@ function changePage(newPage: number) {
         <DialogFooter class="flex gap-2 sm:gap-0">
           <Button 
             variant="outline" 
-            @click="closeBuyModal" 
-            class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white flex-1 sm:flex-none"
+            class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white flex-1 sm:flex-none" 
             :disabled="isBuying"
+            @click="closeBuyModal"
           >
             ✕ Cancel
           </Button>
           <Button 
-            @click="handleBuy"
             class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold flex-1 sm:flex-none"
             :disabled="isBuying || !quantity || parseFloat(quantity) <= 0"
+            @click="handleBuy"
           >
             {{ isBuying ? '⏳ Processing...' : '✓ Confirm Purchase' }}
           </Button>

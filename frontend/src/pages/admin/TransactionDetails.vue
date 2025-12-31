@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArcElement, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Title, Tooltip } from 'chart.js'
+import { computed, onMounted, ref } from 'vue'
+import { Bar, Doughnut } from 'vue-chartjs'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js'
-import { Bar, Doughnut } from 'vue-chartjs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
 
@@ -184,9 +184,9 @@ onMounted(fetchTransaction)
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
         <Button 
-          @click="router.back()"
           variant="outline"
           class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+          @click="router.back()"
         >
           ← Retour
         </Button>
@@ -196,9 +196,9 @@ onMounted(fetchTransaction)
         </div>
       </div>
       <Button 
-        @click="fetchTransaction"
         :disabled="loading"
         class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+        @click="fetchTransaction"
       >
         🔄 Actualiser
       </Button>
@@ -221,8 +221,8 @@ onMounted(fetchTransaction)
         <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Loading Error</h3>
         <div class="text-gray-600 mb-4">{{ error }}</div>
         <Button 
-          @click="fetchTransaction"
           class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+          @click="fetchTransaction"
         >
           Réessayer
         </Button>

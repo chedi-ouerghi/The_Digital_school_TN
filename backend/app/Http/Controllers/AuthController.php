@@ -222,42 +222,179 @@ if (
      *         )
      *     ),
      *     @OA\Response(response=200, description="Demande envoyée avec succès"),
-     *     @OA\Response(response=422, description="Validation error")
+     *     @OA\Response(response=422, description="Validation error"),
+     *     @OA\Response(response=400, description="Email validation failed")
      * )
      */
     public function requestAccount(Request $request): JsonResponse
     {
         try {
+            // Validation des données
             $validated = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             ]);
 
-            // Prevent duplicate pending requests for same email
-            $existing = \App\Models\AccountRequest::where('email', $validated['email'])
+            $email = strtolower(trim($validated['email']));
+            $name = trim($validated['name']);
+
+            // 1. Vérifier que le domaine de l'email existe et peut recevoir des emails (MX records)
+            if (!$this->isEmailDomainValid($email)) {
+                \Log::warning("Tentative de création de compte avec domaine invalide : {$email}");
+                return response()->json([
+                    'error' => 'Le domaine de cet email n\'existe pas ou ne peut pas recevoir d\'emails.'
+                ], 400);
+            }
+
+            // 2. Vérifier que l'email n'est pas un domaine temporaire/jetable
+            if ($this->isDisposableEmail($email)) {
+                \Log::warning("Tentative de création de compte avec email temporaire : {$email}");
+                return response()->json([
+                    'error' => 'Les adresses emails temporaires ne sont pas autorisées.'
+                ], 400);
+            }
+
+            // 3. Vérifier s'il existe déjà une demande en attente pour cet email
+            $existing = \App\Models\AccountRequest::where('email', $email)
                 ->where('status', 'PENDING')
                 ->first();
             if ($existing) {
+                \Log::info("Demande de compte déjà en attente pour : {$email}");
                 return response()->json([
-                    'error' => 'Une demande est déjà en attente pour cet email.'
+                    'error' => 'Une demande est déjà en attente pour cet email. Veuillez vérifier votre boîte mail.'
                 ], 422);
             }
 
-            // Create request (AccountRequest model boot will generate token if absent)
+            // 4. Créer la demande de compte
             $accountRequest = \App\Models\AccountRequest::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
+                'name' => $name,
+                'email' => $email,
                 'status' => 'PENDING',
             ]);
 
-            // Notify admins (email + internal notification). Failures on mail shouldn't block the API reply.
+            \Log::info("Nouvelle demande de compte créée : {$email} (ID: {$accountRequest->id})");
+
+            // 5. Envoyer un email de confirmation à l'utilisateur
+            $emailConfirmationSent = $this->sendAccountRequestConfirmation($accountRequest);
+            if (!$emailConfirmationSent) {
+                \Log::warning("Impossible d'envoyer le mail de confirmation à {$email}");
+                // Ne pas bloquer la réponse, mais logger l'erreur
+            }
+
+            // 6. Notifier les administrateurs
+            $this->notifyAdminsOfNewRequest($accountRequest);
+
+            return response()->json([
+                'message' => 'Votre demande a été envoyée avec succès. Veuillez vérifier votre email pour confirmer votre adresse.'
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('Erreur de validation lors de la demande de compte : ' . json_encode($e->errors()));
+            return response()->json([
+                'error' => 'Erreur de validation',
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la demande de compte (AuthController) : ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Une erreur est survenue lors de votre demande. Veuillez réessayer plus tard.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Vérifier que le domaine de l'email a des MX records valides
+     */
+    private function isEmailDomainValid(string $email): bool
+    {
+        try {
+            // Extraire le domaine de l'email
+            $parts = explode('@', $email);
+            if (count($parts) !== 2) {
+                return false;
+            }
+
+            $domain = $parts[1];
+
+            // Vérifier que le domaine existe et a des MX records
+            // Fonction PHP native pour vérifier les MX records
+            if (function_exists('checkdnsrr')) {
+                return checkdnsrr($domain, 'MX');
+            }
+
+            // Fallback pour les serveurs sans support DNS
+            return gethostbyname($domain) !== $domain;
+
+        } catch (\Exception $e) {
+            \Log::warning("Erreur lors de la vérification du domaine email {$email} : " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Vérifier que l'email n'est pas une adresse temporaire/jetable
+     */
+    private function isDisposableEmail(string $email): bool
+    {
+        // Liste commune de domaines temporaires
+        $disposableDomains = [
+            'guerrillamail.com',
+            'mailinator.com',
+            'tempmail.com',
+            '10minutemail.com',
+            'throwaway.email',
+            'maildrop.cc',
+            'sharklasers.com',
+            'grr.la',
+            'pokemail.net',
+            'spam4.me',
+            'yopmail.com',
+            'temp-mail.org',
+            'fakeinbox.com',
+            'mailnesia.com',
+            'temp mail.io',
+        ];
+
+        $domain = substr(strrchr($email, '@'), 1);
+        return in_array(strtolower($domain), array_map('strtolower', $disposableDomains), true);
+    }
+
+    /**
+     * Envoyer un email de confirmation à l'utilisateur
+     */
+    private function sendAccountRequestConfirmation(\App\Models\AccountRequest $accountRequest): bool
+    {
+        try {
+            \Mail::to($accountRequest->email)->send(
+                new \App\Mail\AccountRequestConfirmationMail($accountRequest)
+            );
+            \Log::info("Email de confirmation envoyé à {$accountRequest->email}");
+            return true;
+        } catch (\Exception $e) {
+            \Log::error("Erreur lors de l'envoi du mail de confirmation à {$accountRequest->email} : " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Notifier les administrateurs d'une nouvelle demande
+     */
+    private function notifyAdminsOfNewRequest(\App\Models\AccountRequest $accountRequest): void
+    {
+        try {
             $admins = User::where('role', 'ADMIN')->get();
+
             foreach ($admins as $admin) {
+                // Envoyer un email à l'administrateur
                 try {
-                    \Mail::to($admin->email)->send(new \App\Mail\NewAccountRequestMail($accountRequest));
+                    \Mail::to($admin->email)->send(
+                        new \App\Mail\NewAccountRequestMail($accountRequest)
+                    );
                 } catch (\Exception $mailEx) {
-                    \Log::error('Échec envoi mail nouvelle demande compte à ' . $admin->email . ' : ' . $mailEx->getMessage());
+                    \Log::error("Erreur lors de l'envoi de notification à {$admin->email} : " . $mailEx->getMessage());
                 }
+
+                // Créer une notification interne
                 try {
                     \App\Models\Notification::create([
                         'user_id' => $admin->id,
@@ -266,17 +403,11 @@ if (
                         'type' => \App\Models\Notification::TYPE_ACCOUNT_REQUEST ?? 'account_request',
                     ]);
                 } catch (\Exception $nEx) {
-                    \Log::warning('Impossible de créer notification interne pour admin ' . $admin->id . ' : ' . $nEx->getMessage());
+                    \Log::warning("Impossible de créer notification pour admin {$admin->id} : " . $nEx->getMessage());
                 }
             }
-
-            return response()->json(['message' => 'Your request has been successfully sent..'], 200);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['error' => 'Erreur de validation','details' => $e->errors()], 422);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la demande de compte (AuthController) : ' . $e->getMessage());
-            return response()->json(['error' => 'Une erreur est survenue'], 500);
+            \Log::error('Erreur lors de la notification des administrateurs : ' . $e->getMessage());
         }
     }
 
@@ -346,4 +477,62 @@ public function changeId(Request $request): JsonResponse
         return response()->json(['error' => 'Failed to change ID.'], 500);
     }
 }
+
+    /**
+     * Vérifier et confirmer l'email de l'utilisateur via un token
+     */
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'token' => ['required', 'string', 'size:32'],
+            ]);
+
+            // Rechercher la demande de compte avec ce token
+            $accountRequest = \App\Models\AccountRequest::where('token', $validated['token'])
+                ->where('status', 'PENDING')
+                ->first();
+
+            if (!$accountRequest) {
+                \Log::warning('Tentative de vérification avec un token invalide ou expiré : ' . $validated['token']);
+                return response()->json([
+                    'error' => 'Token invalide ou expiré. Veuillez faire une nouvelle demande de compte.'
+                ], 400);
+            }
+
+            // Vérifier que le token n'a pas expiré (48 heures)
+            if ($accountRequest->created_at->addHours(48)->isPast()) {
+                $accountRequest->update(['status' => 'EXPIRED']);
+                \Log::warning('Token expiré pour : ' . $accountRequest->email);
+                return response()->json([
+                    'error' => 'Ce lien de confirmation a expiré. Veuillez faire une nouvelle demande.'
+                ], 400);
+            }
+
+            // Marquer la demande comme VERIFIED (email confirmé)
+            $accountRequest->update([
+                'status' => 'VERIFIED',
+                'email_verified_at' => now(),
+            ]);
+
+            \Log::info('Email vérifié avec succès pour : ' . $accountRequest->email);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Votre email a été confirmé avec succès ! Un administrateur examinera votre demande très prochainement.'
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('Erreur de validation lors de la vérification : ' . json_encode($e->errors()));
+            return response()->json([
+                'error' => 'Token manquant ou invalide.',
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la vérification d\'email : ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Une erreur est survenue lors de la vérification.'
+            ], 500);
+        }
+    }
 }

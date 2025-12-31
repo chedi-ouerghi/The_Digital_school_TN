@@ -77,9 +77,9 @@ defineProps<{
                 <CardContent class="p-0">
                   <div class="flex items-center gap-3">
                     <img 
-                      :src="p.cryptomoney?.image" 
+                      v-if="p.cryptomoney?.image" 
+                      :src="p.cryptomoney?.image"
                       class="h-7 w-7 rounded-full border border-gray-300"
-                      v-if="p.cryptomoney?.image"
                     />
                     <div class="flex-1 min-w-0">
                       <div class="font-medium text-[#38618C] text-sm truncate">

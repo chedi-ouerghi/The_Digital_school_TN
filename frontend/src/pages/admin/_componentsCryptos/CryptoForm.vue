@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import api from '../../../services/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ref, watch } from 'vue'
+import api from '../../../services/api'
 
 interface Props {
   isEditMode: boolean
@@ -100,6 +100,11 @@ async function handleSubmit() {
       formSuccess.value = 'Crypto ajoutée avec succès!'
     }
     
+    // Réinitialiser le formulaire après le succès
+    newCryptoId.value = ''
+    cryptoImage.value = null
+    imagePreview.value = ''
+    
     emit('success')
   } catch (err: any) {
     formError.value = err.message || 'Erreur lors de l\'opération'
@@ -149,7 +154,8 @@ function handleCancel() {
         />
         <p class="text-xs text-gray-500">
           💡 Find the name on  
-          <a href="https://www.coingecko.com" target="_blank"
+          <a
+href="https://www.coingecko.com" target="_blank"
              class="text-[#35A7FF] hover:underline">CoinGecko.com</a>
         </p>
       </div>
@@ -163,16 +169,16 @@ function handleCancel() {
             id="crypto_image"
             type="file"
             accept="image/*"
-            @change="handleImageUpload"
             class="hidden"
             :disabled="formLoading"
+            @change="handleImageUpload"
           />
           <Button
             type="button"
-            @click="triggerFileInput"
             variant="outline"
             class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
             :disabled="formLoading"
+            @click="triggerFileInput"
           >
             📁 Choose an image
           </Button>
@@ -198,16 +204,16 @@ function handleCancel() {
     <DialogFooter class="flex gap-2 sm:gap-0">
       <Button 
         variant="outline" 
-        @click="handleCancel"
         class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 sm:flex-none"
         :disabled="formLoading"
+        @click="handleCancel"
       >
         ✕ Cancel
       </Button>
       <Button 
-        @click="handleSubmit"
         class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold flex-1 sm:flex-none"
         :disabled="formLoading || !newCryptoId.trim()"
+        @click="handleSubmit"
       >
         {{ formLoading ? (isEditMode ? '⏳ Updating...' : '⏳ Adding...') : (isEditMode ? '✓ Update' : '✓ Add') }}
       </Button>

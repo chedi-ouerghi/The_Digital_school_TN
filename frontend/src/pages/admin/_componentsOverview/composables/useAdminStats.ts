@@ -8,7 +8,7 @@ export function useAdminStats() {
   const stats = ref<any>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const cryptoDetails = ref<Map<string, any>>(new Map())
+  const cryptoDetails = ref<Map<number, any>>(new Map())
   const recentTransactions = ref<any[]>([])
 
   // Fonctions utilitaires
@@ -34,8 +34,8 @@ export function useAdminStats() {
       // Mapper les cryptos dans cryptoDetails pour un accès facile
       if (stats.value.top_cryptos?.length) {
         stats.value.top_cryptos.forEach((crypto: any) => {
-          cryptoDetails.value.set(crypto.id, {
-            id: crypto.id,
+          cryptoDetails.value.set(Number(crypto.id), {
+            id: Number(crypto.id),
             name: crypto.name,
             symbol: crypto.symbol,
             image_url: getImageUrl(crypto.image),

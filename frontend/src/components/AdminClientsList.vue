@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import api from '../services/api'
-import ClientFormDialog from './ClientFormDialog.vue'
-import ClientDetailsDialog from './ClientDetailsDialog.vue'
-import ConfirmDialog from './ConfirmDialog.vue'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { computed, onMounted, ref } from 'vue'
+import api from '../services/api'
+import ClientDetailsDialog from './ClientDetailsDialog.vue'
+import ClientFormDialog from './ClientFormDialog.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const clients = ref<any[]>([])
 const loading = ref(false)
@@ -24,7 +24,7 @@ const toDeleteId = ref<number | null>(null)
 async function fetchClients(p = 1) {
   loading.value = true
   try {
-    const res = await api.admin.clients.list(p)
+    const res = await api.admin.clients.list({ page: p } as any)
     clients.value = res.data || res.items || res || []
     total.value = res.total || res.meta?.total || clients.value.length
   } catch (err: any) {
@@ -84,7 +84,7 @@ function confirmDelete(id: number) {
 async function doDelete() {
   if (!toDeleteId.value) return
   try {
-    await api.admin.clients.delete(toDeleteId.value)
+    await api.admin.clients.delete(String(toDeleteId.value))
     alert('Client deleted')
     confirmOpen.value = false
     fetchClients(page.value)

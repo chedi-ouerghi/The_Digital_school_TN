@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Sparkles, Zap, BarChart3 } from 'lucide-vue-next'
+import { BarChart3, Check, Sparkles, Zap } from 'lucide-vue-next';
 
 const features = [
   {
@@ -67,7 +67,7 @@ const features = [
       <!-- Features Grid -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div
-          v-for="(feature, index) in features"
+          v-for="feature in features"
           :key="feature.title"
           class="group relative p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:scale-[1.02]"
         >

@@ -14,6 +14,8 @@ import type { PortfolioResponse } from '../types';
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
+export { API_BASE };
+
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 // Generic API response type
@@ -167,6 +169,10 @@ export const authApi = {
   async requestAccount(payload: RegisterRequest): Promise<ApiResponse<User>> {
     return await request<ApiResponse<User>>('/request-account', 'POST', payload);
   },
+
+  async verifyEmail(payload: { token: string }): Promise<ApiResponse<any>> {
+    return await request<ApiResponse<any>>('/verify-email', 'POST', payload);
+  },
   
   async logout(): Promise<void> {
     return await request<void>('/logout', 'POST');
@@ -196,7 +202,7 @@ export const authApi = {
     // Preferred: PUT to update the resource
     try {
       return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture', 'PUT', formData);
-    } catch (err) {
+    } catch {
       // Fallback to legacy POST upload endpoint (method spoofing if needed)
       return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture/upload', 'POST', formData);
     }
@@ -205,7 +211,7 @@ export const authApi = {
   async uploadProfileBanner(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
     try {
       return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner', 'PUT', formData);
-    } catch (err) {
+    } catch {
       return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner/upload', 'POST', formData);
     }
   },

@@ -39,6 +39,7 @@ public function index(): JsonResponse
             'role' => $user->role,
             'profile_picture' => $user->profile_picture,
             'profile_banner' => $user->profile_banner,
+            'email_verified_at' => $user->email_verified_at,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
             'balance_eur' => $user->wallet?->balance_eur ?? 0, 
@@ -274,7 +275,7 @@ public function show($id): JsonResponse
      */
     public function accountRequests(): JsonResponse 
     {
-        $requests = \App\Models\AccountRequest::where('status', 'PENDING')
+        $requests = \App\Models\AccountRequest::where('status', 'VERIFIED')
             ->orderBy('created_at', 'desc')
             ->get();
         return response()->json($requests);
@@ -328,7 +329,7 @@ public function show($id): JsonResponse
             
             $accountRequest = \App\Models\AccountRequest::findOrFail($id);
             
-            if ($accountRequest->status !== 'PENDING') {
+            if ($accountRequest->status !== 'VERIFIED') {
                 return response()->json(['error' => 'Cette demande a déjà été traitée'], 400);
             }
 
@@ -406,7 +407,7 @@ public function show($id): JsonResponse
 
             $accountRequest = AccountRequest::findOrFail($id);
             
-            if ($accountRequest->status !== 'PENDING') {
+            if ($accountRequest->status !== 'VERIFIED') {
                 return response()->json(['error' => 'Cette demande a déjà été traitée'], 400);
             }
 

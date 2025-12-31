@@ -1,234 +1,10 @@
-<template>
-  <div class="min-h-screen bg-[#0b0f19] text-white py-8">
-    <div class="container mx-auto px-4">
-      <!-- Header -->
-      <header class="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div class="mb-4 md:mb-0">
-          <h1 class="text-3xl md:text-4xl font-bold">Blog Crypto & Market Analysis</h1>
-          <p class="text-gray-300 mt-2 max-w-2xl">
-            Stay informed with the latest trends, news and technical analysis from the world of cryptocurrencies.
-          </p>
-        </div>
-        <div v-if="isAdmin" class="mt-2 w-full sm:w-auto">
-          <button 
-            @click="openCreateModal" 
-            class="w-full sm:w-auto px-6 py-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold rounded-2xl shadow transition-colors"
-          >
-            Add Article
-          </button>
-        </div>
-      </header>
-
-      <!-- Main Content -->
-      <div class="flex flex-col lg:flex-row gap-8">
-        <!-- Left Column: Articles -->
-        <main class="flex-1">
-          <!-- Search & Filter -->
-          <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-8">
-            <div class="flex-1 relative">
-              <input 
-                v-model="search" 
-                @input="debouncedFetch" 
-                placeholder="Search articles..." 
-                class="w-full p-4 rounded-2xl bg-[#0f1724] placeholder-gray-400 text-white border border-gray-800 focus:border-[#3b82f6] focus:outline-none"
-              />
-            </div>
-            <div class="w-full md:w-48">
-              <select 
-                v-model="category" 
-                @change="fetchPosts" 
-                class="w-full p-4 rounded-2xl bg-[#0f1724] text-white border border-gray-800 focus:border-[#3b82f6] focus:outline-none cursor-pointer"
-              >
-                <option value="">All Categories</option>
-                <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Loading State -->
-          <div v-if="loading" class="flex justify-center items-center py-12">
-            <div class="text-gray-400 text-lg">Loading articles...</div>
-          </div>
-
-          <!-- Articles Grid -->
-          <div v-else>
-            <div v-if="items.length === 0" class="text-center py-12 text-gray-400">
-              No articles found. Try a different search.
-            </div>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <ArticleCard 
-                v-for="post in items" 
-                :key="post.id" 
-                :post="post" 
-                @edit="onEdit" 
-                @delete="onDelete" 
-              />
-            </div>
-
-            <!-- Load More -->
-            <div v-if="canLoadMore" class="mt-10 flex justify-center">
-              <button 
-                @click="loadMore" 
-                class="px-8 py-3 bg-[#1e293b] hover:bg-[#334155] text-white font-medium rounded-2xl transition-colors"
-              >
-                Load More Articles
-              </button>
-            </div>
-          </div>
-        </main>
-
-        <!-- Right Column: Sidebar -->
-        <aside class="lg:w-80">
-          <div class="bg-[#0f1724] p-6 rounded-2xl border border-gray-800">
-            <h4 class="font-bold text-lg mb-4">Newsletter</h4>
-            <p class="text-sm text-gray-300 mb-5">
-              Subscribe to receive the latest crypto analysis and market insights directly in your inbox.
-            </p>
-            <div class="flex flex-col sm:flex-row gap-3">
-              <input 
-                v-model="email" 
-                placeholder="Your email address" 
-                class="flex-1 p-3 rounded-xl bg-[#1a2234] text-white border border-gray-700 focus:outline-none focus:border-[#3b82f6]"
-              />
-              <button class="px-5 py-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-medium rounded-xl transition-colors whitespace-nowrap">
-                Subscribe
-              </button>
-            </div>
-            <p class="text-xs text-gray-400 mt-3">
-              We respect your privacy. Unsubscribe at any time.
-            </p>
-          </div>
-        </aside>
-      </div>
-    </div>
-
-    <!-- Admin Modal (Create / Edit) -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-[#0f1724] text-white rounded-2xl p-6 sm:p-8 shadow-2xl border border-gray-800">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-2xl font-bold">
-            {{ editing ? 'Edit Article' : 'Create New Article' }}
-          </h3>
-          <button 
-            @click="showModal = false" 
-            class="text-gray-400 hover:text-white text-2xl"
-          >
-            &times;
-          </button>
-        </div>
-
-        <form @submit.prevent="submitForm" class="space-y-5">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Title -->
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-300 mb-2">Title *</label>
-              <input 
-                v-model="form.title" 
-                required
-                placeholder="Article title" 
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none"
-              />
-            </div>
-
-            <!-- Category -->
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Category *</label>
-              <select 
-                v-model="form.category"
-                required
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none cursor-pointer"
-              >
-                <option value="" disabled>Select a category</option>
-                <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-              </select>
-            </div>
-
-            <!-- Published Date -->
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Published Date</label>
-              <input 
-                v-model="form.published_at" 
-                type="date"
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none"
-              />
-            </div>
-
-            <!-- Image URL -->
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-300 mb-2">Image URL</label>
-              <input 
-                v-model="form.image" 
-                placeholder="https://example.com/image.jpg" 
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none"
-              />
-            </div>
-
-            <!-- Summary -->
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-300 mb-2">Summary *</label>
-              <textarea 
-                v-model="form.summary" 
-                required
-                placeholder="Brief summary of the article" 
-                rows="3"
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none resize-none"
-              ></textarea>
-            </div>
-
-            <!-- Tags -->
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-300 mb-2">Tags</label>
-              <input 
-                v-model="form.tags" 
-                placeholder="Bitcoin, Ethereum, DeFi, NFTs (comma separated)" 
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none"
-              />
-              <p class="text-xs text-gray-400 mt-2">Separate tags with commas</p>
-            </div>
-
-            <!-- Content -->
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-300 mb-2">Content (HTML allowed) *</label>
-              <textarea 
-                v-model="form.content" 
-                required
-                placeholder="Full article content..." 
-                rows="8"
-                class="w-full p-4 rounded-xl bg-[#131a2a] text-white border border-gray-700 focus:border-[#3b82f6] focus:outline-none resize-y font-mono text-sm"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Form Actions -->
-          <div class="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-gray-800">
-            <button 
-              type="button"
-              @click="showModal = false" 
-              class="w-full sm:w-auto px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit"
-              class="w-full sm:w-auto px-6 py-3 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-medium rounded-xl transition-colors"
-            >
-              {{ editing ? 'Update Article' : 'Publish Article' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import ArticleCard from '../components/ArticleCard.vue'
 import { blogApi } from '../services/api'
 import auth from '../services/auth'
 
-// Debounce utility
+// Debounce function
 function debounceFn(fn: Function, wait = 300) {
   let timeoutId: any = null
   return (...args: any[]) => {
@@ -244,12 +20,10 @@ const loading = ref(false)
 const search = ref('')
 const category = ref('')
 const categories = ['News', 'Technical Analysis', 'Blockchain', 'Beginner Guides', 'Altcoins', 'Trends']
-const email = ref('')
 const isAdmin = auth.isAdmin()
-
-// Modal state
 const showModal = ref(false)
 const editing = ref<any | null>(null)
+
 const form = ref({
   title: '',
   category: '',
@@ -257,17 +31,10 @@ const form = ref({
   content: '',
   tags: '',
   image: '',
-  published_at: ''
+  published_at: new Date().toISOString().split('T')[0]
 })
 
-// Computed
-const canLoadMore = computed(() => {
-  // Implement your pagination logic here
-  // For now, return true if there are items
-  return items.value.length > 0
-})
-
-// Methods
+const canLoadMore = computed(() => items.value.length > 0)
 const debouncedFetch = debounceFn(() => fetchPosts(true), 400)
 
 const fetchPosts = async (reset = true) => {
@@ -282,13 +49,8 @@ const fetchPosts = async (reset = true) => {
       search: search.value,
       category: category.value
     })
-    
-    if (res && res.data) {
-      if (reset) {
-        items.value = res.data
-      } else {
-        items.value = [...items.value, ...res.data]
-      }
+    if (res?.data) {
+      items.value = reset ? res.data : [...items.value, ...res.data]
     }
   } catch (err) {
     console.error('Error fetching posts:', err)
@@ -325,14 +87,18 @@ const openEditModal = (post: any) => {
   showModal.value = true
 }
 
+const closeModal = () => {
+  showModal.value = false
+}
+
 const submitForm = async () => {
   try {
-    const payload: any = {
+    const payload = {
       title: form.value.title.trim(),
       category: form.value.category,
       summary: form.value.summary.trim(),
       content: form.value.content,
-      tags: form.value.tags ? form.value.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+      tags: form.value.tags ? form.value.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       image: form.value.image.trim(),
       published_at: form.value.published_at || null,
     }
@@ -343,11 +109,11 @@ const submitForm = async () => {
       await blogApi.create(payload)
     }
 
-    showModal.value = false
+    closeModal()
     await fetchPosts(true)
   } catch (e) {
     console.error('Error saving post', e)
-    alert('Error saving post. Please check your inputs and try again.')
+    alert('Error saving post')
   }
 }
 
@@ -358,14 +124,14 @@ const onEdit = (post: any) => {
 
 const onDelete = async (post: any) => {
   if (!isAdmin) return
-  if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) return
+  if (!confirm('Delete this article?')) return
   
   try {
     await blogApi.delete(post.id || post.slug)
     await fetchPosts(true)
   } catch (e) {
     console.error('Delete failed', e)
-    alert('Failed to delete article. Please try again.')
+    alert('Failed to delete article')
   }
 }
 
@@ -374,29 +140,291 @@ const loadMore = async () => {
   await fetchPosts(false)
 }
 
-// Lifecycle
 onMounted(() => {
   fetchPosts()
 })
 </script>
 
+<template>
+  <div class="min-h-screen bg-gradient-to-b from-[#0b0f19] via-[#0f1724] to-[#0a0e17] text-white py-12">
+    
+    <!-- Blobs décoratifs -->
+    <div class="fixed top-10 left-5 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed bottom-20 right-10 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="container mx-auto px-4 sm:px-6 relative z-10">
+      <!-- Header simplifié -->
+      <header class="mb-12 text-center">
+        
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 pb-2 bg-gradient-to-r from-white via-blue-200 to-white bg-clip-text text-transparent">
+          Market Insights
+        </h1>
+        <p class="text-gray-300 max-w-2xl mx-auto">
+          Expert analysis and actionable trading insights for cryptocurrency markets.
+        </p>
+      </header>
+
+      <!-- Contenu principal -->
+      <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Articles -->
+        <main class="flex-1">
+          <!-- Barre de recherche -->
+          <div class="flex flex-col md:flex-row gap-4 mb-8">
+            <div class="flex-1 relative">
+              <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input 
+                v-model="search" 
+                placeholder="Search articles..." 
+                class="w-full pl-12 pr-4 py-3 rounded-xl bg-[#0f1724]/80 text-white border border-gray-800 focus:border-blue-500 focus:outline-none" 
+                @input="debouncedFetch"
+              />
+            </div>
+            <select 
+              v-model="category" 
+              class="px-4 py-3 rounded-xl bg-[#0f1724]/80 text-white border border-gray-800 focus:border-blue-500 focus:outline-none" 
+              @change="() => fetchPosts(true)"
+            >
+              <option value="">📋 All Categories</option>
+              <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
+
+          <!-- Bouton Créer Article -->
+          <button 
+            v-if="isAdmin"
+            class="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl mb-8 hover:from-blue-500 hover:to-blue-400 transition-all" 
+            @click="openCreateModal"
+          >
+            ✨ Create New Article
+          </button>
+
+          <!-- État de chargement -->
+          <div v-if="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p class="text-gray-400">Loading articles...</p>
+          </div>
+
+          <!-- Grille d'articles -->
+          <div v-else>
+            <div v-if="items.length === 0" class="text-center py-12">
+              <p class="text-gray-400">No articles found</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <ArticleCard 
+                v-for="post in items" 
+                :key="post.id" 
+                :post="post" 
+                @edit="onEdit" 
+                @delete="onDelete" 
+              />
+            </div>
+
+            <!-- Bouton Load More -->
+            <div v-if="canLoadMore" class="text-center">
+              <button 
+                class="px-8 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl border border-gray-700 transition-all" 
+                @click="loadMore"
+              >
+                Load More
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="lg:w-80">
+          <!-- Tags populaires -->
+          <div class="bg-gradient-to-b from-[#0f1724] to-[#0a0e17] border border-gray-800 p-6 rounded-2xl sticky top-24">
+            <h4 class="font-bold text-lg mb-4">🏷️ Popular Tags</h4>
+            <div class="flex flex-wrap gap-2">
+              <button 
+                v-for="tag in ['Bitcoin', 'Ethereum', 'DeFi', 'Trading']" 
+                :key="tag"
+                class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm rounded-full hover:bg-blue-500/20 transition-all"
+                @click="category = tag; fetchPosts()"
+              >
+                #{{ tag }}
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Modal Admin -->
+    <div
+      v-if="showModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
+    >
+      <!-- Modal container -->
+      <div
+        class="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto
+               bg-gradient-to-br from-[#0f1724] to-[#0a0e17]
+               text-white rounded-2xl p-6
+               border border-blue-500/20 shadow-2xl"
+      >
+        <!-- Header Modal -->
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-800">
+          <h3 class="text-xl font-bold">
+            {{ editing ? '✏️ Edit Article' : '✍️ Create Article' }}
+          </h3>
+          <button
+            class="text-gray-400 hover:text-white text-2xl leading-none"
+            @click="closeModal"
+          >
+            &times;
+          </button>
+        </div>
+
+        <!-- Formulaire -->
+        <form class="space-y-4" @submit.prevent="submitForm">
+          <!-- Title -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Title *
+            </label>
+            <input
+              v-model="form.title"
+              required
+              placeholder="Article title"
+              class="w-full p-3 rounded-lg bg-[#1a2332]
+                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            />
+          </div>
+
+          <!-- Category + Date -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-300 mb-2">
+                Category *
+              </label>
+              <select
+                v-model="form.category"
+                required
+                class="w-full p-3 rounded-lg bg-[#1a2332]
+                       border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none cursor-pointer transition-all"
+              >
+                <option value="" disabled>Select category</option>
+                <option v-for="c in categories" :key="c" :value="c">
+                  {{ c }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-300 mb-2">
+                Published Date
+              </label>
+              <input
+                v-model="form.published_at"
+                type="date"
+                class="w-full p-3 rounded-lg bg-[#1a2332]
+                       border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- Image URL -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Featured Image URL
+            </label>
+            <input
+              v-model="form.image"
+              type="url"
+              placeholder="https://example.com/image.jpg"
+              class="w-full p-3 rounded-lg bg-[#1a2332]
+                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            />
+          </div>
+
+          <!-- Summary -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Summary *
+            </label>
+            <textarea
+              v-model="form.summary"
+              required
+              rows="3"
+              placeholder="Brief summary of your article"
+              class="w-full p-3 rounded-lg bg-[#1a2332]
+                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none outline-none transition-all"
+            ></textarea>
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Tags
+            </label>
+            <input
+              v-model="form.tags"
+              placeholder="Bitcoin, Ethereum, DeFi, Trading (comma separated)"
+              class="w-full p-3 rounded-lg bg-[#1a2332]
+                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+            />
+            <p class="text-xs text-gray-400 mt-1">Separate tags with commas</p>
+          </div>
+
+          <!-- Content -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Content *
+            </label>
+            <textarea
+              v-model="form.content"
+              required
+              rows="8"
+              placeholder="Article content (HTML allowed)"
+              class="w-full p-3 rounded-lg bg-[#1a2332]
+                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y outline-none transition-all font-mono text-sm"
+            ></textarea>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-3 pt-6 border-t border-gray-800">
+            <button
+              type="button"
+              class="px-6 py-2.5 bg-gray-700/60 hover:bg-gray-700 text-white font-medium rounded-lg transition-all"
+              @click="closeModal"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500
+                     hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-lg transition-all"
+            >
+              {{ editing ? '💾 Update' : '🚀 Publish' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+
 <style scoped>
-/* Custom scrollbar for modal */
+/* Scrollbar personnalisée */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a2234;
-  border-radius: 4px;
+  background: #0f1724;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #3b82f6;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
+* {
+  transition: all 0.2s ease;
 }
 </style>

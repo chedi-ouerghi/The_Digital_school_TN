@@ -1,9 +1,11 @@
+import ProfilePage from '@/pages/client/profile/ProfilePage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import Blog from '../pages/Blog.vue'
 import BlogPost from '../pages/BlogPost.vue'
 import Dashboard from '../pages/Dashboard.vue'
 import Landing from '../pages/Landing.vue'
 import SignIn from '../pages/SignIn.vue'
+import VerifyEmail from '../pages/VerifyEmail.vue'
 import AdminClients from '../pages/admin/Clients.vue'
 import CryptoDetails from '../pages/admin/CryptoDetails.vue'
 import Cryptos from '../pages/admin/Cryptos.vue'
@@ -14,8 +16,6 @@ import AdminTransactions from '../pages/admin/Transactions.vue'
 import ClientCryptosDetails from '../pages/client/CryptosDetails.vue'
 import ClientOverview from '../pages/client/Overview.vue'
 import ClientPortfolioDetails from '../pages/client/PortfolioDetails.vue'
-import ClientProfile from '../pages/client/Profile.vue'
-import ProfilePortfolio from '../pages/client/ProfilePortfolio.vue'
 import ClientTransactions from '../pages/client/Transactions.vue'
 import auth from '../services/auth'
 
@@ -41,6 +41,12 @@ const routes = [
     component: SignIn,
     meta: { requiresGuest: true }
   },
+  {
+    path: '/verify-email',
+    name: 'VerifyEmail',
+    component: VerifyEmail,
+    meta: { requiresGuest: false }
+  },
   
   {
   path: '/:pathMatch(.*)*',
@@ -54,7 +60,7 @@ const routes = [
     name: 'Dashboard',
     component: Dashboard,
     meta: { requiresAuth: true },
-    redirect: (to) => {
+    redirect: () => {
       const role = auth.getRole()?.toUpperCase()
       return role === 'ADMIN' ? '/dashboard/admin/overview' : '/dashboard/overview'
     },
@@ -117,12 +123,7 @@ const routes = [
         component: ClientOverview,
         meta: { requiresAuth: true, roles: ['CLIENT'] }
       },
-      {
-        path: 'profile',
-        name: 'ClientProfile',
-        component: ClientProfile,
-        meta: { requiresAuth: true, roles: ['CLIENT'] }
-      },
+
       {
         path: 'cryptos',
         name: 'ClientCryptos',
@@ -138,7 +139,7 @@ const routes = [
       {
         path: 'portfolio',
         name: 'ProfilePortfolio',
-        component: ProfilePortfolio,
+        component: ProfilePage,
         meta: { requiresAuth: true, roles: ['CLIENT'] }
       },
       {

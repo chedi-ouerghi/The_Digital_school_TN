@@ -23,10 +23,12 @@ class AccountRequest extends Model
         'processed_by',
         'user_id',
         'rejection_reason',
+        'email_verified_at',
     ];
 
     protected $casts = [
         'processed_at' => 'datetime',
+        'email_verified_at' => 'datetime',
     ];
 
     /**

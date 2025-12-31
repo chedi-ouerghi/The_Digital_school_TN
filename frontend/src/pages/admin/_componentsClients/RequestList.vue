@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import api from '../../../services/api'
 
 // Import des composants shadcn-vue
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 // Émissions d'événements
 const emit = defineEmits<{
@@ -129,9 +129,9 @@ onMounted(() => {
           
           <div class="flex gap-3">
             <Button 
-              @click="fetchAccountRequests"
               :disabled="loading"
               class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+              @click="fetchAccountRequests"
             >
               🔄 Refresh
             </Button>
@@ -159,8 +159,8 @@ onMounted(() => {
           <h3 class="text-xl font-semibold text-[#38618C] mb-2">No pending requests</h3>
           <p class="text-gray-500 mb-6">All account requests have been processed</p>
           <Button 
-            @click="fetchAccountRequests"
             class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+            @click="fetchAccountRequests"
           >
             🔄 Check Again
           </Button>
@@ -197,15 +197,15 @@ onMounted(() => {
                 <!-- Actions -->
                 <div class="flex flex-col sm:flex-row gap-3">
                   <Button 
-                    @click="approveRequest(request.id)"
                     class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold px-6 py-2 min-w-[120px]"
+                    @click="approveRequest(request.id)"
                   >
                     <span class="mr-2">✓</span>
                     Approve
                   </Button>
                   <Button 
-                    @click="rejectRequest(request.id)"
                     class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white font-semibold px-6 py-2 min-w-[120px]"
+                    @click="rejectRequest(request.id)"
                   >
                     <span class="mr-2">✗</span>
                     Reject
@@ -242,19 +242,19 @@ onMounted(() => {
             </div>
             <div class="flex gap-4 mt-2 sm:mt-0">
               <Button 
-                @click="approveAll"
                 variant="outline"
                 size="sm"
                 class="border-[#01FF19] text-[#01FF19] hover:bg-[#01FF19] hover:text-white"
                 :disabled="requests.length === 0"
+                @click="approveAll"
               >
                 ✓ Approve All
               </Button>
               <Button 
-                @click="fetchAccountRequests"
                 variant="outline"
                 size="sm"
                 class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white"
+                @click="fetchAccountRequests"
               >
                 🔄 Refresh
               </Button>

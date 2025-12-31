@@ -1,4 +1,4 @@
-import api, { setToken as apiSetToken, getToken as apiGetToken, clearToken as apiClearToken } from './api';
+import api, { clearToken as apiClearToken, getToken as apiGetToken, setToken as apiSetToken } from './api';
 
 type Credentials = { email: string; password: string }
 

@@ -79,10 +79,10 @@ defineEmits<{
               📋 Last 10 Transactions
             </CardTitle>
             <Button 
-              @click="$emit('goToTransactions')"
               variant="outline"
               size="sm"
               class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white text-xs sm:text-sm"
+              @click="$emit('goToTransactions')"
             >
               View All →
             </Button>
@@ -109,8 +109,8 @@ defineEmits<{
                         :alt="tx.cryptomoney?.name"
                         class="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
                         @error="(e) => {
-                          const target = e.target as HTMLImageElement
-                          if (target && target.parentNode) {
+                        const target = e.target as HTMLImageElement | null
+                        if (target?.parentNode) {
                             target.style.display = 'none'
                           }
                         }"
@@ -177,10 +177,10 @@ defineEmits<{
               🏆 Top 5 Most Traded
             </CardTitle>
             <Button 
-              @click="$emit('goToCryptos')"
               variant="outline"
               size="sm"
               class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white text-xs"
+              @click="$emit('goToCryptos')"
             >
               All →
             </Button>
@@ -202,13 +202,16 @@ defineEmits<{
               class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-md bg-gradient-to-br from-gray-50 to-transparent"
             >
               <CardContent class="flex items-center gap-2 sm:gap-3 p-3">
-                <!-- Rank Badge -->
-                <div class="flex-shrink-0">
-                  <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                       :class="getRankColor(index)">
-                    {{ index + 1 }}
-                  </div>
-                </div>
+             <!-- Rank Badge -->
+<div class="flex-shrink-0">
+  <div
+    class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+    :class="getRankColor(Number(index))"
+  >
+    {{ Number(index) + 1 }}
+  </div>
+</div>
+
 
                 <!-- Crypto Image -->
                 <div class="flex-shrink-0">
@@ -218,7 +221,10 @@ defineEmits<{
                       :src="crypto.image"
                       :alt="crypto.name"
                       class="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover"
-                      @error="(e) => e.target.style.display = 'none'"
+                      @error="(e) => {
+                        const target = e.target as HTMLImageElement | null
+                        if (target) target.style.display = 'none'
+                      }"
                     />
                     <div v-else class="text-lg">💎</div>
                   </div>

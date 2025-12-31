@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../../services/api'
-import CryptoStats from './_componentsCryptos/CryptoStats.vue'
-import CryptoList from './_componentsCryptos/CryptoList.vue'
-import CryptoForm from './_componentsCryptos/CryptoForm.vue'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../../services/api'
+import CryptoForm from './_componentsCryptos/CryptoForm.vue'
+import CryptoList from './_componentsCryptos/CryptoList.vue'
+import CryptoStats from './_componentsCryptos/CryptoStats.vue'
 
 const router = useRouter()
 const cryptos = ref<any[]>([])
@@ -37,7 +37,7 @@ const editingCryptoData = ref<any>(null)
 async function fetchCryptos() {
   loading.value = true
   try {
-    const res = await api.crypto.list(currentPage.value)
+    const res = await api.crypto.list({ page: currentPage.value })
     cryptos.value = res.data || []
     const totalItems = res.total_items || res.total || cryptos.value.length
     totalPages.value = Math.ceil(totalItems / itemsPerPage)
@@ -76,7 +76,7 @@ async function handleEditCrypto(crypto: any) {
     isEditMode.value = true
     addCryptoDialog.value = true
   } catch (err: any) {
-    console.error('Erreur lors du chargement des données:', err)
+    console.error('Error loading data:', err)
   }
 }
 
@@ -124,8 +124,8 @@ function changePage(page: number) {
         <p class="text-gray-500">Manage cryptocurrencies available on the platform</p>
       </div>
       <Button 
-        @click="openAddDialog"
         class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+        @click="openAddDialog"
       >
         + Add Crypto
       </Button>
@@ -177,14 +177,14 @@ function changePage(page: number) {
         <DialogFooter class="flex gap-2 sm:gap-0">
           <Button 
             variant="outline" 
-            @click="deleteDialog = false"
             class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 sm:flex-none"
+            @click="deleteDialog = false"
           >
             ✕ Cancel
           </Button>
           <Button 
-            @click="handleDeleteCrypto"
             class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white font-semibold flex-1 sm:flex-none"
+            @click="handleDeleteCrypto"
           >
             🗑️ Delete
           </Button>

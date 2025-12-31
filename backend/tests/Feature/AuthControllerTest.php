@@ -153,7 +153,7 @@ class AuthControllerTest extends TestCase
         $token = $user->createToken('TestToken')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/profile/password', [
+            ->putJson('/api/v1/profile/password', [
                 'current_password' => 'oldpassword',
                 'password' => 'newAdmin123!',
                 'password_confirmation' => 'newAdmin123!',
@@ -174,7 +174,7 @@ class AuthControllerTest extends TestCase
         $token = $user->createToken('TestToken')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/profile/password', [
+            ->putJson('/api/v1/profile/password', [
                 'current_password' => 'wrongpassword',
                 'password' => 'newAdmin123!',
                 'password_confirmation' => 'newAdmin123!',

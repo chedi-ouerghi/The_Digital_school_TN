@@ -247,7 +247,8 @@ function viewClientDetails(id: number) {
           <div class="text-sm text-gray-500 mb-1">
             {{ stats.verifiedClients > 0 ? 'Verified' : 'Pending' }}
           </div>
-          <div class="text-3xl font-bold"
+          <div
+class="text-3xl font-bold"
               :class="stats.verifiedClients > 0 ? 'text-[#38618C]' : 'text-red-500'">
             {{ stats.verifiedClients }}
           </div>
@@ -269,8 +270,8 @@ function viewClientDetails(id: number) {
 
           <div class="flex gap-3">
             <Button 
-              @click="openCreateDialog"
               class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+              @click="openCreateDialog"
             >
               + New Client
             </Button>
@@ -295,9 +296,9 @@ function viewClientDetails(id: number) {
             </div>
 
             <Button 
-              @click="fetchClients"
               :disabled="loading"
               class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+              @click="fetchClients"
             >
               🔄 Refresh
             </Button>
@@ -328,8 +329,8 @@ function viewClientDetails(id: number) {
           </p>
           <Button 
             v-if="!search"
-            @click="openCreateDialog"
             class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+            @click="openCreateDialog"
           >
             + Create First Client
           </Button>
@@ -413,25 +414,25 @@ function viewClientDetails(id: number) {
               <!-- Actions -->
               <div class="flex gap-2 pt-3 border-t border-gray-100">
                 <Button 
-                  @click.stop="viewClientDetails(client.id)"
                   size="sm"
                   class="flex-1 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white text-sm"
+                  @click.stop="viewClientDetails(client.id)"
                 >
                   📊 Details
                 </Button>
                 <Button 
-                  @click.stop="openEditDialog(client)"
                   size="sm"
                   variant="outline"
                   class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+                  @click.stop="openEditDialog(client)"
                 >
                   ✏️
                 </Button>
                 <Button 
-                  @click.stop="confirmDelete(client)"
                   size="sm"
                   variant="outline"
                   class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
+                  @click.stop="confirmDelete(client)"
                 >
                   🗑️
                 </Button>
@@ -499,25 +500,25 @@ function viewClientDetails(id: number) {
 
               <div class="flex gap-2">
                 <Button 
-                  @click.stop="viewClientDetails(client.id)"
                   size="sm"
                   class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+                  @click.stop="viewClientDetails(client.id)"
                 >
                   📊
                 </Button>
                 <Button 
-                  @click.stop="openEditDialog(client)"
                   size="sm"
                   variant="outline"
                   class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+                  @click.stop="openEditDialog(client)"
                 >
                   ✏️
                 </Button>
                 <Button 
-                  @click.stop="confirmDelete(client)"
                   size="sm"
                   variant="outline"
                   class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
+                  @click.stop="confirmDelete(client)"
                 >
                   🗑️
                 </Button>
@@ -599,16 +600,16 @@ function viewClientDetails(id: number) {
         <DialogFooter class="flex gap-2 sm:gap-0">
           <Button 
             variant="outline" 
-            @click="formDialog = false"
             class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 sm:flex-none"
             :disabled="formLoading"
+            @click="formDialog = false"
           >
             ✕ Cancel
           </Button>
           <Button 
-            @click="handleFormSubmit"
             class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold flex-1 sm:flex-none"
             :disabled="formLoading"
+            @click="handleFormSubmit"
           >
             {{ formLoading ? '⏳ Saving...' : (editClient ? '✓ Update' : '✓ Create') }}
           </Button>
@@ -635,14 +636,14 @@ function viewClientDetails(id: number) {
         <DialogFooter class="flex gap-2 sm:gap-0">
           <Button 
             variant="outline" 
-            @click="deleteDialog = false"
             class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 sm:flex-none"
+            @click="deleteDialog = false"
           >
             ✕ Cancel
           </Button>
           <Button 
-            @click="handleDelete"
             class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white font-semibold flex-1 sm:flex-none"
+            @click="handleDelete"
           >
             🗑️ Delete
           </Button>

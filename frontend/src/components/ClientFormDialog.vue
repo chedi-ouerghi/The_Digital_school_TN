@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, defineProps, defineEmits } from 'vue';
+import { defineEmits, defineProps, ref, watch } from 'vue';
 
 const props = defineProps<{ open: boolean; client: any | null }>()
 const emits = defineEmits<{
   (e: 'close'): void
-  (e: 'saved', payload: any): void
+  (e: 'saved', _payload: any): void
 }>()
 
 const form = ref({ name: '', email: '', role: 'CLIENT', solde: 0 })
@@ -49,7 +49,7 @@ async function save() {
         </div>
         <div>
           <label class="block text-sm text-gray-600">Balance (€)</label>
-          <input type="number" v-model.number="form.solde" class="w-full border rounded px-3 py-2" />
+          <input v-model.number="form.solde" type="number" class="w-full border rounded px-3 py-2" />
         </div>
       </div>
 

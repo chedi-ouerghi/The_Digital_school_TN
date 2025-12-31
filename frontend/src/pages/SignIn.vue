@@ -41,7 +41,7 @@ function togglePasswordVisibility() {
   <div class="min-h-screen flex flex-col lg:flex-row overflow-hidden relative">
     <!-- DottedSurface amélioré -->
     <div class="absolute inset-0 hidden lg:block">
-      <DottedSurface className="w-full h-full opacity-100" />
+      <DottedSurface class-name="w-full h-full opacity-100" />
       <!-- Effets de gradient améliorés -->
       <div class="absolute inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/50 to-gray-900/80" />
     </div>
@@ -72,7 +72,7 @@ function togglePasswordVisibility() {
           </Alert>
         </div>
         <!-- Login Form -->
-        <form @submit="submit" class="space-y-5">
+        <form class="space-y-5" @submit="submit">
           <div>
             <Label for="email" class="text-xs font-medium text-gray-600">Email</Label>
             <div class="relative mt-1">

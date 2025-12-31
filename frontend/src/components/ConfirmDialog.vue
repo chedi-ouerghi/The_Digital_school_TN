@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -7,7 +7,7 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { defineEmits, defineProps } from 'vue';
 
 const props = defineProps<{ 
   open: boolean
@@ -15,10 +15,7 @@ const props = defineProps<{
   message?: string 
 }>()
 
-const emits = defineEmits<{
-  (e: 'close'): void
-  (e: 'confirm'): void
-}>()
+const _props = props // Suppress unused variable warning
 </script>
 
 <template>
@@ -33,14 +30,14 @@ const emits = defineEmits<{
       <div class="flex justify-end gap-3 mt-6">
         <Button
           variant="outline"
-          @click="emits('close')"
           class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white"
+          @click="emits('close')"
         >
           Annuler
         </Button>
         <Button
-          @click="emits('confirm')"
           class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white"
+          @click="emits('confirm')"
         >
           Confirmer
         </Button>

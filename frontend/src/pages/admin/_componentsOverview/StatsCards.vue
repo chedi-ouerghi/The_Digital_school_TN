@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pb-6">
     <Card 
       class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-lg cursor-pointer" 
       @click="$emit('goToClients')"
@@ -61,8 +61,8 @@
 </template>
 
 <script setup lang="ts">
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 defineProps<{
   cardStats: {

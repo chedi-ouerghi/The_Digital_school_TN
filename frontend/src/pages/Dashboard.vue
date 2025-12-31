@@ -51,7 +51,13 @@ async function fetchNotifications() {
   notifError.value = null
   try {
     const res = await api.notifications.list()
-    notifications.value = Array.isArray(res) ? res : (res?.data || res?.notifications || res || [])
+    if (Array.isArray(res)) {
+      notifications.value = res
+    } else if ((res as any)?.data) {
+      notifications.value = Array.isArray((res as any).data) ? (res as any).data : []
+    } else {
+      notifications.value = []
+    }
   } catch (err: any) {
     console.error('Error notifications:', err)
     notifError.value = err?.message || String(err)
@@ -139,7 +145,9 @@ async function loadWalletData() {
   try {
     const response = await api.wallet.list()
     
-    const walletData = response?.wallet || response?.data || response || {}
+    const walletData = Array.isArray(response) 
+      ? (response[0] || {})
+      : (response as any) || {}
     
     portfolio.value = walletData.cryptomonnaies || walletData.cryptos || []
     totalValue.value = Number(walletData.current_value || walletData.total_value || 0)
@@ -186,16 +194,16 @@ const userInitials = computed(() => {
   if (!user.value?.name) return 'U'
   return user.value.name
     .split(' ')
-    .map(word => word[0])
+    .map((word: string) => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
 })
 
-const getProfilePictureUrl = (profilePicture: string | null | undefined) => {
-  if (!profilePicture) return null
+const getProfilePictureUrl = (profilePicture: string | null | undefined): string | undefined => {
+  if (!profilePicture) return undefined
   if (profilePicture.startsWith('http')) return profilePicture
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+  const baseUrl = (import.meta.env as any).VITE_API_URL || 'http://localhost:8000'
   return `${baseUrl}/storage/${profilePicture}`
 }
 
@@ -264,8 +272,8 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
           <div class="flex items-center gap-3 flex-1">
             <!-- Mobile Menu Button -->
             <button
-              @click="showMobileSidebar = true"
               class="lg:hidden p-2.5 text-slate-600 hover:bg-slate-100/80 rounded-xl transition-all duration-200 hover:scale-105"
+              @click="showMobileSidebar = true"
             >
               <Menu class="w-5 h-5" />
             </button>
@@ -310,11 +318,11 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
                 </div>
               </div>
               <Button
-                @click="refreshWallet"
                 variant="ghost"
                 size="sm"
                 class="h-9 w-9 p-0 hover:bg-slate-100/80 rounded-xl"
                 :disabled="loadingWallet"
+                @click="refreshWallet"
               >
                 <RefreshCw class="w-4 h-4" :class="{'animate-spin': loadingWallet}" />
               </Button>
@@ -322,9 +330,9 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
 
             <!-- Notifications -->
             <button
-              @click="toggleNotifications"
               class="relative p-2.5 text-slate-600 hover:bg-slate-100/80 rounded-xl transition-all duration-200 hover:scale-105"
               aria-label="Open notifications"
+              @click="toggleNotifications"
             >
               <Bell class="w-5 h-5" />
               <span
@@ -346,7 +354,7 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
       <div class="relative">
         <Avatar class="h-9 w-9 border-2 border-slate-200/60 group-hover:border-slate-300 transition-all duration-300 group-hover:scale-105">
           <AvatarImage 
-            :src="getProfilePictureUrl(user?.profile_picture)" 
+            :src="getProfilePictureUrl(user?.profile_picture) || ''" 
             :alt="user?.name || 'User'"
             class="object-cover"
           />
@@ -377,7 +385,7 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
       <div class="flex items-center gap-3">
         <Avatar class="h-10 w-10 border border-slate-200">
           <AvatarImage 
-            :src="getProfilePictureUrl(user?.profile_picture)" 
+            :src="getProfilePictureUrl(user?.profile_picture) || ''" 
             :alt="user?.name || 'User'"
           />
           <AvatarFallback class="bg-slate-100 text-slate-700">
@@ -419,8 +427,8 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
     <DropdownMenuSeparator />
 
     <DropdownMenuItem 
-      @click="logout"
       class="cursor-pointer p-3 text-rose-600 focus:text-rose-600 focus:bg-rose-50/50"
+      @click="logout"
     >
       <LogOut class="w-4 h-4 mr-3" />
       <span>Logout</span>
@@ -442,10 +450,10 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
       >
         <div class="p-6">
           <CustomSidebar
-            :menuItems="menuItems"
+            :menu-items="menuItems"
             :portfolio="portfolio"
-            :totalValue="totalValue"
-            :dayChangePct="dayChangePct"
+            :total-value="totalValue"
+            :day-change-pct="dayChangePct"
             :role="role"
           />
         </div>
@@ -465,7 +473,7 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
     </div>
 
     <!-- NOTIFICATIONS PANEL -->
-    <Drawer :open="showNotifications" @update:open="v => showNotifications = v" direction="right">
+    <Drawer :open="showNotifications" direction="right" @update:open="v => showNotifications = v">
       <DrawerContent class="w-full sm:w-96 lg:w-[420px] h-full ml-auto border-l border-slate-200 bg-white shadow-xl flex flex-col">
 
         <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
@@ -477,7 +485,7 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
                 <span class="font-semibold text-slate-700">{{ notifications.length }}</span> total
               </p>
             </div>
-            <button @click="showNotifications = false" class="p-2 hover:bg-white rounded-xl transition-colors">
+            <button class="p-2 hover:bg-white rounded-xl transition-colors" @click="showNotifications = false">
               <X class="w-5 h-5 text-slate-700" />
             </button>
           </div>
@@ -485,9 +493,9 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
           <!-- Mark all as read button -->
           <Button
             v-if="unreadCount > 0"
-            @click="markAllAsRead"
             size="sm"
             class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg h-9"
+            @click="markAllAsRead"
           >
             ✓ Mark as read
           </Button>
@@ -512,9 +520,9 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
             <div
               v-for="n in notifications"
               :key="n.id"
-              @click="!n.is_read && markNotificationAsRead(n)"
               class="p-4 transition-all duration-200 cursor-pointer hover:bg-slate-50/60 group"
               :class="n.is_read ? 'bg-white' : 'bg-blue-50/40 border-l-4 border-blue-500'"
+              @click="!n.is_read && markNotificationAsRead(n)"
             >
               <!-- Header with icon, type badge and timestamp -->
               <div class="flex gap-4 mb-3">
@@ -584,9 +592,9 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
               <!-- Action button for unread -->
               <div v-if="!n.is_read" class="mt-3 flex gap-2">
                 <Button
-                  @click.stop="markNotificationAsRead(n)"
                   size="sm"
                   class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs h-8 rounded-lg"
+                  @click.stop="markNotificationAsRead(n)"
                 >
                   Mark as read
                 </Button>
@@ -603,22 +611,22 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
     </Drawer>
 
     <!-- MOBILE SIDEBAR -->
-    <Drawer :open="showMobileSidebar" @update:open="v => showMobileSidebar = v" direction="left">
+    <Drawer :open="showMobileSidebar" direction="left" @update:open="v => showMobileSidebar = v">
       <DrawerContent class="w-[85vw] max-w-sm h-full border-r border-slate-200 bg-white shadow-xl flex flex-col">
 
         <div class="p-6 border-b border-slate-200 flex justify-between items-center">
           <h2 class="text-lg font-bold text-slate-900">Navigation</h2>
-          <button @click="showMobileSidebar = false" class="p-2 hover:bg-slate-100 rounded-xl">
+          <button class="p-2 hover:bg-slate-100 rounded-xl" @click="showMobileSidebar = false">
             <X class="w-5 h-5" />
           </button>
         </div>
 
         <ScrollArea class="flex-1 p-8">
           <CustomSidebar
-            :menuItems="menuItems"
+            :menu-items="menuItems"
             :portfolio="portfolio"
-            :totalValue="totalValue"
-            :dayChangePct="dayChangePct"
+            :total-value="totalValue"
+            :day-change-pct="dayChangePct"
             :role="role"
           />
         </ScrollArea>
@@ -632,6 +640,7 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

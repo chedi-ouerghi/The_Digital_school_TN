@@ -55,7 +55,7 @@
       <div class="mb-4">
         <div class="flex flex-wrap gap-2">
           <span 
-            v-for="(tag, index) in displayedTags" 
+            v-for="tag in displayedTags" 
             :key="tag"
             class="px-2.5 py-1 bg-gray-800/50 text-gray-300 text-xs rounded-lg border border-gray-700 hover:border-[#3b82f6]/50 transition-colors"
           >
@@ -85,8 +85,8 @@
         <!-- Admin Actions -->
         <div v-if="isAdmin" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button 
-            @click.stop="$emit('edit', post)" 
-            class="w-full sm:w-auto px-3 py-1.5 bg-[#1e293b] hover:bg-[#2d3748] text-blue-400 text-xs font-medium rounded-lg border border-blue-900/30 transition-colors flex items-center justify-center gap-1"
+            class="w-full sm:w-auto px-3 py-1.5 bg-[#1e293b] hover:bg-[#2d3748] text-blue-400 text-xs font-medium rounded-lg border border-blue-900/30 transition-colors flex items-center justify-center gap-1" 
+            @click.stop="emit('edit', post)"
           >
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
@@ -94,8 +94,8 @@
             Edit
           </button>
           <button 
-            @click.stop="$emit('delete', post)" 
-            class="w-full sm:w-auto px-3 py-1.5 bg-red-900/20 hover:bg-red-900/30 text-red-400 text-xs font-medium rounded-lg border border-red-900/30 transition-colors flex items-center justify-center gap-1"
+            class="w-full sm:w-auto px-3 py-1.5 bg-red-900/20 hover:bg-red-900/30 text-red-400 text-xs font-medium rounded-lg border border-red-900/30 transition-colors flex items-center justify-center gap-1" 
+            @click.stop="emit('delete', post)"
           >
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineProps } from 'vue';
+import { computed } from 'vue';
 import auth from '../services/auth';
 
 const props = defineProps<{ post: any }>()
@@ -150,6 +150,7 @@ const displayedTags = computed(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -157,6 +158,7 @@ const displayedTags = computed(() => {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

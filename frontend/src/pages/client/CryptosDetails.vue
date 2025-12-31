@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
 
 // Import des composants shadcn-vue
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js'
+import { CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js'
 import { Line } from 'vue-chartjs'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
@@ -21,6 +21,7 @@ const error = ref<string | null>(null)
 const positions = ref<any>(null)
 const loadingPositions = ref(false)
 const history = ref<any[]>([])
+const historyMetadata = ref<any>(null) // Nouvelles données: symbol, name, count, from, to
 
 // ============================
 // Fonctions utilitaires
@@ -71,7 +72,7 @@ async function fetchCryptoDetail() {
     crypto.value = response.data || response.item || response || null
     if (!crypto.value) throw new Error('Cryptomonnaie non trouvée')
   } catch (e: any) {
-    error.value = e.message || 'Erreur lors du chargement des données'
+    error.value = e.message || 'Error loading data'
     console.error('Erreur détail crypto:', e)
   } finally {
     loading.value = false
@@ -131,10 +132,37 @@ async function fetchHistoricalData() {
       return
     }
 
-    history.value = response.data || response.prices || response || []
+    // Extraire les données de la réponse API
+    if (response.data?.prices) {
+      // La réponse a une structure: { prices: [...], symbol, name, count, from, to }
+      history.value = response.data.prices || []
+      historyMetadata.value = {
+        symbol: response.data.symbol,
+        name: response.data.name,
+        count: response.data.count,
+        from: response.data.from,
+        to: response.data.to
+      }
+    } else if (response.prices) {
+      // Alternative: réponse directe avec prices
+      history.value = response.prices || []
+      historyMetadata.value = {
+        symbol: response.symbol,
+        name: response.name,
+        count: response.count,
+        from: response.from,
+        to: response.to
+      }
+    } else if (Array.isArray(response.data)) {
+      // Fallback: array direct
+      history.value = response.data
+    } else if (Array.isArray(response)) {
+      history.value = response
+    }
   } catch (e: any) {
     console.warn('Historique non disponible:', e.message)
     history.value = []
+    historyMetadata.value = null
   }
 }
 
@@ -231,8 +259,8 @@ function buyCrypto() {
           </CardTitle>
           <Button 
             variant="outline" 
-            @click="goBack"
             class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+            @click="goBack"
           >
             ← back
           </Button>
@@ -265,8 +293,8 @@ function buyCrypto() {
         <div class="text-[#FF5964] text-lg font-semibold mb-2">Erreur</div>
         <div class="text-gray-600 mb-4">{{ error }}</div>
         <Button 
-          @click="loadAllData"
           class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+          @click="loadAllData"
         >
           Réessayer
         </Button>
@@ -280,8 +308,8 @@ function buyCrypto() {
         <div class="text-[#FF5964] text-lg font-semibold mb-2">Cryptomonnaie non trouvée</div>
         <div class="text-gray-600 mb-4">La cryptomonnaie demandée n'existe pas ou n'est plus disponible.</div>
         <Button 
-          @click="goBack"
           class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+          @click="goBack"
         >
           Retour à la liste
         </Button>
@@ -385,9 +413,15 @@ function buyCrypto() {
       <Card>
         <CardHeader>
           <div class="flex items-center justify-between">
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📈 Evolution Price (30 days)
-            </CardTitle>
+            <div>
+              <CardTitle class="text-lg font-semibold text-[#38618C]">
+                📈 Evolution Price (30 days)
+              </CardTitle>
+              <!-- Afficher les métadonnées d'historique -->
+              <div v-if="historyMetadata" class="text-xs text-gray-500 mt-2 space-y-1">
+                <div>📊 {{ historyMetadata.count }} points de données | Du {{ historyMetadata.from }} au {{ historyMetadata.to }}</div>
+              </div>
+            </div>
             <div class="flex gap-2">
               <Badge class="bg-[#35A7FF] text-white">30J</Badge>
             </div>
@@ -399,8 +433,8 @@ function buyCrypto() {
               <div class="text-6xl mb-4">📊</div>
               <div>Aucune donnée historique disponible</div>
               <Button 
-                @click="fetchHistoricalData" 
-                class="mt-4 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+                class="mt-4 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white" 
+                @click="fetchHistoricalData"
               >
                 Charger l'historique
               </Button>
@@ -546,8 +580,8 @@ function buyCrypto() {
               <div class="text-3xl mb-2">💡</div>
               <div>You don't own this crypto yet</div>
               <Button 
-                @click="buyCrypto" 
-                class="mt-4 bg-[#01FF19] hover:bg-[#01FF19]/90 text-white"
+                class="mt-4 bg-[#01FF19] hover:bg-[#01FF19]/90 text-white" 
+                @click="buyCrypto"
               >
                 Buy now
               </Button>

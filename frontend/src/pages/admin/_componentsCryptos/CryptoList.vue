@@ -1,16 +1,4 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +10,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { computed, ref } from 'vue'
 import api from '../../../services/api'; // ajouté pour la synchronisation d'historique
 
 interface Props {
@@ -149,8 +149,8 @@ async function handleSyncHistory() {
                 variant="ghost"
                 size="sm"
                 :class="viewMode === 'grid' ? 'bg-[#35A7FF] text-white' : 'text-[#38618C]'"
-                @click="viewMode = 'grid'"
                 aria-label="grid view"
+                @click="viewMode = 'grid'"
               >
                 ⊞
               </Button>
@@ -158,17 +158,17 @@ async function handleSyncHistory() {
                 variant="ghost"
                 size="sm"
                 :class="viewMode === 'list' ? 'bg-[#35A7FF] text-white' : 'text-[#38618C]'"
-                @click="viewMode = 'list'"
                 aria-label="list view"
+                @click="viewMode = 'list'"
               >
                 ☰
               </Button>
             </div>
 
             <Button 
-              @click="emit('refresh')" 
-              :disabled="loading"
+              :disabled="loading" 
               class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+              @click="emit('refresh')"
             >
               🔄
             </Button>
@@ -206,9 +206,9 @@ async function handleSyncHistory() {
                     Annuler
                   </AlertDialogCancel>
                   <AlertDialogAction 
-                    @click="handleSyncHistory"
                     :disabled="syncLoading"
                     class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+                    @click="handleSyncHistory"
                   >
                     <span v-if="syncLoading" class="flex items-center gap-2">
                       <span class="animate-spin">⏳</span>
@@ -230,7 +230,7 @@ async function handleSyncHistory() {
       <CardContent class="p-12 text-center">
         <div class="animate-pulse text-gray-600">
           <div class="text-4xl mb-4">⏳</div>
-          <div>Chargement des cryptomonnaies...</div>
+          <div>Loading cryptos...</div>
         </div>
       </CardContent>
     </Card>
@@ -303,22 +303,22 @@ async function handleSyncHistory() {
 
           <div class="flex gap-2">
             <Button 
-              @click.stop="emit('viewDetails', crypto.id)"
               class="flex-1 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+              @click.stop="emit('viewDetails', crypto.id)"
             >
               📊 details
             </Button>
             <Button 
               variant="outline"
-              @click.stop="emit('editCrypto', crypto)"
               class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+              @click.stop="emit('editCrypto', crypto)"
             >
               ✏️
             </Button>
             <Button 
               variant="outline"
-              @click.stop="emit('deleteCrypto', crypto)"
               class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
+              @click.stop="emit('deleteCrypto', crypto)"
             >
               🗑️
             </Button>
@@ -382,24 +382,24 @@ async function handleSyncHistory() {
             <div class="flex gap-2 w-full sm:w-auto">
               <Button 
                 size="sm"
-                @click.stop="emit('viewDetails', crypto.id)"
                 class="flex-1 sm:flex-none bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+                @click.stop="emit('viewDetails', crypto.id)"
               >
                 📊 details
               </Button>
               <Button 
                 size="sm"
                 variant="outline"
-                @click.stop="emit('editCrypto', crypto)"
                 class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+                @click.stop="emit('editCrypto', crypto)"
               >
                 ✏️
               </Button>
               <Button 
                 size="sm"
                 variant="outline"
-                @click.stop="emit('deleteCrypto', crypto)"
                 class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
+                @click.stop="emit('deleteCrypto', crypto)"
               >
                 🗑️
               </Button>
@@ -415,8 +415,8 @@ async function handleSyncHistory() {
         variant="outline"
         size="sm"
         :disabled="currentPage === 1"
-        @click="emit('changePage', currentPage - 1)"
         class="border-[#38618C] text-[#38618C]"
+        @click="emit('changePage', currentPage - 1)"
       >
         ← Previous
       </Button>
@@ -427,8 +427,8 @@ async function handleSyncHistory() {
           :key="page"
           :variant="page === currentPage ? 'default' : 'outline'"
           size="sm"
-          @click="emit('changePage', page)"
           :class="page === currentPage ? 'bg-[#35A7FF] text-white' : 'border-[#38618C] text-[#38618C]'"
+          @click="emit('changePage', page)"
         >
           {{ page }}
         </Button>
@@ -438,8 +438,8 @@ async function handleSyncHistory() {
         variant="outline"
         size="sm"
         :disabled="currentPage === totalPages"
-        @click="emit('changePage', currentPage + 1)"
         class="border-[#38618C] text-[#38618C]"
+        @click="emit('changePage', currentPage + 1)"
       >
         Next →
       </Button>

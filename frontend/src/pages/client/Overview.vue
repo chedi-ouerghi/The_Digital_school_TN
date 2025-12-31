@@ -42,7 +42,6 @@ ChartJS.register(
 )
 
 // State variables
-const activeTab = ref('overview')
 const loading = ref(false)
 const error = ref<string | null>(null)
 const chartLoading = ref(false)
@@ -702,7 +701,6 @@ function goToTransactions() {
                   <Button
                     v-for="period in timePeriods"
                     :key="period.value"
-                    @click="selectedChartPeriod = period.value"
                     :variant="selectedChartPeriod === period.value ? 'default' : 'ghost'"
                     :class="[
                       'h-7 px-3 text-xs rounded-md',
@@ -710,6 +708,7 @@ function goToTransactions() {
                         ? 'bg-[#38618C] text-white' 
                         : 'text-gray-600 hover:text-[#38618C]'
                     ]"
+                    @click="selectedChartPeriod = period.value"
                   >
                     {{ period.label }}
                   </Button>
@@ -746,10 +745,10 @@ function goToTransactions() {
             <div class="flex items-center justify-between">
               <CardTitle class="text-lg font-semibold text-gray-900">Top Holdings</CardTitle>
               <Button 
-                @click="goPortfolio" 
                 variant="ghost" 
                 size="sm" 
-                class="text-[#35A7FF] hover:text-[#35A7FF]/80"
+                class="text-[#35A7FF] hover:text-[#35A7FF]/80" 
+                @click="goPortfolio"
               >
                 View All
                 <ChevronRight class="w-4 h-4 ml-1" />
@@ -762,7 +761,7 @@ function goToTransactions() {
                 <Coins class="w-8 h-8 text-gray-400" />
               </div>
               <p class="text-gray-500 mb-3">No holdings yet</p>
-              <Button @click="goBuy" class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C]">
+              <Button class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C]" @click="goBuy">
                 Start Trading
               </Button>
             </div>
@@ -839,26 +838,26 @@ function goToTransactions() {
           </CardHeader>
           <CardContent class="space-y-3">
             <Button
-              @click="goBuy"
               class="w-full h-12 bg-gradient-to-r from-[#01FF19] to-[#01FF19]/80 hover:from-[#01FF19]/90 hover:to-[#01FF19]/70 text-[#38618C] font-semibold justify-start"
+              @click="goBuy"
             >
               <ShoppingCart class="w-5 h-5 mr-3" />
               Buy Crypto
             </Button>
             
             <Button
-              @click="goSell"
               variant="outline"
               class="w-full h-12 border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white justify-start"
+              @click="goSell"
             >
               <ArrowUpRight class="w-5 h-5 mr-3" />
               Sell Assets
             </Button>
             
             <Button
-              @click="goToTransactions"
               variant="outline"
               class="w-full h-12 border-gray-300 text-gray-700 hover:bg-gray-50 justify-start"
+              @click="goToTransactions"
             >
               <Activity class="w-5 h-5 mr-3" />
               View Transactions
@@ -989,10 +988,10 @@ function goToTransactions() {
         <div class="flex items-center justify-between">
           <CardTitle class="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
           <Button 
-            @click="goToTransactions" 
             variant="ghost" 
             size="sm" 
-            class="text-[#35A7FF] hover:text-[#35A7FF]/80"
+            class="text-[#35A7FF] hover:text-[#35A7FF]/80" 
+            @click="goToTransactions"
           >
             View All Activity
             <ChevronRight class="w-4 h-4 ml-1" />
@@ -1005,7 +1004,7 @@ function goToTransactions() {
             <Activity class="w-8 h-8 text-gray-400" />
           </div>
           <p class="text-gray-500 mb-3">No recent activity</p>
-          <Button @click="goBuy" class="bg-[#38618C] hover:bg-[#38618C]/90 text-white">
+          <Button class="bg-[#38618C] hover:bg-[#38618C]/90 text-white" @click="goBuy">
             Make Your First Trade
           </Button>
         </div>

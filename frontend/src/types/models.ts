@@ -134,6 +134,16 @@ export interface CryptoHistory extends BaseModel {
   cryptomoney?: Cryptomoney;
 }
 
+// Response for crypto history endpoint
+export interface CryptoHistoryResponse {
+  prices: Array<[number, number]>; // [timestamp_ms, price]
+  symbol: string;
+  name: string;
+  count: number;
+  from: string;
+  to: string;
+}
+
 // AccountRequest model
 export interface AccountRequest extends BaseModel {
   name: string;
@@ -200,7 +210,7 @@ export const getNotificationColor = (type: NotificationType): string => {
 };
 
 export const shouldSendEmail = (type: NotificationType): boolean => {
-  return [NotificationTypes.ACCOUNT_REQUEST, NotificationTypes.ADMIN_ACTION].includes(type);
+  return type === NotificationTypes.ACCOUNT_REQUEST || type === NotificationTypes.ADMIN_ACTION;
 };
 
 // API Response types
@@ -212,6 +222,7 @@ export interface ApiResponse<T> {
 
 export interface PaginatedResponse<T> {
   data: T[];
+  notifications?: T[]; // Add this for API responses that return notifications
   current_page: number;
   total_pages?: number;
   total_items?: number;

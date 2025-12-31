@@ -120,8 +120,8 @@ const handleCancel = () => {
   <Dialog v-model:open="isOpen">
     <DialogTrigger as-child>
        <button 
-      @click="isOpen = true"
       class="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-all flex items-center gap-2"
+      @click="isOpen = true"
     >
       Get Started
       <ArrowRight class="w-4 h-4" />
@@ -160,16 +160,16 @@ const handleCancel = () => {
         <!-- Initial step -->
         <div v-if="currentStep === 'initial'" class="space-y-4">
           <Button 
-            @click="handleSignIn"
             class="w-full bg-blue-500 hover:bg-blue-900 text-[#071B2C] font-semibold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
+            @click="handleSignIn"
           >
             <LogIn class="h-4 w-4" />
             Log In
           </Button>
           
           <Button 
-            @click="currentStep = 'signup'"
             class="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-lg border border-white/30 transition-all duration-300 flex items-center justify-center gap-2"
+            @click="currentStep = 'signup'"
           >
             <UserPlus class="h-4 w-4" />
             Create Account
@@ -205,18 +205,18 @@ const handleCancel = () => {
 
           <div class="flex gap-3 pt-4">
             <Button
-              @click="handleCancel"
               variant="outline"
               class="flex-1 bg-transparent border-white/30 text-white hover:bg-white/10"
               :disabled="isLoading"
+              @click="handleCancel"
             >
               <X class="h-4 w-4 mr-2" />
               Cancel
             </Button>
             <Button
-              @click="handleSignUp"
               class="flex-1 bg-blue-500 hover:bg-blue-900  text-[#071B2C] font-semibold"
               :disabled="isLoading"
+              @click="handleSignUp"
             >
               <ArrowRight class="h-4 w-4 mr-2" />
               {{ isLoading ? 'Sending...' : 'Submit' }}

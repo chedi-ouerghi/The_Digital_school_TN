@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-vue-next'
+import { BarChart3, TrendingDown, TrendingUp } from 'lucide-vue-next'
+import { ref } from 'vue'
 
 interface Crypto {
   id: string
@@ -139,13 +139,13 @@ const selectedTimeframe = ref('1D')
           <button
             v-for="tf in timeframes"
             :key="tf"
-            @click="selectedTimeframe = tf"
             :class="[
               'px-4 py-2 rounded-lg text-sm font-medium transition-all',
               selectedTimeframe === tf
                 ? 'bg-white/10 text-white border border-white/20'
                 : 'text-gray-400 hover:text-white'
             ]"
+            @click="selectedTimeframe = tf"
           >
             {{ tf }}
           </button>

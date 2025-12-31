@@ -12,7 +12,7 @@ class AdminCryptoControllerTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Test edit crypto as admin
+     * Test get crypto as admin
      */
     public function test_edit_crypto_as_admin()
     {
@@ -21,14 +21,14 @@ class AdminCryptoControllerTest extends TestCase
         $token = $admin->createToken('TestToken')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson("/api/v1/admin/cryptos/{$crypto->id}/edit");
+            ->getJson("/api/v1/cryptos/{$crypto->id}");
 
         $response->assertStatus(200)
             ->assertJsonStructure(['id', 'name', 'symbol', 'price_eur']);
     }
 
     /**
-     * Test edit non-existent crypto as admin
+     * Test get non-existent crypto as admin
      */
     public function test_edit_non_existent_crypto_as_admin()
     {
@@ -36,10 +36,9 @@ class AdminCryptoControllerTest extends TestCase
         $token = $admin->createToken('TestToken')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/admin/cryptos/99999/edit');
+            ->getJson('/api/v1/cryptos/99999');
 
-        $response->assertStatus(404)
-            ->assertJson(['error' => 'Crypto non trouvée']);
+        $response->assertStatus(404);
     }
 
     /**

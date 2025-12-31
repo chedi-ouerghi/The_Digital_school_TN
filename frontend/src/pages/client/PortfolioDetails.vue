@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js'
+import { computed, onMounted, ref } from 'vue'
+import { Line } from 'vue-chartjs'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js'
-import { Line } from 'vue-chartjs'
 
 // Import des composants shadcn-vue
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
@@ -220,8 +220,8 @@ function goToTrade() {
       <div class="flex items-center gap-4">
         <Button 
           variant="outline"
-          @click="goBack"
           class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+          @click="goBack"
         >
           ← Back
         </Button>
@@ -232,8 +232,8 @@ function goToTrade() {
       </div>
       <Button 
         v-if="position"
-        @click="goToTrade"
         class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+        @click="goToTrade"
       >
         💱 Trade
       </Button>
@@ -251,7 +251,7 @@ function goToTrade() {
       <CardContent class="p-8 text-center text-[#FF5964]">
         <div class="text-2xl mb-2">❌</div>
         <div>{{ error }}</div>
-        <Button @click="goBack" class="mt-4">← Back to wallet</Button>
+        <Button class="mt-4" @click="goBack">← Back to wallet</Button>
       </CardContent>
     </Card>
 
@@ -260,7 +260,7 @@ function goToTrade() {
       <CardContent class="p-8 text-center">
         <div class="text-6xl mb-4">🔍</div>
         <h3 class="text-xl font-semibold text-[#38618C] mb-2">Position not found</h3>
-        <Button @click="goBack" class="mt-4">← Back to wallet</Button>
+        <Button class="mt-4" @click="goBack">← Back to wallet</Button>
       </CardContent>
     </Card>
 

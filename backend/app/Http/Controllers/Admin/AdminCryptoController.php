@@ -59,17 +59,6 @@ class AdminCryptoController extends Controller
 
   
 
-    /**
-     * Récupérer une crypto pour modification
-     */
-    public function edit($id): JsonResponse
-    {
-        $crypto = Cryptomoney::find($id);
-        if (!$crypto) {
-            return response()->json(['error' => 'Crypto non trouvée'], 404);
-        }
-        return response()->json($crypto);
-    }
 
    /**
      * Synchroniser toutes les cryptos (si coingecko_id present)
