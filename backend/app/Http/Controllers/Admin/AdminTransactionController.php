@@ -99,7 +99,7 @@ public function cancel(Request $request, $id): JsonResponse
         ])->findOrFail($id);
 
         if ($transaction->cancelled_at) {
-            return response()->json(['error' => 'Cette transaction est déjà annulée.'], 400);
+            return response()->json(['error' => 'This transaction has already been cancelled.'], 400);
         }
 
         // Vérifions l'accès au client plus simplement
@@ -113,7 +113,7 @@ public function cancel(Request $request, $id): JsonResponse
         // Annuler la transaction via le service
         $result = $this->transactionService->cancelTransaction(
             $transaction,
-            $request->reason ?? 'Annulation administrative'
+            $request->reason ?? 'Administrative cancellation'
         );
 
         // Notifier le client
@@ -122,14 +122,14 @@ public function cancel(Request $request, $id): JsonResponse
             
             $clientName = $client->name ?? $client->email ?? "Utilisateur #{$client->id}";
             
-            $title = 'Transaction annulée par un administrateur';
-            $message = "Bonjour {$clientName},\n"
-                     . "Votre transaction #{$transaction->id} "
+            $title = 'Transaction cancelled by an administrator';
+            $message = "Good morning {$clientName},\n"
+                     . "Your transaction #{$transaction->id} "
                      . "({$transaction->quantity} x {$cryptoSymbole} "
-                     . "à {$transaction->price}€/u, "
+                     . "at {$transaction->price}€/u, "
                      . "total {$transaction->total_eur}€) "
-                     . "a été annulée par un administrateur.\n"
-                     . "Raison: " . ($request->reason ?? 'Annulation administrative');
+                     . "has been cancelled by an administrator.\n"
+                     . "Raison: " . ($request->reason ?? 'Administrative cancellation');
 
             Notification::create([
                 'user_id' => $client->id,
@@ -140,13 +140,13 @@ public function cancel(Request $request, $id): JsonResponse
         }
 
         return response()->json([
-            'message' => 'Transaction annulée avec succès.',
+            'message' => 'Transaction cancelled successfully.',
             'result' => $result
         ]);
     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
         throw $e;
     } catch (\Exception $e) {
-        \Log::error('Erreur annulation transaction: ' . $e->getMessage());
+        \Log::error('Error cancelling transaction: ' . $e->getMessage());
         return response()->json(['error' => $e->getMessage()], 400);
     }
 }

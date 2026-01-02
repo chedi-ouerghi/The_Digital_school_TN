@@ -44,7 +44,7 @@ class AuthControllerTest extends TestCase
         ]);
 
         $response->assertStatus(401)
-            ->assertJson(['message' => 'Identifiants invalides']);
+            ->assertJson(['message' => 'Invalid credentials']);
     }
 
     /**
@@ -77,7 +77,7 @@ class AuthControllerTest extends TestCase
             ->postJson('/api/v1/logout');
 
         $response->assertStatus(200)
-            ->assertJson(['message' => 'Déconnexion réussie']);
+            ->assertJson(['message' => 'Logout successful']);
     }
 
     /**
@@ -160,7 +160,7 @@ class AuthControllerTest extends TestCase
             ]);
 
         $response->assertStatus(200)
-            ->assertJson(['message' => 'Mot de passe mis à jour.']);
+            ->assertJson(['message' => 'Password updated successfully.']);
     }
 
     /**
@@ -194,7 +194,9 @@ class AuthControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJson(['message' => 'Your request has been successfully sent..']);
+            ->assertJsonFragment([
+                'message' => 'Your request has been sent successfully. Please check your email to confirm your address.'
+            ]);
 
         $this->assertDatabaseHas('account_requests', [
             'name' => 'John Doe',

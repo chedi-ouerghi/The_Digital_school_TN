@@ -25,11 +25,11 @@ class PortefeuilleController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/wallets",
-     *     summary="Lister les wallets de l'utilisateur connecté",
+     *     summary="List wallets of the authenticated user",
      *     tags={"wallet"},
      *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Liste des wallets"),
-     *     @OA\Response(response=500, description="Erreur interne")
+     *     @OA\Response(response=200, description="List of wallets"),
+     *     @OA\Response(response=500, description="Internal error")
      * )
      */
     public function index(): JsonResponse
@@ -37,10 +37,10 @@ class PortefeuilleController extends Controller
         try {
             $user = Auth::user();
             
-            // Vérifier si l'utilisateur est un client
+            // Check if user is a client
             if ($user->role !== 'CLIENT') {
                 return response()->json([
-                    'error' => 'Seuls les clients peuvent accéder à leur wallet'
+                    'error' => 'Only clients can access their wallet'
                 ], 403);
             }
 
@@ -55,18 +55,18 @@ class PortefeuilleController extends Controller
             
             if (!$wallet) {
                 return response()->json([
-                    'error' => 'wallet non trouvé'
+                    'error' => 'Wallet not found'
                 ], 404);
             }
             
             return response()->json([
                 'wallet' => $wallet,
-                'solde_eur' => (float) $wallet->balance_eur,
+                'balance_eur' => (float) $wallet->balance_eur,
                 'stats' => $this->walletService->calculatePortfolioStats($wallet->id)
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Erreur lors de la récupération du wallet',
+                'error' => 'Error retrieving wallet',
                 'details' => $e->getMessage()
             ], 500);
         }
@@ -75,22 +75,22 @@ class PortefeuilleController extends Controller
     /**
      * @OA\Post(
      *     path="/api/v1/wallets/transaction",
-     *     summary="Effectuer une transaction (achat/vente)",
+     *     summary="Perform a transaction (buy/sell)",
      *     tags={"wallet"},
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
      *             required={"symbol","type","quantity"},
-     *             @OA\Property(property="symbol", type="string", description="Symbole de la crypto (ex: BTC)"),
-     *             @OA\Property(property="type", type="string", enum={"ACHAT","VENTE"}),
-     *             @OA\Property(property="quantity", type="number", format="float", description="Quantité à acheter/vendre")
+     *             @OA\Property(property="symbol", type="string", description="Crypto symbol (e.g., BTC)"),
+     *             @OA\Property(property="type", type="string", enum={"BUY","SELL"}),
+     *             @OA\Property(property="quantity", type="number", format="float", description="Quantity to buy/sell")
      *         )
      *     ),
-     *     @OA\Response(response=200, description="Transaction effectuée avec succès"),
-     *     @OA\Response(response=400, description="Erreur de validation ou transaction"),
-     *     @OA\Response(response=422, description="Erreur de validation"),
-     *     @OA\Response(response=500, description="Erreur interne")
+     *     @OA\Response(response=200, description="Transaction completed successfully"),
+     *     @OA\Response(response=400, description="Validation or transaction error"),
+     *     @OA\Response(response=422, description="Validation error"),
+     *     @OA\Response(response=500, description="Internal error")
      * )
      */
     public function transact(Request $request): JsonResponse
@@ -100,7 +100,7 @@ class PortefeuilleController extends Controller
 
             $validated = $request->validate([
                 'symbol' => 'required|string|exists:cryptomoney,symbol',
-                'type' => 'required|in:ACHAT,VENTE',
+                'type' => 'required|in:BUY,SELL',
                 'quantity' => 'required|numeric|min:0.00000001'
             ]);
 
@@ -135,7 +135,7 @@ class PortefeuilleController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'error' => 'Erreur lors de la transaction',
+                'error' => 'Transaction error',
                 'details' => $e->getMessage()
             ], 500);
         }
@@ -144,11 +144,11 @@ class PortefeuilleController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/wallets/plus-value",
-     *     summary="Calculer la plus-value totale du wallet",
+     *     summary="Calculate total capital gains of the wallet",
      *     tags={"wallet"},
      *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Plus-value calculée avec succès"),
-     *     @OA\Response(response=500, description="Erreur interne")
+     *     @OA\Response(response=200, description="Capital gains calculated successfully"),
+     *     @OA\Response(response=500, description="Internal error")
      * )
      */
     public function plusValue(): JsonResponse
@@ -159,16 +159,16 @@ class PortefeuilleController extends Controller
 
             if (!$wallet) {
                 return response()->json([
-                    'error' => 'wallet non trouvé'
+                    'error' => 'Wallet not found'
                 ], 404);
             }
 
-            $stats = $this->walletService->calculatePlusValue($wallet->id);
+            $stats = $this->walletService->calculateCapitalGains($wallet->id);
 
             return response()->json($stats);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Erreur lors du calcul de la plus-value',
+                'error' => 'Error calculating capital gains',
                 'details' => $e->getMessage()
             ], 500);
         }
@@ -177,12 +177,12 @@ class PortefeuilleController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/wallets/history",
-     *     summary="Obtenir l'historique des valeurs du wallet",
+     *     summary="Get wallet value history",
      *     tags={"wallet"},
      *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Historique récupéré avec succès"),
-     *     @OA\Response(response=404, description="wallet non trouvé"),
-     *     @OA\Response(response=500, description="Erreur interne")
+     *     @OA\Response(response=200, description="History retrieved successfully"),
+     *     @OA\Response(response=404, description="Wallet not found"),
+     *     @OA\Response(response=500, description="Internal error")
      * )
      */
     public function history(): JsonResponse
@@ -193,7 +193,7 @@ class PortefeuilleController extends Controller
 
             if (!$wallet) {
                 return response()->json([
-                    'error' => 'wallet non trouvé'
+                    'error' => 'Wallet not found'
                 ], 404);
             }
 
@@ -202,7 +202,7 @@ class PortefeuilleController extends Controller
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Erreur lors de la récupération de l\'historique',
+                'error' => 'Error retrieving history',
                 'details' => $e->getMessage()
             ], 500);
         }
@@ -211,20 +211,20 @@ class PortefeuilleController extends Controller
     /**
      * @OA\Get(
      *     path="/api/v1/wallets/{id}",
-     *     summary="Obtenir les détails d'un wallet spécifique",
+     *     summary="Get details of a specific wallet",
      *     tags={"wallet"},
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID du wallet",
+     *         description="Wallet ID",
      *         @OA\Schema(type="integer")
      *     ),
-     *     @OA\Response(response=200, description="Détails du wallet"),
-     *     @OA\Response(response=404, description="wallet non trouvé"),
-     *     @OA\Response(response=403, description="Accès non autorisé"),
-     *     @OA\Response(response=500, description="Erreur interne")
+     *     @OA\Response(response=200, description="Wallet details"),
+     *     @OA\Response(response=404, description="Wallet not found"),
+     *     @OA\Response(response=403, description="Unauthorized access"),
+     *     @OA\Response(response=500, description="Internal error")
      * )
      */
     public function show($id): JsonResponse
@@ -241,25 +241,25 @@ class PortefeuilleController extends Controller
                 ->first();
 
             if (!$wallet) {
-                return response()->json(['error' => 'wallet non trouvé'], 404);
+                return response()->json(['error' => 'Wallet not found'], 404);
             }
 
-            // Vérification que l'utilisateur est propriétaire ou admin
+            // Check that user is owner or admin
             if ($wallet->user_id !== $user->id && !$user->isAdmin()) {
-                return response()->json(['error' => 'Accès non autorisé'], 403);
+                return response()->json(['error' => 'Unauthorized access'], 403);
             }
 
-            // Récupérer les détails via le service
+            // Get details via service
             $details = $this->walletService->getPortfolioDetails($wallet->id);
 
             return response()->json([
                 'wallet' => $details,
-                'solde_eur' => (float) $wallet->balance_eur,
+                'balance_eur' => (float) $wallet->balance_eur,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Erreur lors de la récupération des détails du wallet',
+                'error' => 'Error retrieving wallet details',
                 'details' => $e->getMessage()
             ], 500);
         }

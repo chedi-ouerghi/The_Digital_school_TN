@@ -4,19 +4,15 @@ import { ref } from 'vue';
 import GetStartedDialog from './GetStartedDialog.vue';
 
 const navItems = [
-  { label: 'Home', href: '#hero' },
-  { label: 'Markets', href: '#crypto-tracker' },
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Home', href: '/' },
   { label: 'Blog', href: '/blog', external: true },
-  { label: 'Contact', href: '#contact' }
 ]
 
 const isMenuOpen = ref(false)
 </script>
 
 <template>
-  <header class="fixed w-full z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
+  <header class="fixed w-full z-50 backdrop-blur-xl" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.06);">
     <!-- Main Header -->
     <div class="container mx-auto px-4 md:px-6 py-3">
       <div class="flex items-center justify-between">
@@ -29,16 +25,16 @@ const isMenuOpen = ref(false)
         </div>
 
         <!-- Desktop Navigation -->
-        <nav class="hidden md:flex items-center gap-1">
+        <nav class="hidden md:flex items-center gap-1 nav">
           <router-link
             v-for="item in navItems"
             :key="item.label"
             :to="item.href"
-            class="relative px-3 py-2 text-sm text-gray-300 hover:text-white transition-colors group"
+            class="nav-link relative px-3 py-2 text-sm transition-colors group"
             :target="item.external ? '_self' : undefined"
           >
             {{ item.label }}
-            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-emerald-500 group-hover:w-4/5 transition-all duration-300"></div>
+            <div class="underline"></div>
           </router-link>
         </nav>
 
@@ -62,22 +58,21 @@ const isMenuOpen = ref(false)
     </div>
 
     <!-- Status Bar -->
-    <div class="border-t border-white/5 bg-black/90">
+    <div class="status-bar">
       <div class="container mx-auto px-4 md:px-6 py-2">
         <div class="flex items-center justify-between text-xs">
           <div class="flex items-center gap-4 overflow-x-auto">
             <div class="flex items-center gap-2 whitespace-nowrap">
-              <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <span class="text-emerald-400 font-medium">LIVE</span>
+              <div class="w-2 h-2 rounded-full live-dot"></div>
+              <span class="live-text">LIVE</span>
             </div>
-            <div class="text-gray-400 whitespace-nowrap">BTC: <span class="text-white font-medium">$63,842</span></div>
-            <div class="text-gray-400 whitespace-nowrap">ETH: <span class="text-white font-medium">$3,456</span></div>
-            <div class="text-gray-400 whitespace-nowrap">24h Vol: <span class="text-white font-medium">$68.4B</span></div>
+            <div class="stat-text">BTC: <span class="stat-value">$63,842</span></div>
+            <div class="stat-text">ETH: <span class="stat-value">$3,456</span></div>
+            <div class="stat-text">24h Vol: <span class="stat-value">$68.4B</span></div>
           </div>
           <div class="hidden md:block whitespace-nowrap">
-            <div class="text-gray-400">
-              Market Cap: <span class="text-white font-medium">$1.87T</span>
-              <span class="text-emerald-400 ml-2">+2.4%</span>
+            <div class="stat-text">Market Cap: <span class="stat-value">$1.87T</span>
+              <span class="market-change">+2.4%</span>
             </div>
           </div>
         </div>
@@ -87,14 +82,14 @@ const isMenuOpen = ref(false)
     <!-- Mobile Menu -->
     <div
       v-if="isMenuOpen"
-      class="md:hidden absolute top-full left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-white/10 p-6 rounded-b-2xl"
+      class="md:hidden absolute top-full left-0 right-0 mobile-menu p-6 rounded-b-2xl"
     >
       <div class="space-y-3">
         <router-link
           v-for="item in navItems"
           :key="item.label"
           :to="item.href"
-          class="block py-2 px-4 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+          class="block py-2 px-4 rounded-lg mobile-link"
           @click="isMenuOpen = false"
         >
           {{ item.label }}
@@ -138,4 +133,22 @@ div[class*="bg-black/95"] {
 .overflow-x-auto::-webkit-scrollbar {
   display: none;
 }
+
+/* New header styles to match landing palette */
+.nav-link { color: #38618C; font-weight: 600; }
+.nav-link:hover { color: #01FF19; }
+.nav-link.router-link-active { color: #FF5964; }
+.underline { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 0; height: 3px; border-radius: 6px; background: linear-gradient(90deg, #35A7FF, #01FF19); transition: width .28s; }
+.nav-link:hover .underline { width: 60%; }
+
+.status-bar { border-top: 1px solid rgba(255,255,255,0.03); background: transparent; }
+.live-dot { background: #01FF19; box-shadow: 0 0 8px rgba(1,255,25,0.3); }
+.live-text { color: #01FF19; font-weight: 700; }
+.stat-text { color: #38618C; opacity: 0.9 }
+.stat-value { color: #FFFFFF; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; margin-left: 6px }
+.market-change { color: #01FF19; margin-left: 6px }
+
+.mobile-menu { background: #FFFFFF; color: #38618C; border-top: 1px solid rgba(56,97,140,0.06); }
+.mobile-link { color: #38618C; }
+.mobile-link:hover { color: #01FF19; background: rgba(1,255,25,0.03); }
 </style>

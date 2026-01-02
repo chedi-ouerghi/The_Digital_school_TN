@@ -53,7 +53,7 @@ class CryptoController extends Controller
             // ✅ OPTION 1: Vérifier le rôle directement (Plus simple)
             if (auth()->user()->role !== 'ADMIN') {
                 return response()->json([
-                    'error' => 'Non autorisé. Seuls les administrateurs peuvent ajouter des cryptomonnaies.',
+                    'error' => 'Not authorized. Only administrators can add cryptocurrencies.',
                     'code' => 'unauthorized'
                 ], 403);
             }
@@ -66,13 +66,13 @@ class CryptoController extends Controller
                 ->get('https://api.coingecko.com/api/v3/coins/list?include_platform=false');
 
             if (!$search->ok()) {
-                Log::warning('CoinGecko API indisponible', [
+                Log::warning('CoinGecko API unavailable', [
                     'status' => $search->status(),
                     'crypto_searched' => $name
                 ]);
 
-                return response()->json([
-                    'error' => 'CoinGecko est actuellement indisponible. Veuillez réessayer plus tard.',
+                    return response()->json([
+                        'error' => 'CoinGecko is currently unavailable. Please try again later.',
                     'code' => 'coingecko_unavailable'
                 ], 503);
             }
@@ -85,10 +85,10 @@ class CryptoController extends Controller
             });
 
             if (!$found) {
-                Log::info('Crypto non trouvée sur CoinGecko', ['crypto' => $name]);
+                Log::info('Crypto not found on CoinGecko', ['crypto' => $name]);
 
                 return response()->json([
-                    'error' => "Cryptomonnaie '{$name}' non trouvée sur CoinGecko",
+                    'error' => "Cryptocurrency '{$name}' not found on CoinGecko",
                     'code' => 'crypto_not_found'
                 ], 404);
             }
@@ -107,41 +107,41 @@ class CryptoController extends Controller
                             $crypto->update(['image' => $imagePath]);
                         }
                     } catch (\Exception $e) {
-                        Log::warning('Erreur lors de l\'upload d\'image', [
+                        Log::warning('Error uploading image', [
                             'crypto_id' => $id,
                             'error' => $e->getMessage()
                         ]);
                     }
                 }
 
-                Log::info('Cryptomonnaie ajoutée avec succès', ['crypto_id' => $id]);
+                Log::info('Cryptocurrency added successfully', ['crypto_id' => $id]);
 
                 return response()->json([
-                    'message' => 'Cryptomonnaie ajoutée avec succès',
+                    'message' => 'Cryptocurrency added successfully',
                     'id' => $id,
                     'code' => 'crypto_added'
                 ], 201);
 
             } catch (\Exception $e) {
-                Log::error('Erreur lors de l\'enregistrement de la crypto', [
+                Log::error('Error saving cryptocurrency', [
                     'coingecko_id' => $coingeckoId,
                     'error' => $e->getMessage()
                 ]);
 
                 return response()->json([
-                    'error' => 'Impossible d\'enregistrer la cryptomonnaie',
+                    'error' => 'Unable to register cryptocurrency',
                     'code' => 'save_failed'
                 ], 422);
             }
 
         } catch (\Exception $e) {
-            Log::error('Erreur inattendue lors de l\'ajout de crypto', [
+            Log::error('Unexpected error during crypto addition', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
-                'error' => 'Erreur interne du serveur',
+                'error' => 'Internal server error',
                 'code' => 'internal_error'
             ], 500);
         }
@@ -178,12 +178,12 @@ class CryptoController extends Controller
             return response()->json($cryptos);
 
         } catch (\Exception $e) {
-            Log::error('Erreur lors de la récupération des cryptos', [
+            Log::error('Error retrieving cryptos', [
                 'error' => $e->getMessage()
             ]);
 
             return response()->json([
-                'error' => 'Impossible de récupérer les cryptomonnaies',
+                'error' => 'Unable to retrieve cryptocurrencies',
                 'code' => 'list_failed'
             ], 500);
         }
@@ -212,18 +212,18 @@ class CryptoController extends Controller
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
-                'error' => 'Cryptomonnaie non trouvée',
+                'error' => 'Cryptocurrency not found',
                 'code' => 'crypto_not_found'
             ], 404);
 
         } catch (\Exception $e) {
-            Log::error('Erreur lors de la récupération d\'une crypto', [
+            Log::error('Error retrieving a cryptocurrency', [
                 'crypto_id' => $id,
                 'error' => $e->getMessage()
             ]);
 
             return response()->json([
-                'error' => 'Erreur serveur',
+                'error' => 'Server error',
                 'code' => 'internal_error'
             ], 500);
         }
@@ -273,7 +273,7 @@ public function history($id): JsonResponse
 
         if ($days < 1 || $days > 365) {
             return response()->json([
-                'error' => 'Le nombre de jours doit être entre 1 et 365',
+                'error' => 'The number of days must be between 1 and 365',
                 'code' => 'invalid_days'
             ], 422);
         }
@@ -308,18 +308,18 @@ public function history($id): JsonResponse
 
     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
         return response()->json([
-            'error' => 'Cryptomonnaie non trouvée',
+            'error' => 'Cryptocurrency not found',
             'code' => 'crypto_not_found'
         ], 404);
 
     } catch (\Exception $e) {
-        Log::error('Erreur histoire crypto', [
+        Log::error('Error retrieving cryptocurrency history', [
             'crypto_id' => $id,
             'error' => $e->getMessage()
         ]);
 
         return response()->json([
-            'error' => 'Erreur serveur',
+            'error' => 'Server error',
             'code' => 'internal_error'
         ], 500);
     }
@@ -336,7 +336,7 @@ public function history($id): JsonResponse
 private function fetchFromCoinGeckoAndSave(Cryptomoney $crypto, int $days, string $cryptoId): JsonResponse
 {
     try {
-        Log::info("Récupération historique CoinGecko pour {$crypto->symbol}", [
+        Log::info("CoinGecko historical data recovery for {$crypto->symbol}", [
             'coingecko_id' => $crypto->coingecko_id,
             'days' => $days
         ]);
@@ -345,7 +345,7 @@ private function fetchFromCoinGeckoAndSave(Cryptomoney $crypto, int $days, strin
         $prices = $this->cryptoService->getMarketChart($crypto->coingecko_id, $days);
 
         if (empty($prices)) {
-            throw new \Exception('Aucune donnée reçue de CoinGecko');
+            throw new \Exception('No data received from CoinGecko');
         }
 
         $saved = 0;
@@ -356,7 +356,7 @@ private function fetchFromCoinGeckoAndSave(Cryptomoney $crypto, int $days, strin
             try {
                 // Valider le timestamp
                 if (!$this->isValidTimestamp($timestamp)) {
-                    Log::warning('Timestamp invalide ignoré', [
+                    Log::warning('Invalid timestamp ignored', [
                         'timestamp' => $timestamp,
                         'crypto_id' => $cryptoId
                     ]);
@@ -389,7 +389,7 @@ private function fetchFromCoinGeckoAndSave(Cryptomoney $crypto, int $days, strin
                 $saved++;
 
             } catch (\Exception $e) {
-                Log::warning('Erreur sauvegarde point historique', [
+                Log::warning('Error saving historical point', [
                     'crypto_id' => $cryptoId,
                     'timestamp' => $timestamp,
                     'error' => $e->getMessage()
@@ -398,7 +398,7 @@ private function fetchFromCoinGeckoAndSave(Cryptomoney $crypto, int $days, strin
             }
         }
 
-        Log::info("Historique CoinGecko sauvegardé", [
+        Log::info("CoinGecko history saved", [
             'crypto_id' => $cryptoId,
             'saved' => $saved,
             'failed' => $failed
@@ -415,13 +415,13 @@ private function fetchFromCoinGeckoAndSave(Cryptomoney $crypto, int $days, strin
         ], 200);
 
     } catch (\Exception $e) {
-        Log::error('Erreur récupération CoinGecko', [
+        Log::error('Error retrieving CoinGecko data', [
             'crypto_id' => $cryptoId,
             'error' => $e->getMessage()
         ]);
 
         return response()->json([
-            'error' => 'Historique non disponible',
+            'error' => 'History unavailable',
             'code' => 'history_unavailable',
             'details' => $e->getMessage()
         ], 503);

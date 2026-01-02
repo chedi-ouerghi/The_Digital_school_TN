@@ -35,8 +35,8 @@ class AuthController extends Controller
             // Récupérer l'utilisateur par email
             $user = User::where('email', $credentials['email'])->first();
             if (!$user) {
-                \Log::warning('Tentative de connexion échouée pour (email inconnu) : ' . $credentials['email']);
-                return response()->json(['message' => 'Identifiants invalides'], 401);
+                \Log::warning('Connection attempt failed for (unknown email): ' . $credentials['email']);
+                return response()->json(['message' => 'Invalid credentials'], 401);
             }
 
             $providedPassword = (string) $credentials['password'];
@@ -58,8 +58,8 @@ class AuthController extends Controller
             }
 
             if (!$valid) {
-                \Log::warning('Tentative de connexion échouée (mot de passe invalide) pour : ' . $credentials['email']);
-                return response()->json(['message' => 'Identifiants invalides'], 401);
+                \Log::warning('Connection attempt failed (invalid password) for : ' . $credentials['email']);
+                return response()->json(['message' => 'Invalid credentials'], 401);
             }
 
             // Authentifier et générer un token Sanctum
@@ -86,9 +86,9 @@ class AuthController extends Controller
                 'token' => $token,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la connexion : ' . $e->getMessage());
+            \Log::error('Error during login: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Échec de la connexion',
+                'message' => 'Login failed',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -107,11 +107,11 @@ class AuthController extends Controller
     {
         try {
             $request->user()->currentAccessToken()->delete();
-            return response()->json(['message' => 'Déconnexion réussie']);
+            return response()->json(['message' => 'Logout successful']);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la déconnexion : ' . $e->getMessage());
+            \Log::error('Error during logout: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Échec de la déconnexion',
+                'message' => 'Logout failed',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -133,9 +133,9 @@ class AuthController extends Controller
                 'user' => $request->user(),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la récupération du profil : ' . $e->getMessage());
+            \Log::error('Error retrieving profile: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Échec de la récupération du profil',
+                'message' => 'Failed to retrieve profile',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -157,10 +157,10 @@ class AuthController extends Controller
             $user->save();
             return response()->json(['user' => $user]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::warning('Erreur de validation lors de la mise à jour du profil : ' . json_encode($e->errors()));
+            \Log::warning('Validation error during profile update: ' . json_encode($e->errors()));
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la mise à jour du profil : ' . $e->getMessage());
+            \Log::error('Error during profile update: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -188,22 +188,22 @@ if (
     !in_array(strtoupper($user->role), ['ADMIN', 'CLIENT'])
 ) {
     return response()->json([
-        'error' => 'Vous n’êtes pas autorisé à changer le mot de passe via ce endpoint.'
+        'error' => 'You are not authorized to change the password via this endpoint.'
     ], 403);
 }
 
 
             if (!\Illuminate\Support\Facades\Hash::check($validated['current_password'], $user->password)) {
-                return response()->json(['error' => 'Mot de passe actuel invalide.'], 400);
+                return response()->json(['error' => 'Current password is invalid.'], 400);
             }
             $user->password = $validated['password'];
             $user->save();
-            return response()->json(['message' => 'Mot de passe mis à jour.']);
+            return response()->json(['message' => 'Password updated successfully.']);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::warning('Erreur de validation lors du changement de mot de passe : ' . json_encode($e->errors()));
+            \Log::warning('Validation error during password change: ' . json_encode($e->errors()));
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors du changement de mot de passe : ' . $e->getMessage());
+            \Log::error('Error during password change: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -240,17 +240,17 @@ if (
 
             // 1. Vérifier que le domaine de l'email existe et peut recevoir des emails (MX records)
             if (!$this->isEmailDomainValid($email)) {
-                \Log::warning("Tentative de création de compte avec domaine invalide : {$email}");
+                \Log::warning("Attempted account creation with invalid domain : {$email}");
                 return response()->json([
-                    'error' => 'Le domaine de cet email n\'existe pas ou ne peut pas recevoir d\'emails.'
+                    'error' => 'The domain for this email address does not exist or cannot receive emails.'
                 ], 400);
             }
 
             // 2. Vérifier que l'email n'est pas un domaine temporaire/jetable
             if ($this->isDisposableEmail($email)) {
-                \Log::warning("Tentative de création de compte avec email temporaire : {$email}");
+                \Log::warning("Attempted account creation with disposable email : {$email}");
                 return response()->json([
-                    'error' => 'Les adresses emails temporaires ne sont pas autorisées.'
+                    'error' => 'Temporary email addresses are not allowed. Please use a valid email address.'
                 ], 400);
             }
 
@@ -259,9 +259,9 @@ if (
                 ->where('status', 'PENDING')
                 ->first();
             if ($existing) {
-                \Log::info("Demande de compte déjà en attente pour : {$email}");
+                \Log::info("Account request already pending for email : {$email}");
                 return response()->json([
-                    'error' => 'Une demande est déjà en attente pour cet email. Veuillez vérifier votre boîte mail.'
+                    'error' => 'A request is already pending for this email. Please check your inbox.'
                 ], 422);
             }
 
@@ -272,12 +272,12 @@ if (
                 'status' => 'PENDING',
             ]);
 
-            \Log::info("Nouvelle demande de compte créée : {$email} (ID: {$accountRequest->id})");
+            \Log::info("New account request created : {$email} (ID: {$accountRequest->id})");
 
             // 5. Envoyer un email de confirmation à l'utilisateur
             $emailConfirmationSent = $this->sendAccountRequestConfirmation($accountRequest);
             if (!$emailConfirmationSent) {
-                \Log::warning("Impossible d'envoyer le mail de confirmation à {$email}");
+                \Log::warning("Unable to send the confirmation email to {$email}");
                 // Ne pas bloquer la réponse, mais logger l'erreur
             }
 
@@ -285,19 +285,19 @@ if (
             $this->notifyAdminsOfNewRequest($accountRequest);
 
             return response()->json([
-                'message' => 'Votre demande a été envoyée avec succès. Veuillez vérifier votre email pour confirmer votre adresse.'
+                'message' => 'Your request has been sent successfully. Please check your email to confirm your address.'
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::warning('Erreur de validation lors de la demande de compte : ' . json_encode($e->errors()));
+            \Log::warning('Validation error during account request: ' . json_encode($e->errors()));
             return response()->json([
-                'error' => 'Erreur de validation',
+                'error' => 'Validation error',
                 'details' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la demande de compte (AuthController) : ' . $e->getMessage());
+            \Log::error('Error during account request (AuthController) : ' . $e->getMessage());
             return response()->json([
-                'error' => 'Une erreur est survenue lors de votre demande. Veuillez réessayer plus tard.'
+                'error' => 'An error occurred during your request. Please try again later.'
             ], 500);
         }
     }
@@ -326,7 +326,7 @@ if (
             return gethostbyname($domain) !== $domain;
 
         } catch (\Exception $e) {
-            \Log::warning("Erreur lors de la vérification du domaine email {$email} : " . $e->getMessage());
+            \Log::warning("Error during email domain verification for {$email} : " . $e->getMessage());
             return false;
         }
     }
@@ -368,10 +368,10 @@ if (
             \Mail::to($accountRequest->email)->send(
                 new \App\Mail\AccountRequestConfirmationMail($accountRequest)
             );
-            \Log::info("Email de confirmation envoyé à {$accountRequest->email}");
+            \Log::info("Confirmation email sent to {$accountRequest->email}");
             return true;
         } catch (\Exception $e) {
-            \Log::error("Erreur lors de l'envoi du mail de confirmation à {$accountRequest->email} : " . $e->getMessage());
+            \Log::error("Error sending confirmation email to {$accountRequest->email} : " . $e->getMessage());
             return false;
         }
     }
@@ -391,23 +391,23 @@ if (
                         new \App\Mail\NewAccountRequestMail($accountRequest)
                     );
                 } catch (\Exception $mailEx) {
-                    \Log::error("Erreur lors de l'envoi de notification à {$admin->email} : " . $mailEx->getMessage());
+                    \Log::error("Error during notification email to {$admin->email} : " . $mailEx->getMessage());
                 }
 
                 // Créer une notification interne
                 try {
                     \App\Models\Notification::create([
                         'user_id' => $admin->id,
-                        'title' => 'Nouvelle demande de compte',
-                        'message' => "Demande de {$accountRequest->name} ({$accountRequest->email})",
+                        'title' => 'New account request',
+                        'message' => "Request from {$accountRequest->name} ({$accountRequest->email})",
                         'type' => \App\Models\Notification::TYPE_ACCOUNT_REQUEST ?? 'account_request',
                     ]);
                 } catch (\Exception $nEx) {
-                    \Log::warning("Impossible de créer notification pour admin {$admin->id} : " . $nEx->getMessage());
+                    \Log::warning("Unable to create notification for admin {$admin->id} : " . $nEx->getMessage());
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la notification des administrateurs : ' . $e->getMessage());
+            \Log::error('Error during notification of administrators : ' . $e->getMessage());
         }
     }
 
@@ -494,18 +494,18 @@ public function changeId(Request $request): JsonResponse
                 ->first();
 
             if (!$accountRequest) {
-                \Log::warning('Tentative de vérification avec un token invalide ou expiré : ' . $validated['token']);
+                \Log::warning('Attempted verification with an invalid or expired token: ' . $validated['token']);
                 return response()->json([
-                    'error' => 'Token invalide ou expiré. Veuillez faire une nouvelle demande de compte.'
+                    'error' => 'Invalid or expired token. Please submit a new account request.'
                 ], 400);
             }
 
             // Vérifier que le token n'a pas expiré (48 heures)
             if ($accountRequest->created_at->addHours(48)->isPast()) {
                 $accountRequest->update(['status' => 'EXPIRED']);
-                \Log::warning('Token expiré pour : ' . $accountRequest->email);
+                \Log::warning('Token expired for : ' . $accountRequest->email);
                 return response()->json([
-                    'error' => 'Ce lien de confirmation a expiré. Veuillez faire une nouvelle demande.'
+                    'error' => 'This confirmation link has expired. Please submit a new request.'
                 ], 400);
             }
 
@@ -515,23 +515,23 @@ public function changeId(Request $request): JsonResponse
                 'email_verified_at' => now(),
             ]);
 
-            \Log::info('Email vérifié avec succès pour : ' . $accountRequest->email);
+            \Log::info('Email verified successfully for : ' . $accountRequest->email);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Votre email a été confirmé avec succès ! Un administrateur examinera votre demande très prochainement.'
+                'message' => 'Your email has been confirmed successfully! An administrator will review your request shortly.'
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::warning('Erreur de validation lors de la vérification : ' . json_encode($e->errors()));
+            \Log::warning('Error during validation of verification : ' . json_encode($e->errors()));
             return response()->json([
-                'error' => 'Token manquant ou invalide.',
+                'error' => 'Token missing or invalid.',
                 'details' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de la vérification d\'email : ' . $e->getMessage());
+            \Log::error('Error during email verification : ' . $e->getMessage());
             return response()->json([
-                'error' => 'Une erreur est survenue lors de la vérification.'
+                'error' => 'An error occurred during verification.'
             ], 500);
         }
     }

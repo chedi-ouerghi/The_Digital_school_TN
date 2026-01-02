@@ -10,6 +10,8 @@ class BlogPost extends Model
     use HasFactory;
 
     protected $table = 'blog_posts';
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'title',

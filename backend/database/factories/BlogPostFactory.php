@@ -19,6 +19,7 @@ class BlogPostFactory extends Factory
         $title = fake()->sentence();
         
         return [
+            'id' => strtoupper(Str::random(14)),
             'title' => $title,
             'slug' => Str::slug($title),
             'user_id' => User::factory(),

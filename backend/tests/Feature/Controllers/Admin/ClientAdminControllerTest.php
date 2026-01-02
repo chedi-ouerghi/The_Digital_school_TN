@@ -92,7 +92,7 @@ class ClientAdminControllerTest extends TestCase
             ->getJson('/api/v1/admin/clients/99999/wallet');
 
         $response->assertStatus(404)
-            ->assertJson(['error' => 'Utilisateur non trouvé.']);
+            ->assertJson(['error' => 'User not found.']);
     }
 
     /**
@@ -109,7 +109,7 @@ class ClientAdminControllerTest extends TestCase
             ->getJson("/api/v1/admin/clients/{$client->id}/wallet");
 
         $response->assertStatus(404)
-            ->assertJson(['error' => 'Aucun wallet trouvé pour cet utilisateur.']);
+            ->assertJson(['error' => 'No wallet was found for this user.']);
     }
 
     /**

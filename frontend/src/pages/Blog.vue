@@ -21,18 +21,6 @@ const search = ref('')
 const category = ref('')
 const categories = ['News', 'Technical Analysis', 'Blockchain', 'Beginner Guides', 'Altcoins', 'Trends']
 const isAdmin = auth.isAdmin()
-const showModal = ref(false)
-const editing = ref<any | null>(null)
-
-const form = ref({
-  title: '',
-  category: '',
-  summary: '',
-  content: '',
-  tags: '',
-  image: '',
-  published_at: new Date().toISOString().split('T')[0]
-})
 
 const canLoadMore = computed(() => items.value.length > 0)
 const debouncedFetch = debounceFn(() => fetchPosts(true), 400)
@@ -49,8 +37,18 @@ const fetchPosts = async (reset = true) => {
       search: search.value,
       category: category.value
     })
-    if (res?.data) {
-      items.value = reset ? res.data : [...items.value, ...res.data]
+
+    // The API returns a wrapper { success, data: { data: [...] } }
+    // Accept both shapes: direct array or paginated wrapper
+    const resData = (res && res.data && Array.isArray(res.data))
+      ? res.data
+      : (res && res.data && Array.isArray(res.data?.data))
+        ? res.data.data
+        : (Array.isArray(res) ? res : []);
+
+    if (resData && Array.isArray(resData)) {
+      const merged = reset ? resData : [...items.value, ...resData]
+      items.value = merged.filter(Boolean)
     }
   } catch (err) {
     console.error('Error fetching posts:', err)
@@ -59,81 +57,8 @@ const fetchPosts = async (reset = true) => {
   }
 }
 
-const openCreateModal = () => {
-  editing.value = null
-  form.value = {
-    title: '',
-    category: '',
-    summary: '',
-    content: '',
-    tags: '',
-    image: '',
-    published_at: new Date().toISOString().split('T')[0]
-  }
-  showModal.value = true
-}
-
-const openEditModal = (post: any) => {
-  editing.value = post
-  form.value = {
-    title: post.title || '',
-    category: post.category || '',
-    summary: post.summary || '',
-    content: post.content || '',
-    tags: Array.isArray(post.tags) ? post.tags.join(', ') : post.tags || '',
-    image: post.image || '',
-    published_at: post.published_at ? post.published_at.split(' ')[0] : new Date().toISOString().split('T')[0]
-  }
-  showModal.value = true
-}
-
-const closeModal = () => {
-  showModal.value = false
-}
-
-const submitForm = async () => {
-  try {
-    const payload = {
-      title: form.value.title.trim(),
-      category: form.value.category,
-      summary: form.value.summary.trim(),
-      content: form.value.content,
-      tags: form.value.tags ? form.value.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-      image: form.value.image.trim(),
-      published_at: form.value.published_at || null,
-    }
-
-    if (editing.value) {
-      await blogApi.update(editing.value.id || editing.value.slug, payload)
-    } else {
-      await blogApi.create(payload)
-    }
-
-    closeModal()
-    await fetchPosts(true)
-  } catch (e) {
-    console.error('Error saving post', e)
-    alert('Error saving post')
-  }
-}
-
-const onEdit = (post: any) => {
-  if (!isAdmin) return
-  openEditModal(post)
-}
-
-const onDelete = async (post: any) => {
-  if (!isAdmin) return
-  if (!confirm('Delete this article?')) return
-  
-  try {
-    await blogApi.delete(post.id || post.slug)
-    await fetchPosts(true)
-  } catch (e) {
-    console.error('Delete failed', e)
-    alert('Failed to delete article')
-  }
-}
+// Admin create/update/delete are handled in the admin dashboard.
+// The public Blog page only lists and reads posts.
 
 const loadMore = async () => {
   page.value++
@@ -191,14 +116,14 @@ onMounted(() => {
             </select>
           </div>
 
-          <!-- Bouton Créer Article -->
-          <button 
+          <!-- Bouton vers le dashboard admin -->
+          <router-link 
             v-if="isAdmin"
-            class="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl mb-8 hover:from-blue-500 hover:to-blue-400 transition-all" 
-            @click="openCreateModal"
+            to="/admin/overview"
+            class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl mb-8 hover:from-blue-500 hover:to-blue-400 transition-all"
           >
-            ✨ Create New Article
-          </button>
+            ✨ Manage Articles (Admin)
+          </router-link>
 
           <!-- État de chargement -->
           <div v-if="loading" class="text-center py-12">
@@ -215,10 +140,8 @@ onMounted(() => {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               <ArticleCard 
                 v-for="post in items" 
-                :key="post.id" 
+                :key="post?.id ?? post?.slug" 
                 :post="post" 
-                @edit="onEdit" 
-                @delete="onDelete" 
               />
             </div>
 

@@ -82,7 +82,7 @@ class AdminCryptoControllerTest extends TestCase
             ]);
 
         $response->assertStatus(404)
-            ->assertJson(['error' => 'Crypto non trouvée']);
+            ->assertJson(['error' => 'Crypto not found']);
     }
 
     /**
@@ -98,7 +98,7 @@ class AdminCryptoControllerTest extends TestCase
             ->deleteJson("/api/v1/admin/cryptos/{$crypto->id}");
 
         $response->assertStatus(200)
-            ->assertJson(['message' => 'Crypto supprimée']);
+            ->assertJson(['message' => 'Crypto deleted']);
 
         $this->assertDatabaseMissing('cryptomoney', ['id' => $crypto->id]);
     }
@@ -115,7 +115,7 @@ class AdminCryptoControllerTest extends TestCase
             ->deleteJson('/api/v1/admin/cryptos/99999');
 
         $response->assertStatus(404)
-            ->assertJson(['error' => 'Crypto non trouvée']);
+            ->assertJson(['error' => 'Crypto not found']);
     }
 
     /**

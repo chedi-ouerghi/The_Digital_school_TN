@@ -71,7 +71,7 @@ class NotificationControllerTest extends TestCase
             ->putJson("/api/v1/notifications/{$notification->id}/read");
 
         $response->assertStatus(200)
-            ->assertJson(['message' => 'Notification marquée comme lue.']);
+            ->assertJson(['message' => 'Notification marked as read.']);
 
         $this->assertDatabaseHas('notifications', [
             'id' => $notification->id,
@@ -94,7 +94,7 @@ class NotificationControllerTest extends TestCase
             ->putJson("/api/v1/notifications/{$notification->id}/read");
 
         $response->assertStatus(403)
-            ->assertJson(['error' => 'Accès refusé.']);
+            ->assertJson(['error' => 'Access denied.']);
     }
 
     /**

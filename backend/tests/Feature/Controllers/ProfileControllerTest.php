@@ -146,7 +146,7 @@ class ProfileControllerTest extends TestCase
         
         $data = $response->json();
         $this->assertArrayHasKey('error', $data);
-        $this->assertEquals('Aucune photo de profil à supprimer', $data['error']);
+        $this->assertEquals('No profile picture to delete', $data['error']);
     }
 
     /**
@@ -166,6 +166,6 @@ class ProfileControllerTest extends TestCase
         
         $data = $response->json();
         $this->assertArrayHasKey('error', $data);
-        $this->assertEquals('Aucune bannière de profil à supprimer', $data['error']);
+        $this->assertEquals('No profile banner to delete', $data['error']);
     }
 }

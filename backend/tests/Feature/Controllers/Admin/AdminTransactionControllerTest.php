@@ -167,7 +167,7 @@ public function test_cancel_transaction_as_admin()
     
     // Verify the response contains correct data
     $data = $response->json();
-    $this->assertEquals('Transaction annulée avec succès.', $data['message']);
+    $this->assertEquals('Transaction cancelled successfully.', $data['message']);
     $this->assertEquals($transactionId, $data['result']['cancelled_transaction']);
     
     // Verify cancelled_at is set in database

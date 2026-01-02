@@ -72,11 +72,11 @@ class AdminStatsController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur stats admin: ' . $e->getMessage());
+            \Log::error('Error retrieving stats admin: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors de la récupération des statistiques',
+                'error' => 'Error retrieving statistics',
                 'message' => $e->getMessage()
             ], 500);
         }

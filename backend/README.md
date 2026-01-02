@@ -235,607 +235,144 @@ Les migrations créent les tables suivantes :
 
 1. **users** - Utilisateurs (clients et administrateurs)
 2. **wallets** - Portefeuilles des clients
-3. **cryptomonies** - Liste des cryptomonnaies disponibles
-4. **crypto_wallet_assets** - Actifs cryptos des utilisateurs
-5. **transactions** - Historique des transactions
-6. **notifications** - Notifications utilisateur
-7. **account_requests** - Demandes de création de compte
+# BitChest — Backend API (Laravel)
 
-### Modèles Eloquent
+Ce document décrit l'installation, la configuration, l'exécution et le déploiement du backend BitChest.
 
-```php
-// app/Models/User.php
-- belongsTo(Wallet)
-- hasMany(Notification)
-- hasOne(AccountRequest)
+## Vue d'ensemble
 
-// app/Models/Wallet.php
-- belongsTo(User)
-- hasMany(CryptoWalletAsset)
-- hasMany(Transaction)
+Le backend expose une API REST (version v1) pour :
+- Authentification (Sanctum)
+- Gestion des utilisateurs (clients, admins)
+- Portefeuilles et actifs crypto
+- Transactions (achat/vente)
+- Notifications
+- Gestion des cryptomonnaies et synchronisation (CoinGecko)
 
-// app/Models/Cryptomoney.php
-- hasMany(CryptoWalletAsset)
-- hasMany(Transaction)
+## Prérequis
 
-// app/Models/Transaction.php
-- belongsTo(Wallet)
-- belongsTo(Cryptomoney)
+- PHP 8.2+
+- Composer
+- MySQL 5.7+ ou équivalent
+- Node.js 18+ (pour assets Vite/Tailwind)
+- Git
 
-// app/Models/Notification.php
-- belongsTo(User)
+## Installation (développement)
 
-// app/Models/AccountRequest.php
-- belongsTo(User)
+1. Cloner le dépôt et se placer dans `backend/` :
+
+```powershell
+git clone <repo-url>
+cd backend
 ```
 
-## 🏗️ Structure du Projet
+2. Installer les dépendances PHP :
 
-```
-app/
-├── Console/
-│   ├── Commands/
-│   │   └── CheckStorageSymlink.php    # Commande pour vérifier le symlink
-│   └── Kernel.php
-├── Http/
-│   ├── Controllers/
-│   │   ├── AuthController.php         # Authentification
-│   │   ├── CryptoController.php       # Gestion des cryptos
-│   │   ├── PortefeuilleController.php # Gestion des portefeuilles
-│   │   ├── ProfileController.php      # Profil et uploads
-│   │   ├── NotificationController.php # Notifications
-│   │   ├── AdminUserController.php    # Gestion des clients
-│   │   ├── AdminCryptoController.php  # Admin cryptos
-│   │   └── AdminTransactionController.php # Admin transactions
-│   ├── Middleware/
-│   │   ├── Authenticate.php
-│   │   ├── CheckRole.php
-│   │   └── ...
-│   └── Requests/
-│       ├── UploadProfilePictureRequest.php
-│       ├── UploadProfileBannerRequest.php
-│       └── ...
-├── Models/
-│   ├── User.php
-│   ├── Wallet.php
-│   ├── Cryptomoney.php
-│   ├── CryptoWalletAsset.php
-│   ├── Transaction.php
-│   ├── Notification.php
-│   └── AccountRequest.php
-├── Services/
-│   ├── UploadService.php              # Gestion des uploads
-│   ├── ProfileService.php             # Logique du profil
-│   ├── TransactionService.php         # Logique des transactions
-│   └── ...
-└── Mail/
-    ├── TempPasswordMail.php
-    ├── NewAccountRequestMail.php
-    └── ...
-
-database/
-├── migrations/
-│   ├── 2024_01_01_000001_create_users_table.php
-│   ├── 2024_01_01_000002_create_wallets_table.php
-│   ├── 2025_11_17_000000_add_profile_picture_and_banner_to_users_table.php
-│   └── ...
-├── seeders/
-│   ├── DatabaseSeeder.php
-│   ├── CryptoSeeder.php
-│   └── ...
-└── factories/
-    ├── UserFactory.php
-    └── ...
-
-routes/
-└── api.php                            # Toutes les routes API
-
-storage/
-└── app/
-    └── public/
-        ├── profile_pictures/          # Photos de profil uploadées
-        └── profile_banners/           # Bannières uploadées
-
-public/
-└── storage/ → symlink vers storage/app/public/
-
-tests/
-├── Feature/
-│   ├── AuthTest.php
-│   ├── CryptoTest.php
-│   └── ...
-└── Unit/
-    └── ...
-
-config/
-├── app.php
-├── database.php
-├── filesystems.php
-├── mail.php
-├── queue.php
-├── sanctum.php
-└── ...
+```powershell
+composer install
 ```
 
-## 🔐 API Endpoints
+3. Copier et adapter l'environnement :
 
-### Authentification
-
-```
-POST   /api/v1/login
-    Body: { "email": "user@example.com", "password": "password123" }
-    Response: { "user": {...}, "token": "..." }
-
-POST   /api/v1/logout
-    Headers: Authorization: Bearer {token}
-    Response: { "message": "Logged out successfully" }
-
-POST   /api/v1/request-account
-    Body: { "name": "John Doe", "email": "john@example.com" }
-    Response: { "message": "Request submitted" }
+```powershell
+copy .env.example .env
 ```
 
-### Profil et Uploads
+Configurer au minimum : `APP_URL`, `DB_*`, `SANCTUM_STATEFUL_DOMAINS`, `MAIL_*`.
 
-```
-GET    /api/v1/profile
-    Headers: Authorization: Bearer {token}
-    Response: { "user": {...} }
+4. Générer la clé d'application :
 
-PUT    /api/v1/profile
-    Headers: Authorization: Bearer {token}
-    Body: { "name": "New Name", "email": "new@example.com" }
-
-POST   /api/v1/profile/password
-    Headers: Authorization: Bearer {token}
-    Body: {
-        "current_password": "old_password",
-        "password": "new_password",
-        "password_confirmation": "new_password"
-    }
-
-PUT    /api/v1/profile/picture
-    Headers: Authorization: Bearer {token}
-    Body: FormData { "profile_picture": File }
-    Response: { "path": "profile_pictures/...", "url": "..." }
-
-DELETE /api/v1/profile/picture
-    Headers: Authorization: Bearer {token}
-
-PUT    /api/v1/profile/banner
-    Headers: Authorization: Bearer {token}
-    Body: FormData { "profile_banner": File }
-
-DELETE /api/v1/profile/banner
-    Headers: Authorization: Bearer {token}
-
-GET    /api/v1/profile/stats
-    Headers: Authorization: Bearer {token}
-    Response: { "portfolio_data": {...}, "charts": {...} }
-```
-
-### Cryptomonnaies (Public)
-
-```
-GET    /api/v1/cryptos
-    Response: [ { "id": 1, "name": "Bitcoin", "symbol": "BTC", "price_eur": 45000, ... } ]
-
-GET    /api/v1/cryptos/{id}
-    Response: { "id": 1, "name": "Bitcoin", ... }
-
-GET    /api/v1/cryptos/{id}/history
-    Response: { "prices": [...], "dates": [...] }
-```
-
-### Portefeuille (Client, auth required)
-
-```
-GET    /api/v1/wallets
-    Response: {
-        "wallet": { "id": 1, "balance_eur": 500, ... },
-        "cryptomonnaies": [ { "name": "Bitcoin", "quantity": 0.5, ... } ]
-    }
-
-GET    /api/v1/wallets/{id}
-    Response: { "wallet": {...}, "assets": [...] }
-
-GET    /api/v1/wallets/plus-value
-    Response: { "total_invested": 5000, "current_value": 5500, "plus_value": 500, "pct": 10 }
-
-GET    /api/v1/wallets/history
-    Response: [ { "type": "ACHAT", "crypto": "Bitcoin", "quantity": 0.5, "price": 45000, "date": "2025-01-15" } ]
-
-POST   /api/v1/wallets/transaction
-    Body: {
-        "type": "ACHAT",
-        "cryptomoney_id": 1,
-        "quantity": 0.5,
-        "price": 45000
-    }
-    Response: { "transaction": {...}, "wallet": {...} }
-```
-
-### Notifications (Client, auth required)
-
-```
-GET    /api/v1/notifications
-    Response: [ { "id": 1, "title": "Transaction", "message": "...", "is_read": false } ]
-
-PUT    /api/v1/notifications/{id}/read
-    Response: { "message": "Marked as read" }
-```
-
-### Administration (Admin only, auth required)
-
-#### Clients
-```
-GET    /api/v1/admin/clients
-    Response: [ { "id": "uuid", "name": "John", "email": "john@example.com", "balance_eur": 500, ... } ]
-
-POST   /api/v1/admin/clients
-    Body: { "name": "Jane Doe", "email": "jane@example.com", "role": "CLIENT", "balance_eur": 500 }
-
-GET    /api/v1/admin/clients/{id}
-    Response: { "user": {...}, "wallet": {...}, "transactions": [...], "positions": [...] }
-
-PUT    /api/v1/admin/clients/{id}
-    Body: { "name": "Updated Name", ... }
-
-DELETE /api/v1/admin/clients/{id}
-
-GET    /api/v1/admin/clients/{id}/transactions
-    Response: [ { "type": "ACHAT", "quantity": 0.5, ... } ]
-
-GET    /api/v1/admin/clients/{id}/wallet
-    Response: { "portfolio": [...] }
-```
-
-#### Cryptomonnaies
-```
-POST   /api/v1/admin/cryptos
-    Body: { "crypto_id": "bitcoin", "image": File }
-    Response: { "crypto": {...} }
-
-GET    /api/v1/admin/cryptos/{id}/edit
-    Response: { "crypto": {...} }
-
-PUT    /api/v1/admin/cryptos/{id}
-    Body: FormData { "image": File, ... }
-
-DELETE /api/v1/admin/cryptos/{id}
-
-POST   /api/v1/admin/cryptos/sync
-    Response: { "message": "Synced", "count": 10 }
-```
-
-#### Transactions
-```
-GET    /api/v1/admin/transactions
-    Response: [ { "id": 1, "type": "ACHAT", "user": {...}, "crypto": {...}, ... } ]
-
-GET    /api/v1/admin/transactions/{id}
-    Response: { "transaction": {...}, "user": {...}, "details": {...} }
-
-POST   /api/v1/admin/transactions/{id}/cancel
-    Body: { "reason": "Client request" }
-    Response: { "message": "Transaction cancelled" }
-```
-
-#### Demandes de Compte
-```
-GET    /api/v1/admin/account-requests
-    Response: [ { "id": 1, "name": "John", "email": "john@example.com", "status": "PENDING" } ]
-
-POST   /api/v1/admin/account-requests/{id}/approve
-    Response: { "user": {...}, "temp_password": "..." }
-
-POST   /api/v1/admin/account-requests/{id}/reject
-    Body: { "reason": "Reason for rejection" }
-    Response: { "message": "Request rejected" }
-```
-
-#### Statistiques
-```
-GET    /api/v1/admin/stats
-    Response: {
-        "total_users": 100,
-        "total_transactions": 500,
-        "total_volume": 500000,
-        "crypto_count": 50,
-        "recent_transactions": [...],
-        "top_cryptos": [...],
-        "charts": {...}
-    }
-
-POST   /api/v1/admin/change-id
-    Body: { "new_id": "NEWADMINID123456", "confirmation": "I confirm..." }
-    Response: { "message": "ID changed" }
-```
-
-## 🔧 Services et Logique Métier
-
-### UploadService
-
-Gère le stockage sécurisé des fichiers uploadés.
-
-```php
-// app/Services/UploadService.php
-
-public function uploadProfilePicture(User $user, UploadedFile $file): string
-public function uploadProfileBanner(User $user, UploadedFile $file): string
-public function deleteProfilePicture(User $user): bool
-public function deleteProfileBanner(User $user): bool
-public function getProfilePictureUrl(User $user): ?string
-public function getProfileBannerUrl(User $user): ?string
-```
-
-**Caractéristiques** :
-- Stockage sur disque `public`
-- Suppression automatique des fichiers anciens
-- Génération d'URLs publiques
-- Validation MIME type et taille
-- Logging détaillé
-
-### ProfileService
-
-Récupère les données complètes du profil avec statistiques.
-
-```php
-public function getFullProfileOverview(string $userId): array
-```
-
-**Retourne** : Statistiques, graphiques, composition du portefeuille, historique
-
-### TransactionService
-
-Gère les transactions d'achat/vente avec validation.
-
-```php
-public function processTransaction(Wallet $wallet, $cryptoId, $quantity, $type): Transaction
-public function creditInitialBalance(User $user, float $amount): void
-```
-
-**Validations** :
-- Solde suffisant pour les ventes
-- Quantité valide
-- Prix actuel récupéré depuis la BD
-
-## 🔐 Authentification
-
-### Laravel Sanctum
-
-Authentification par token API (stateless, idéale pour les SPA).
-
-**Flux de connexion** :
-1. Client envoie `email` et `password` à POST `/api/v1/login`
-2. Backend valide et retourne un token Sanctum
-3. Client stocke le token dans localStorage
-4. Pour chaque requête, client ajoute header : `Authorization: Bearer {token}`
-5. Middleware `auth:sanctum` valide le token
-
-**Middleware de Rôle** :
-```php
-middleware(['auth:sanctum', 'role:ADMIN'])
-```
-
-## 📸 Stockage des Fichiers
-
-### Structure du Stockage
-
-```
-storage/app/public/
-├── profile_pictures/
-│   ├── user_id_1/
-│   │   ├── abc123_1234567890.jpg
-│   │   └── def456_1234567891.jpg
-│   └── user_id_2/
-│       └── ...
-└── profile_banners/
-    ├── user_id_1/
-    │   └── xyz789_1234567892.png
-    └── ...
-```
-
-### Upload de Fichiers
-
-**Format** : multipart/form-data
-
-**Exemple Frontend** :
-```javascript
-const formData = new FormData();
-formData.append('profile_picture', fileInput.files[0]);
-
-fetch('/api/v1/profile/picture', {
-    method: 'PUT',
-    headers: {
-        'Authorization': `Bearer ${token}`
-    },
-    body: formData
-});
-```
-
-**Réponse** :
-```json
-{
-    "success": true,
-    "message": "Profile picture uploaded successfully",
-    "data": {
-        "path": "profile_pictures/user_id/abc123_1234567890.jpg",
-        "url": "http://localhost:8000/storage/profile_pictures/user_id/abc123_1234567890.jpg",
-        "user": {...}
-    }
-}
-```
-
-### Symlink Storage
-
-Le symlink connecte `public/storage/` à `storage/app/public/` pour servir les fichiers publiquement.
-
-**Créer le symlink** :
-```bash
-php artisan storage:link
-```
-
-**Vérifier/Réparer** :
-```bash
-php artisan storage:check-symlink
-```
-
-## 📝 Commandes Artisan Personnalisées
-
-### CheckStorageSymlink
-
-Vérifier et créer le symlink de stockage.
-
-```bash
-php artisan storage:check-symlink
-
-# Sortie
-# Storage symlink already exists.
-# Link: /var/www/bitchest/public/storage
-# Target: /var/www/bitchest/storage/app/public
-```
-
-### Commandes Standard Laravel Utiles
-
-```bash
-# Migration
-php artisan migrate                 # Exécuter les migrations
-php artisan migrate:rollback       # Annuler la dernière migration
-php artisan migrate:refresh --seed # Réinitialiser la BD
-
-# Seeding
-php artisan db:seed                # Exécuter les seeders
-php artisan db:seed --class=CryptoSeeder
-
-# Tinker (REPL Laravel)
-php artisan tinker
-
-# Queue
-php artisan queue:work             # Démarrer le worker des jobs
-php artisan queue:failed           # Voir les jobs échoués
-
-# Cache
-php artisan cache:clear            # Vider le cache
-php artisan config:cache           # Cacher la configuration
-```
-
-## 🧪 Tests
-
-### Lancer les Tests
-
-```bash
-# Tous les tests
-composer run test
-# ou
-php artisan test
-
-# Avec output détaillé
-php artisan test --verbose
-
-# Tests spécifiques
-php artisan test --filter=AuthControllerTest
-php artisan test tests/Feature/AuthTest.php
-
-# Tests avec couverture
-php artisan test --coverage
-```
-
-### Écrire des Tests
-
-```php
-// tests/Feature/AuthTest.php
-namespace Tests\Feature;
-
-use Tests\TestCase;
-use App\Models\User;
-
-class AuthTest extends TestCase
-{
-    public function test_user_can_login()
-    {
-        $user = User::factory()->create([
-            'password' => bcrypt('password'),
-        ]);
-
-        $response = $this->postJson('/api/v1/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $response->assertOk();
-        $response->assertHas('token');
-    }
-}
-```
-
-## 🚀 Déploiement
-
-### Production Checklist
-
-```bash
-# 1. Optimiser l'autoloader Composer
-composer install --optimize-autoloader --no-dev
-
-# 2. Mettre en cache la configuration
-php artisan config:cache
-
-# 3. Mettre en cache les routes
-php artisan route:cache
-
-# 4. Mettre en cache les vues
-php artisan view:cache
-
-# 5. Optimiser l'application
-php artisan optimize
-
-# 6. Générer la clé d'application
+```powershell
 php artisan key:generate
+```
 
-# 7. Exécuter les migrations
-php artisan migrate --force
+5. Installer les dépendances Node (assets) :
 
-# 8. Créer le symlink de stockage
+```powershell
+npm install
+```
+
+6. Créer la base de données et exécuter les migrations :
+
+```powershell
+php artisan migrate --seed
+```
+
+7. Lier le dossier de stockage public :
+
+```powershell
 php artisan storage:link
-
-# 9. Définir APP_ENV=production dans .env
-APP_ENV=production
-APP_DEBUG=false
 ```
 
-### Fichier .env pour Production
+8. Lancer le serveur de développement :
 
-```env
-APP_NAME=BitChest
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://bitchest.com
-
-# Database - RDS, Cloud SQL, etc.
-DB_CONNECTION=mysql
-DB_HOST=db-prod.example.com
-DB_DATABASE=bitchest_prod
-DB_USERNAME=produser
-DB_PASSWORD=...
-
-# Cache distribué (Redis)
-CACHE_DRIVER=redis
-REDIS_HOST=redis-prod.example.com
-
-# Queue
-QUEUE_CONNECTION=redis
-
-# Mail - Service mail en production
-MAIL_MAILER=smtp
-MAIL_HOST=...
-MAIL_USERNAME=...
-MAIL_PASSWORD=...
+```powershell
+php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-## 🐛 Dépannage
+## Variables importantes (.env)
 
-### Erreur de Permission de Symlink
+- APP_URL=http://localhost:8000
+- DB_CONNECTION, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+- SANCTUM_STATEFUL_DOMAINS=localhost:5173,localhost:3000
+# BitChest — Backend (présentation)
 
+Table des matières
+- Présentation
+- Architecture et dossiers
+- Fonctionnalités
+- Prérequis
+- Utilisation (cas d'usage)
+- Endpoints API (résumé)
+
+Description
+Le backend BitChest est une API développée avec Laravel. Il fournit les services métier essentiels : authentification, gestion des comptes et portefeuilles, traitement des transactions, gestion des cryptomonnaies, stockage des fichiers et envoi de notifications.
+
+Architecture et dossiers (présentation)
+- `app/Http/Controllers` : contrôleurs exposant la logique des endpoints.
+- `app/Models` : modèles Eloquent représentant les entités (User, Wallet, Transaction, Cryptomoney, Notification).
+- `app/Services` : services métier (upload, profil, transaction) qui encapsulent la logique réutilisable.
+- `routes/api.php` : définition des routes API versionnées.
+- `database/migrations` et `database/seeders` : schéma et données de test.
+- `storage/app/public` : stockage des fichiers publics (photos, bannières, images de cryptos).
+
+Fonctionnalités principales
+- API RESTful pour toutes les opérations clients et administrateurs.
+- Authentification et autorisation avec rôles (client / admin) via Sanctum.
+- Création et gestion automatique de portefeuilles utilisateur.
+- Traitement sécurisé des transactions (achat/vente), historique et calcul des plus-values.
+- Intégration et synchronisation des prix via CoinGecko.
+- Upload et gestion sécurisée des images utilisateur et des médias de cryptomonnaies.
+- Jobs asynchrones et file d'attente pour opérations longues.
+- Tests unitaires et fonctionnels pour assurer la qualité.
+
+Prérequis
+- PHP 8.2 ou supérieur et Composer.
+- MySQL / MariaDB ou équivalent.
+- Node.js et npm (pour la compilation d'assets si besoin).
+- Accès à un service SMTP pour l'envoi d'e-mails (optionnel mais recommandé).
+
+Utilisation (grands cas d'usage)
+- Préparer l'environnement : copier le fichier ` .env` depuis ` .env.example`, configurer la base de données, les variables Sanctum et la configuration mail.
+- Préparer la base : exécuter les migrations et seeders pour initialiser le schéma et les données de test.
+- Gérer les fichiers : s'assurer que le dossier `storage` est lié au dossier public pour servir les uploads.
+- Surveillance : surveiller les workers de queue et les logs pour assurer le traitement asynchrone des tâches.
+
+Endpoints API (aperçu, une phrase chacun)
+- POST /api/v1/login — authentifie un utilisateur et délivre un token.
+- POST /api/v1/logout — termine la session de l'utilisateur.
+- GET /api/v1/profile — récupère les informations du profil authentifié.
+- PUT /api/v1/profile — met à jour les informations du profil.
+- GET /api/v1/cryptos — liste publique des cryptomonnaies.
+- GET /api/v1/cryptos/{id}/history — historique des prix d'une cryptomonnaie.
+- GET /api/v1/wallets — affiche le portefeuille et ses positions pour l'utilisateur.
+- POST /api/v1/wallets/transaction — enregistre une transaction d'achat ou de vente.
+- GET /api/v1/notifications — liste les notifications utilisateur.
+- Routes administrateur (/api/v1/admin/*) — gestion des cryptomonnaies, clients et transactions par des APIs réservées aux administrateurs.
+
+Pour des informations techniques détaillées, importer la collection `postman_collection.json` fournie et consulter les fichiers dans `app/` et `routes/`.
+
+Dernière mise à jour : 2025
 **Problème** :
 ```
 Failed to create symlink: symlink(): Permission denied

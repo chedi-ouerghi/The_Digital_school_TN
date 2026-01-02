@@ -1,118 +1,226 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Création de votre compte</title>
+    <title>Your Account is Ready</title>
     <style>
-        body {
-            font-family: "Segoe UI", Roboto, Arial, sans-serif;
-            background-color: #f7f9fc;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
-        .email-container {
-            max-width: 600px;
-            margin: 40px auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-        .header {
-            background-color: #0b0d12;
-            text-align: center;
-            padding: 25px 0;
-        }
-        .header img {
-            width: 140px;
-            height: auto;
-        }
-        .content {
-            padding: 30px 40px;
-            color: #333333;
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6;
+            color: #374151;
+            background-color: #f9fafb;
+            padding: 20px;
         }
-        .content h1 {
-            color: #0b0d12;
-            font-size: 22px;
-            margin-bottom: 15px;
+        
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
         }
-        .temp-pass {
-            background-color: #f3f6fb;
-            border: 1px dashed #b0c4de;
-            color: #0b0d12;
-            font-weight: bold;
-            font-size: 18px;
-            padding: 12px;
+        
+        .header {
+            background: linear-gradient(135deg, #38618C 0%, #35A7FF 100%);
+            color: white;
+            padding: 40px 30px;
             text-align: center;
-            border-radius: 6px;
+        }
+        
+        .header-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite alternate;
+        }
+        
+        @keyframes bounce {
+            from { transform: translateY(0px); }
+            to { transform: translateY(-10px); }
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: white;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 20px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 30px;
+        }
+        
+        .success-message {
+            background-color: #f0fdf4;
+            border-left: 4px solid #01FF19;
+            padding: 24px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        
+        .password-box {
+            background-color: #f8fafc;
+            border: 2px solid #01FF19;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .password-label {
+            display: block;
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .password-value {
+            font-family: 'Courier New', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: 1px;
+        }
+        
+        .login-button {
+            display: inline-block;
+            background-color: #01FF19;
+            color: #000000;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(1, 255, 25, 0.2);
             margin: 20px 0;
         }
-        .button-container {
-            text-align: center;
-            margin-top: 25px;
+        
+        .login-button:hover {
+            background-color: #00e617;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(1, 255, 25, 0.3);
         }
-        a.button {
-            display: inline-block;
-            background-color: #007bff;
-            color: #fff !important;
-            padding: 14px 30px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            transition: background-color 0.2s ease-in-out;
-        }
-        a.button:hover {
-            background-color: #0056b3;
-        }
-        .footer {
-            background-color: #f3f6fb;
-            text-align: center;
+        
+        .security-note {
+            background-color: #fef3c7;
+            border: 1px solid #fbbf24;
             padding: 20px;
-            font-size: 13px;
-            color: #666;
-            border-top: 1px solid #e4e4e4;
+            border-radius: 8px;
+            margin: 30px 0;
+            color: #92400e;
+        }
+        
+        .security-note strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .footer {
+            background-color: #f8fafc;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .footer p {
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .content, .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .header-icon {
+                font-size: 50px;
+            }
+            
+            .password-value {
+                font-size: 18px;
+            }
+            
+            .login-button {
+                padding: 14px 32px;
+                width: 100%;
+                display: block;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <!-- Header avec logo -->
+    <div class="email-wrapper">
         <div class="header">
-            <img src="{{ $message->embed(public_path('assets/bitchest_logo.png')) }}" alt="Bitchest Logo">
+            <div class="header-icon">🎉</div>
+            <h1>Your Account is Ready!</h1>
+            <p>Welcome to {{ config('app.name') }}</p>
         </div>
-
-        <!-- Contenu -->
+        
         <div class="content">
-            <h1>Bonjour {{ $userName }},</h1>
-
-            <p>🎉 Votre compte a été créé avec succès sur <strong>{{ config('app.name') }}</strong> !</p>
-
-            <p>Voici vos informations de connexion temporaires :</p>
-
-            <div class="temp-pass">
-                🔐 Mot de passe temporaire : <strong>{{ $tempPassword }}</strong>
+            <div class="greeting">Hello {{ $userName }},</div>
+            
+            <div class="success-message">
+                <p>Your account has been successfully created on <strong>{{ config('app.name') }}</strong>!</p>
             </div>
-
-            <p>Pour accéder à votre compte, cliquez sur le bouton ci-dessous :</p>
-
-            <div class="button-container">
-                <a href="http://localhost:5173/signin" target="_blank" class="button">Accéder à mon compte</a>
+            
+            <p>Here are your temporary login credentials:</p>
+            
+            <div class="password-box">
+                <span class="password-label">🔐 Temporary Password</span>
+                <div class="password-value">{{ $tempPassword }}</div>
             </div>
-
-            <p style="margin-top: 25px;">
-                Par mesure de sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.<br><br>
-                Merci de votre confiance,<br>
-                L’équipe <strong>{{ $note ?? config('app.name') }}</strong>
+            
+            <p>To access your account, click the button below:</p>
+            
+            <div style="text-align: center;">
+                <a href="http://localhost:5173/signin" class="login-button">Access My Account</a>
+            </div>
+            
+            <div class="security-note">
+                <strong>⚠️ Security Recommendation</strong>
+                <p>For security purposes, we strongly recommend changing your password on your first login.</p>
+            </div>
+            
+            <p style="margin-top: 30px;">
+                Thank you for your trust,<br>
+                The <strong>{{ config('app.name') }}</strong> Team
             </p>
         </div>
-
-        <!-- Footer -->
+        
         <div class="footer">
-            &copy; {{ date('Y') }} {{ config('app.name') }}. Tous droits réservés.<br>
-            Cet email a été envoyé automatiquement — merci de ne pas y répondre.
+            <p>© {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+            <p>This email was sent automatically — please do not reply.</p>
         </div>
     </div>
 </body>

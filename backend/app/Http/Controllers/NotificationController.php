@@ -33,12 +33,12 @@ class NotificationController extends Controller
         $notification = Notification::findOrFail($id);
 
         if ($notification->user_id !== $user->id) {
-            return response()->json(['error' => 'Accès refusé.'], 403);
+            return response()->json(['error' => 'Access denied.'], 403);
         }
 
         $notification->is_read = true;
         $notification->save();
 
-        return response()->json(['message' => 'Notification marquée comme lue.']);
+        return response()->json(['message' => 'Notification marked as read.']);
     }
 }

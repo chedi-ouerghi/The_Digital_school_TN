@@ -67,7 +67,7 @@ public function test_get_all_cryptos()
         $response = $this->getJson('/api/v1/cryptos/99999');
 
         $response->assertStatus(404)
-            ->assertJson(['error' => 'Cryptomonnaie non trouvée']);
+            ->assertJson(['error' => 'Cryptocurrency not found']);
     }
 
     /**

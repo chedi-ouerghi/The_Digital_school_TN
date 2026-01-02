@@ -32,7 +32,7 @@ class ClientAdminController extends Controller
             // Si aucun wallet trouvé
             if (!$portfolio) {
                 return response()->json([
-                    'error' => "Aucun wallet trouvé pour cet utilisateur.",
+                    'error' => "No wallet was found for this user.",
                     'user' => $user->only(['id', 'name', 'email'])
                 ], 404);
             }
@@ -68,12 +68,12 @@ class ClientAdminController extends Controller
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['error' => 'Utilisateur non trouvé.'], 404);
+            return response()->json(['error' => 'User not found.'], 404);
 
         } catch (\Exception $e) {
-            Log::error("Erreur lors de la récupération du wallet: " . $e->getMessage());
+            Log::error("Error retrieving wallet: " . $e->getMessage());
             return response()->json([
-                'error' => 'Une erreur est survenue lors de la récupération du wallet.',
+                'error' => 'An error occurred while retrieving the wallet.',
                 'details' => $e->getMessage()
             ], 500);
         }

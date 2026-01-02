@@ -32,7 +32,7 @@ class AdminCryptoController extends Controller
             'change_24h_pct' => ['nullable','numeric'],
         ]);
         $crypto = Cryptomoney::find($id);
-        if (!$crypto) return response()->json(['error'=>'Crypto non trouvée'],404);
+        if (!$crypto) return response()->json(['error'=>'Crypto not found'],404);
         
         // Gérer l'upload d'image
         if ($request->hasFile('image')) {
@@ -48,13 +48,13 @@ class AdminCryptoController extends Controller
     public function destroy($id): JsonResponse
     {
         $crypto = Cryptomoney::find($id);
-        if (!$crypto) return response()->json(['error'=>'Crypto non trouvée'],404);
+        if (!$crypto) return response()->json(['error'=>'Crypto not found'],404);
         
         // Supprimer l'image si elle existe
         $crypto->deleteImage();
         
         $crypto->delete();
-        return response()->json(['message'=>'Crypto supprimée']);
+        return response()->json(['message'=>'Crypto deleted']);
     }
 
   
@@ -77,13 +77,13 @@ class AdminCryptoController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Synchronisation de l’historique lancée',
+            'message' => 'Synchronization of history launched',
             'output' => $lines,
         ]);
     } catch (\Throwable $e) {
         return response()->json([
             'status' => 'error',
-            'message' => 'Erreur lors de l’exécution',
+            'message' => 'Error during execution',
             'error' => $e->getMessage(),
         ], 500);
     }

@@ -22,7 +22,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * Retourne toutes les données du profil (stats + growth + distribution)
+     * Returns all profile data (stats + growth + distribution)
      */
     public function getProfileOverview(): JsonResponse
     {
@@ -32,7 +32,7 @@ class ProfileController extends Controller
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Utilisateur non authentifié'
+                    'error' => 'User not authenticated'
                 ], 401);
             }
 
@@ -44,11 +44,11 @@ class ProfileController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur profile overview: ' . $e->getMessage());
+            \Log::error('Profile overview error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur interne serveur',
+                'error' => 'Internal server error',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -58,67 +58,66 @@ class ProfileController extends Controller
      * Upload profile picture
      * Allowed for CLIENT and ADMIN roles
      */
-public function uploadProfilePicture(UploadProfilePictureRequest $request): JsonResponse
-{
-    try {
-        $user = Auth::user();
+    public function uploadProfilePicture(UploadProfilePictureRequest $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'User not authenticated'
+                ], 401);
+            }
+
+            if (!$request->hasFile('profile_picture')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No file received',
+                    'message' => 'profile_picture field is required'
+                ], 422);
+            }
+
+            $file = $request->file('profile_picture');
+            if (!$file->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Invalid file',
+                ], 422);
+            }
+
+            \Log::info('Uploading profile picture (controller)', [
+                'user_id' => $user->id,
+                'client_name' => $file->getClientOriginalName(),
+                'client_size' => $file->getSize(),
+                'client_mime' => $file->getClientMimeType(),
+                'client_ext' => $file->getClientOriginalExtension(),
+            ]);
+
+            // Use the injected service from constructor
+            $path = $this->uploadService->uploadProfilePicture($user, $file);
+
+            $url = Storage::disk('public')->url($path);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile picture uploaded successfully',
+                'data' => [
+                    'path' => $path,
+                    'url' => $url,
+                    'user' => $user->fresh()
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Profile picture upload error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'error' => 'Utilisateur non authentifié'
-            ], 401);
+                'error' => 'Error uploading profile picture',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        if (!$request->hasFile('profile_picture')) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Aucun fichier reçu',
-                'message' => 'profile_picture field is required'
-            ], 422);
-        }
-
-        $file = $request->file('profile_picture');
-        if (!$file->isValid()) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Fichier invalide',
-            ], 422);
-        }
-
-        \Log::info('Uploading profile picture (controller)', [
-            'user_id' => $user->id,
-            'client_name' => $file->getClientOriginalName(),
-            'client_size' => $file->getSize(),
-            'client_mime' => $file->getClientMimeType(),
-            'client_ext' => $file->getClientOriginalExtension(),
-        ]);
-
-        // Use the injected service from constructor
-        $path = $this->uploadService->uploadProfilePicture($user, $file);
-
-        $url = Storage::disk('public')->url($path);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Profile picture uploaded successfully',
-            'data' => [
-                'path' => $path,
-                'url' => $url,
-                'user' => $user->fresh()
-            ]
-        ], 200);
-    } catch (\Exception $e) {
-        \Log::error('Erreur upload profile picture: ' . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'error' => 'Erreur lors du téléchargement de la photo de profil',
-            'message' => $e->getMessage()
-        ], 500);
     }
-}
-
 
     /**
      * Upload profile banner
@@ -132,14 +131,14 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Utilisateur non authentifié'
+                    'error' => 'User not authenticated'
                 ], 401);
             }
 
             if (!$request->hasFile('profile_banner')) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Aucun fichier reçu',
+                    'error' => 'No file received',
                     'message' => 'profile_banner field is required'
                 ], 422);
             }
@@ -153,7 +152,7 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
 
                 return response()->json([
                     'success' => false,
-                    'error' => 'Fichier invalide',
+                    'error' => 'Invalid file',
                 ], 422);
             }
 
@@ -209,11 +208,11 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
                 ]
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Erreur upload profile banner: ' . $e->getMessage());
+            \Log::error('Profile banner upload error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors du téléchargement de la bannière de profil',
+                'error' => 'Error uploading profile banner',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -230,7 +229,7 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Utilisateur non authentifié'
+                    'error' => 'User not authenticated'
                 ], 401);
             }
 
@@ -239,7 +238,7 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             if (!$deleted) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Aucune photo de profil à supprimer'
+                    'error' => 'No profile picture to delete'
                 ], 404);
             }
 
@@ -249,11 +248,11 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur delete profile picture: ' . $e->getMessage());
+            \Log::error('Profile picture deletion error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors de la suppression de la photo de profil',
+                'error' => 'Error deleting profile picture',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -270,7 +269,7 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Utilisateur non authentifié'
+                    'error' => 'User not authenticated'
                 ], 401);
             }
 
@@ -279,7 +278,7 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             if (!$deleted) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Aucune bannière de profil à supprimer'
+                    'error' => 'No profile banner to delete'
                 ], 404);
             }
 
@@ -289,11 +288,11 @@ public function uploadProfilePicture(UploadProfilePictureRequest $request): Json
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Erreur delete profile banner: ' . $e->getMessage());
+            \Log::error('Profile banner deletion error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'error' => 'Erreur lors de la suppression de la bannière de profil',
+                'error' => 'Error deleting profile banner',
                 'message' => $e->getMessage()
             ], 500);
         }

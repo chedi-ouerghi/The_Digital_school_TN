@@ -205,10 +205,10 @@ public function show($id): JsonResponse
     {
         $user = User::find($id);
         if (!$user) {
-            return response()->json(['error' => 'Utilisateur non trouvé'], 404);
+            return response()->json(['error' => 'User not found'], 404);
         }
         $user->delete();
-        return response()->json(['message' => 'Utilisateur supprimé']);
+        return response()->json(['message' => 'User deleted']);
     }
 
 	public function transactions($id): JsonResponse
@@ -247,9 +247,9 @@ public function show($id): JsonResponse
 				})
 			]);
 		} catch (\Exception $e) {
-			\Log::error('Erreur lors de la récupération des transactions: ' . $e->getMessage());
+			\Log::error('Error retrieving transactions: ' . $e->getMessage());
 			return response()->json([
-				'error' => 'Erreur lors de la récupération des transactions',
+				'error' => 'Error retrieving transactions',
 				'details' => $e->getMessage()
 			], 500);
 		}
@@ -258,7 +258,7 @@ public function show($id): JsonResponse
 	public function portfolio($id): JsonResponse
 	{
 		$user = \App\Models\User::find($id);
-		if (!$user) return response()->json(['error' => 'Utilisateur non trouvé'], 404);
+		if (!$user) return response()->json(['error' => 'User not found'], 404);
 
 		$portfolio = \App\Models\Wallet::with([
 			'cryptoWalletAssets.cryptomoney',
@@ -305,17 +305,17 @@ public function show($id): JsonResponse
 
                 Notification::create([
                     'user_id' => $admin->id,
-                    'title' => 'Nouvelle demande de compte',
-                    'message' => "Demande soumise par {$accountRequest->name} ({$accountRequest->email})",
+                    'title' => 'New account request',
+                    'message' => "Request submitted by {$accountRequest->name} ({$accountRequest->email})",
                     'type' => Notification::TYPE_ACCOUNT_REQUEST ?? 'account_request',
                 ]);
             } catch (\Throwable $ex) {
-                \Log::warning("Notification/mail échoué pour admin {$admin->id}: " . $ex->getMessage());
+                \Log::warning("Notification/email failed for admin {$admin->id}: " . $ex->getMessage());
             }
         }
 
         return response()->json([
-            'message' => 'Votre demande a été soumise avec succès.',
+            'message' => 'Your request has been submitted successfully.',
         ]);
     }
 
@@ -330,7 +330,7 @@ public function show($id): JsonResponse
             $accountRequest = \App\Models\AccountRequest::findOrFail($id);
             
             if ($accountRequest->status !== 'VERIFIED') {
-                return response()->json(['error' => 'Cette demande a déjà été traitée'], 400);
+                return response()->json(['error' => 'This request has already been processed'], 400);
             }
 
             $tempPassword = Str::random(12);
@@ -360,7 +360,7 @@ public function show($id): JsonResponse
                 Mail::to($user->email)->send(new TempPasswordMail($user, $tempPassword));
                 $mailSent = true;
             } catch (\Exception $mailEx) {
-                \Log::error('Échec envoi mail mot de passe temporaire à ' . $user->email . ' : ' . $mailEx->getMessage());
+                \Log::error('Failed sending temporary password email to ' . $user->email . ' : ' . $mailEx->getMessage());
                 $mailSent = false;
             }
 
@@ -370,23 +370,23 @@ public function show($id): JsonResponse
             $user = $user->fresh(['wallets']);
 
             $response = [
-                'message' => 'Compte créé avec succès',
+                'message' => 'Account created successfully',
                 'user' => $user,
                 'wallet' => $user->wallets->first(),
             ];
 
             if (!$mailSent) {
                 $response['temp_password'] = $tempPassword;
-                $response['warning'] = 'Email non envoyé - conservez ce mot de passe temporaire';
+                $response['warning'] = 'Email not sent - keep this temporary password safe';
             }
 
             return response()->json($response, 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Erreur lors de l\'approbation de la demande: ' . $e->getMessage());
+            \Log::error('Error during account request approval: ' . $e->getMessage());
             return response()->json([
-                'error' => 'Erreur lors de la création du compte',
+                'error' => 'Error during account creation',
                 'details' => $e->getMessage()
             ], 500);
         }
@@ -408,14 +408,14 @@ public function show($id): JsonResponse
             $accountRequest = AccountRequest::findOrFail($id);
             
             if ($accountRequest->status !== 'VERIFIED') {
-                return response()->json(['error' => 'Cette demande a déjà été traitée'], 400);
+                return response()->json(['error' => 'This request has already been processed'], 400);
             }
 
             $accountRequest->update([
                 'status' => 'REJECTED',
                 'processed_by' => Auth::id(),
                 'processed_at' => now(),
-                'rejection_reason' => $validated['reason'] ?? 'Aucune raison fournie.',
+                'rejection_reason' => $validated['reason'] ?? 'No reason provided.',
             ]);
 
             DB::commit();
@@ -423,29 +423,29 @@ public function show($id): JsonResponse
             // Notification à l’email du demandeur (si disponible)
             try {
                 Mail::raw(
-                    "Bonjour {$accountRequest->name},\n\nVotre demande de compte a été refusée.\nRaison : " .
-                    ($validated['reason'] ?? 'Non spécifiée.') .
-                    "\n\nCordialement,\nL’équipe BitChest",
+                    "Bonjour {$accountRequest->name},\n\Your account request has been denied. \nReason : " .
+                    ($validated['reason'] ?? 'No reason provided.') .
+                    "\n\nSincerely,\nTeam BitChest",
                     function ($message) use ($accountRequest) {
                         $message->to($accountRequest->email)
-                                ->subject('Demande de compte refusée');
+                                ->subject('Account request denied');
                     }
                 );
             } catch (\Throwable $mailEx) {
-                \Log::error("Échec envoi mail de refus à {$accountRequest->email}: " . $mailEx->getMessage());
+                \Log::error("Email rejection failed to send to {$accountRequest->email}: " . $mailEx->getMessage());
             }
 
             return response()->json([
-                'message' => 'Demande rejetée avec succès.',
+                'message' => 'Account request rejected successfully.',
                 'account_request' => $accountRequest,
             ]);
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            \Log::error('Erreur rejet demande: ' . $e->getMessage());
+            \Log::error('Error rejecting account request: ' . $e->getMessage());
 
             return response()->json([
-                'error' => 'Erreur lors du rejet de la demande.',
+                'error' => 'Error during account request rejection.',
                 'details' => $e->getMessage(),
             ], 500);
         }

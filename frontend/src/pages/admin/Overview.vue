@@ -34,6 +34,10 @@ function goToClients() {
   router.push('/dashboard/admin/clients')
 }
 
+function goToBlogs() {
+  router.push('/dashboard/admin/blogs')
+}
+
 function goToTransactions() {
   router.push('/dashboard/admin/transactions')
 }
@@ -71,6 +75,12 @@ function refreshData() {
           @click="goToCryptos"
         >
           💎 Cryptos
+        </Button>
+        <Button 
+          class="bg-[#38618C] hover:bg-[#38618C]/90 text-white font-semibold text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
+          @click="goToBlogs"
+        >
+          📰 Manage Blogs
         </Button>
       </div>
     </div>

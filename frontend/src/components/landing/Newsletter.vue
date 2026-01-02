@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mail, Twitter, Linkedin, Instagram, Send } from 'lucide-vue-next'
+import { Instagram, Linkedin, Mail, Send, Twitter } from 'lucide-vue-next';
 
 const socialLinks = [
   { icon: Twitter, label: 'Twitter', url: '#' },
