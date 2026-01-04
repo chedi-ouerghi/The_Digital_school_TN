@@ -24,35 +24,128 @@ interface ApiError {
   error?: string | Record<string, any>;
 }
 
-// Enhanced request function with proper typing
+/**
+ * SÉCURITÉ : Enhanced request function utilisant les cookies HttpOnly + Secure
+ * 
+ * Migration de Bearer Token (localStorage) vers Sanctum SPA Mode:
+ * - Suppression du token dans localStorage
+ * - Authentification via cookies HttpOnly (gérés par le serveur)
+ * - Ajout de credentials: 'include' pour inclure les cookies
+ * - CSRF token géré automatiquement par Sanctum
+ * 
+ * IMPORTANT : Cette fonction envoie automatiquement le header X-XSRF-TOKEN
+ *             qui est extrait du cookie XSRF-TOKEN
+ */
+
+/**
+ * 🔥 Initialiser le token XSRF via Sanctum
+ * IMPORTANT: Appeler cette fonction AVANT toute requête POST publique (sans authentification)
+ * Notamment pour: /login, /request-account, /verify-email
+ */
+async function initializeCsrfToken(): Promise<void> {
+  try {
+    // 🔥 IMPORTANT: Utiliser l'URL absolue du backend, pas une URL relative
+    // Le frontend (localhost:5173) ne peut pas servir cette route
+    const csrfUrl = 'http://localhost:8000/sanctum/csrf-cookie';
+    
+    const response = await fetch(csrfUrl, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    console.log('🔐 CSRF Cookie Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      cookies: document.cookie
+    });
+    
+    // Attendre un peu pour s'assurer que le cookie est défini
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const token = getXsrfToken();
+    console.log('✅ CSRF token initialized', {
+      token: token ? `${token.substring(0, 20)}...` : 'NOT FOUND'
+    });
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize CSRF token:', error);
+  }
+}
+
+/**
+ * 🔥 Extraire le token XSRF du cookie
+ * Sanctum stocke le token dans le cookie XSRF-TOKEN
+ */
+function getXsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'XSRF-TOKEN') {
+      return decodeURIComponent(value || '');
+    }
+  }
+  return null;
+}
+
 async function request<T = any>(
   path: string,
   method: HttpMethod = 'GET',
-  body?: any,
-  token?: string
+  body?: any
 ): Promise<T> {
   try {
-    const t = token || localStorage.getItem('api_token') || '';
-
     const headers: Record<string, string> = {
       Accept: 'application/json',
     };
     
-    if (t) headers['Authorization'] = `Bearer ${t}`;
     // Only set Content-Type for non-FormData requests
     if (body && !(body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
+    } else if (body instanceof FormData) {
+      // 🔥 FormData: Log what we're sending
+      console.log(`📤 FormData request to ${method} ${path}`, {
+        method,
+        path,
+        isFormData: true,
+        entries: Array.from((body as FormData).entries()).map(([k, v]) => ({
+          key: k,
+          value: v instanceof File ? `File(${v.name}, ${v.size} bytes, ${v.type})` : v
+        }))
+      });
+    }
+
+    // 🔥 CRITICAL : Ajouter le header X-XSRF-TOKEN pour la protection CSRF
+    // Sanctum valide que ce header correspond au cookie XSRF-TOKEN
+    const xsrfToken = getXsrfToken();
+    if (xsrfToken) {
+      headers['X-XSRF-TOKEN'] = xsrfToken;
     }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     
+    let finalMethod = method;
+    let finalBody = body;
+
+    // Laravel does not natively support PUT/PATCH with multipart/form-data
+    // We must spoof the method by sending a POST request with _method field
+    if ((method === 'PUT' || method === 'PATCH') && body instanceof FormData) {
+      finalMethod = 'POST';
+      finalBody.append('_method', method);
+      console.log(`🔄 Spoofing ${method} request as POST with _method field.`);
+    }
+
     const res = await fetch(`${API_BASE}${path}`, {
-      method,
+      method: finalMethod,
       headers,
-      body: body && !(body instanceof FormData) 
-        ? JSON.stringify(body) 
-        : (body as any) || undefined,
+      // SÉCURITÉ : Inclure les cookies HttpOnly dans les requêtes cross-origin
+      credentials: 'include',
+      body: finalBody && !(finalBody instanceof FormData) 
+        ? JSON.stringify(finalBody) 
+        : (finalBody as any) || undefined,
       signal: controller.signal,
     });
     
@@ -65,6 +158,15 @@ async function request<T = any>(
       data = text ? JSON.parse(text) : null;
     } catch {
       data = text as any;
+    }
+
+    // 🔥 Log response for file uploads
+    if (body instanceof FormData) {
+      console.log(`📥 Response ${res.status} from ${method} ${path}`, {
+        status: res.status,
+        statusText: res.statusText,
+        data: data
+      });
     }
 
     if (!res.ok) {
@@ -101,31 +203,26 @@ async function request<T = any>(
 }
 
 // ------------------
-// 🔑 Token helpers
+// 🔑 Token helpers (DEPRECATED - kept for backward compatibility)
 // ------------------
-
+/**
+ * SÉCURITÉ : Ces fonctions sont DÉPRÉCIÉES
+ * L'authentification utilise maintenant les cookies HttpOnly gérés par Sanctum
+ * Le token ne doit JAMAIS être stocké en localStorage
+ */
 export function setToken(token: string): void {
-  try {
-    localStorage.setItem('api_token', token);
-  } catch {
-    console.warn('Impossible d\'enregistrer le token.');
-  }
+  // DEPRECATED: Ne pas utiliser
+  console.warn('[DEPRECATED] setToken() is no longer needed. Use cookie-based auth.');
 }
 
 export function getToken(): string | null {
-  try {
-    return localStorage.getItem('api_token');
-  } catch {
-    return null;
-  }
+  // DEPRECATED: Ne pas utiliser
+  return null;
 }
 
 export function clearToken(): void {
-  try {
-    localStorage.removeItem('api_token');
-  } catch {
-    console.warn('Impossible de supprimer le token.');
-  }
+  // DEPRECATED: Ne pas utiliser
+  console.warn('[DEPRECATED] clearToken() is no longer needed. Cookies are cleared server-side.');
 }
 
 // ------------------
@@ -163,14 +260,17 @@ export interface ProfileUploadResponse {
 
 export const authApi = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
+    await initializeCsrfToken();
     return await request<LoginResponse>('/login', 'POST', payload);
   },
   
   async requestAccount(payload: RegisterRequest): Promise<ApiResponse<User>> {
+    await initializeCsrfToken();
     return await request<ApiResponse<User>>('/request-account', 'POST', payload);
   },
 
   async verifyEmail(payload: { token: string }): Promise<ApiResponse<any>> {
+    await initializeCsrfToken();
     return await request<ApiResponse<any>>('/verify-email', 'POST', payload);
   },
   
@@ -194,26 +294,26 @@ export const authApi = {
     return await request<PortfolioResponse>('/profile/stats', 'GET');
   },
 
-  async changeId(payload: { new_id: string; confirmation: string }): Promise<{ message: string }> {
-    return await request<{ message: string }>('/admin/change-id', 'PUT', payload);
-  },
+
 
   async uploadProfilePicture(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
-    // Preferred: PUT to update the resource
-    try {
-      return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture', 'PUT', formData);
-    } catch {
-      // Fallback to legacy POST upload endpoint (method spoofing if needed)
-      return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture/upload', 'POST', formData);
-    }
+    // Use PUT method for profile picture upload
+    return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture', 'PUT', formData);
+  },
+
+  async uploadProfilePicturePost(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
+    // POST method for profile picture upload
+    return await request<ApiResponse<ProfileUploadResponse>>('/profile/picture/upload', 'POST', formData);
   },
 
   async uploadProfileBanner(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
-    try {
-      return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner', 'PUT', formData);
-    } catch {
-      return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner/upload', 'POST', formData);
-    }
+    // Use PUT method for profile banner upload
+    return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner', 'PUT', formData);
+  },
+
+  async uploadProfileBannerPost(formData: FormData): Promise<ApiResponse<ProfileUploadResponse>> {
+    // POST method for profile banner upload
+    return await request<ApiResponse<ProfileUploadResponse>>('/profile/banner/upload', 'POST', formData);
   },
 
   async deleteProfilePicture(): Promise<ApiResponse<void>> {
@@ -229,27 +329,16 @@ export const authApi = {
 // 💰 Cryptos (public + admin)
 // ------------------
 
+/**
+ * ✅ Les 10 cryptos sont FIXES et non modifiables
+
+ * ✅ Seule fonctionnalité: Synchroniser l'historique 30 jours avec api.crypto.syncHistory()
+ */
+
 export interface CryptoListParams {
   page?: number;
   search?: string;
   category?: string;
-}
-
-export interface CreateCryptoFromCoinGeckoRequest {
-  crypto_id: string;
-}
-
-export interface UpdateCryptoRequest {
-  name?: string;
-  symbol?: string;
-  image?: string;
-  price_eur?: number;
-  coingecko_id?: string;
-  category?: string;
-  website?: string;
-  market_cap?: number;
-  volume_24h?: number;
-  change_24h_pct?: number;
 }
 
 export const cryptoApi = {
@@ -267,31 +356,13 @@ export const cryptoApi = {
     return await request<Cryptomoney>(`/cryptos/${id}`, 'GET');
   },
   
-  async history(id: string): Promise<CryptoHistory[]> {
-    return await request<CryptoHistory[]>(`/cryptos/${id}/history`, 'GET');
+  async history(id: string, days: number = 30): Promise<CryptoHistory[]> {
+    return await request<CryptoHistory[]>(`/cryptos/${id}/history?days=${days}`, 'GET');
   },
   
-  // Admin methods
-  async createFromCoinGecko(payload: CreateCryptoFromCoinGeckoRequest): Promise<ApiResponse<Cryptomoney>> {
-    return await request<ApiResponse<Cryptomoney>>('/admin/cryptos', 'POST', payload);
-  },
-  
-  async update(id: string, payload: UpdateCryptoRequest): Promise<ApiResponse<Cryptomoney>> {
-    return await request<ApiResponse<Cryptomoney>>(`/admin/cryptos/${id}`, 'PUT', payload);
-  },
-
-  async updateWithImage(id: string, formData: FormData): Promise<ApiResponse<Cryptomoney>> {
-    return await request<ApiResponse<Cryptomoney>>(`/admin/cryptos/${id}`, 'PUT', formData);
-  },
-  
-  async delete(id: string): Promise<void> {
-    return await request<void>(`/admin/cryptos/${id}`, 'DELETE');
-  },
-
-
-  //  lance la synchronisation de l'historique 
-  async syncHistory(): Promise<ApiResponse<any>> {
-    return await request<ApiResponse<any>>('/admin/cryptos/sync-history', 'POST');
+  // ✅ Synchroniser l'historique de toutes les cryptos (24h, 7j, 30j)
+  async syncHistory(): Promise<ApiResponse<{ status: string; message: string; output: string[] }>> {
+    return await request<ApiResponse<{ status: string; message: string; output: string[] }>>('/admin/cryptos/sync-history', 'POST');
   },
 };
 
@@ -301,7 +372,7 @@ export const cryptoApi = {
 
 export interface TransactionRequest {
   symbol: string;
-  type: 'ACHAT' | 'VENTE';
+  type: 'BUY' | 'SELL';
   quantity: number;
 }
 
@@ -319,8 +390,8 @@ export interface PlusValueResponse {
 }
 
 export const walletApi = {
-  async list(): Promise<Wallet[]> {
-    return await request<Wallet[]>('/wallets', 'GET');
+  async list(): Promise<Wallet> {
+    return await request<Wallet>('/wallets', 'GET');
   },
   
   async show(id: string): Promise<Wallet> {
@@ -341,6 +412,10 @@ export const walletApi = {
   
   async walletHistory(id: string): Promise<WalletHistoryResponse[]> {
     return await request<WalletHistoryResponse[]>(`/wallets/${id}/history`, 'GET');
+  },
+  
+  async getTransactionsHistory(type?: 'ACHAT' | 'VENTE'): Promise<{ transactions: Transaction[] }> {
+    return await request<{ transactions: Transaction[] }>(`/wallets/transactions/history${type ? `?type=${type}` : ''}`, 'GET');
   },
 };
 
@@ -442,13 +517,17 @@ export const adminClientsApi = {
 // 📋 Admin - Account Requests
 // ------------------
 
+export interface ApproveAccountRequestPayload {
+  temporary_password: string;
+}
+
 export const adminAccountRequestsApi = {
   async list(): Promise<PaginatedResponse<AccountRequest>> {
     return await request<PaginatedResponse<AccountRequest>>('/admin/account-requests', 'GET');
   },
   
-  async approve(id: string): Promise<ApiResponse<AccountRequest>> {
-    return await request<ApiResponse<AccountRequest>>(`/admin/account-requests/${id}/approve`, 'POST');
+  async approve(id: string, payload?: ApproveAccountRequestPayload): Promise<ApiResponse<AccountRequest>> {
+    return await request<ApiResponse<AccountRequest>>(`/admin/account-requests/${id}/approve`, 'POST', payload);
   },
   
   async reject(id: string, reason?: string): Promise<ApiResponse<AccountRequest>> {
@@ -542,9 +621,7 @@ export const notificationsApi = {
     return await request<ApiResponse<Notification>>(`/notifications/${id}/read`, 'PUT');
   },
   
-  async markAllAsRead(): Promise<ApiResponse<void>> {
-    return await request<ApiResponse<void>>('/notifications/read-all', 'PUT');
-  },
+
 };
 
 // ------------------
@@ -555,6 +632,7 @@ const api = {
   setToken,
   getToken,
   clearToken,
+  initializeCsrfToken,
   auth: authApi,
   crypto: cryptoApi,
   wallet: walletApi,

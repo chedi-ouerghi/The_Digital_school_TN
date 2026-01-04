@@ -6,24 +6,21 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Cryptomoney;
 use App\Models\CryptoWalletAsset;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class PortefeuilleControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get wallets for authenticated user
      */
     public function test_get_wallets_authenticated()
     {
-        $user = User::factory()->create(['role' => 'CLIENT']);
+        $user = $this->createAuthenticatedUser(['role' => 'CLIENT']);
         $wallet = Wallet::factory()->create(['user_id' => $user->id]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/wallets');
+        $response = $this->authenticatedJson('GET', '/api/v1/wallets', [], $user);
 
         $response->assertStatus(200);
         // Just verify it returns 200, actual structure varies
@@ -45,40 +42,30 @@ class PortefeuilleControllerTest extends TestCase
      */
     public function test_get_specific_wallet()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create([
             'user_id' => $user->id,
             'balance_eur' => 1000.00
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson("/api/v1/wallets/{$wallet->id}");
+        $response = $this->authenticatedJson('GET', "/api/v1/wallets/{$wallet->id}", [], $user);
 
         $response->assertStatus(200);
         // Just verify it returns 200, actual structure varies
         $this->assertIsArray($response->json());
     }
 
-    /**
-     * Test get wallet plus-value
-     */
-    public function test_get_wallet_plus_value()
-    {
-        $this->markTestSkipped('Method calculateCapitalGains not implemented yet');
-    }
+
 
     /**
      * Test get wallet history
      */
     public function test_get_wallet_history()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create(['user_id' => $user->id]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/wallets/history');
+        $response = $this->authenticatedJson('GET', '/api/v1/wallets/history', [], $user);
 
         $response->assertStatus(200);
     }
@@ -88,12 +75,10 @@ class PortefeuilleControllerTest extends TestCase
      */
     public function test_get_specific_wallet_history()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create(['user_id' => $user->id]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson("/api/v1/wallets/{$wallet->id}/history");
+        $response = $this->authenticatedJson('GET', "/api/v1/wallets/{$wallet->id}/history", [], $user);
 
         $response->assertStatus(200);
     }
@@ -103,7 +88,7 @@ class PortefeuilleControllerTest extends TestCase
      */
     public function test_perform_buy_transaction()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create([
             'user_id' => $user->id,
             'balance_eur' => 5000.00
@@ -112,14 +97,12 @@ class PortefeuilleControllerTest extends TestCase
             'symbol' => 'BTC',
             'price_eur' => 50000
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/wallets/transaction', [
-                'cryptomoney_id' => $crypto->id,
-                'type' => 'ACHAT',
-                'quantity' => 0.1
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/wallets/transaction', [
+            'cryptomoney_id' => $crypto->id,
+            'type' => 'ACHAT',
+            'quantity' => 0.1
+        ], $user);
 
         // Expecting 422 due to validation issues, just check it responds
         $this->assertTrue(in_array($response->getStatusCode(), [200, 422]));
@@ -130,7 +113,7 @@ class PortefeuilleControllerTest extends TestCase
      */
     public function test_perform_transaction_without_sufficient_funds()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create([
             'user_id' => $user->id,
             'balance_eur' => 100.00
@@ -139,14 +122,12 @@ class PortefeuilleControllerTest extends TestCase
             'symbol' => 'BTC',
             'price_eur' => 50000
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/wallets/transaction', [
-                'cryptomoney_id' => $crypto->id,
-                'type' => 'ACHAT',
-                'quantity' => 1.0
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/wallets/transaction', [
+            'cryptomoney_id' => $crypto->id,
+            'type' => 'ACHAT',
+            'quantity' => 1.0
+        ], $user);
 
         $response->assertStatus(422);
     }
@@ -156,16 +137,14 @@ class PortefeuilleControllerTest extends TestCase
      */
     public function test_perform_transaction_with_invalid_crypto()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create(['user_id' => $user->id]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/wallets/transaction', [
-                'symbol' => 'INVALID',
-                'type' => 'ACHAT',
-                'quantity' => 1.0
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/wallets/transaction', [
+            'symbol' => 'INVALID',
+            'type' => 'ACHAT',
+            'quantity' => 1.0
+        ], $user);
 
         $response->assertStatus(422);
     }
@@ -175,7 +154,7 @@ class PortefeuilleControllerTest extends TestCase
      */
     public function test_perform_sell_transaction()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create(['user_id' => $user->id]);
         $crypto = Cryptomoney::factory()->create(['symbol' => 'BTC']);
         
@@ -186,14 +165,11 @@ class PortefeuilleControllerTest extends TestCase
             'quantity' => 0.5
         ]);
 
-        $token = $user->createToken('TestToken')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/wallets/transaction', [
-                'cryptomoney_id' => $crypto->id,
-                'type' => 'VENTE',
-                'quantity' => 0.1
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/wallets/transaction', [
+            'cryptomoney_id' => $crypto->id,
+            'type' => 'VENTE',
+            'quantity' => 0.1
+        ], $user);
 
         // Expecting 422 due to validation issues, just check it responds
         $this->assertTrue(in_array($response->getStatusCode(), [200, 422]));

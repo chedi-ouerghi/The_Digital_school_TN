@@ -6,20 +6,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Stateful Domains
+    | Stateful Domains (SPA Mode)
     |--------------------------------------------------------------------------
     |
-    | Requests from the following domains / hosts will receive stateful API
-    | authentication cookies. Typically, these should include your local
-    | and production domains which access your API via a frontend SPA.
+    | Domaines qui utiliseront l'authentification STATEFUL (cookies session)
+    | Les requêtes depuis ces domaines recevront des tokens de session
+    | au lieu de bearer tokens.
+    |
+    | SÉCURITÉ : Ajouter votre domaine frontend (production et dev)
     |
     */
 
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
         '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+        'localhost,localhost:3000,localhost:5173,127.0.0.1,127.0.0.1:8000,127.0.0.1:5173,::1',
         Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
     ))),
 
     /*
@@ -27,10 +28,10 @@ return [
     | Sanctum Guards
     |--------------------------------------------------------------------------
     |
-    | This array contains the authentication guards that will be checked when
-    | Sanctum is trying to authenticate a request. If none of these guards
-    | are able to authenticate the request, Sanctum will use the bearer
-    | token that's present on an incoming request for authentication.
+    | 'web' = Mode SPA (Sanctum utilise les cookies de session)
+    | 'sanctum' = Mode API (requêtes avec Bearer tokens)
+    |
+    | Pour un SPA avec authentification par cookies : use 'web'
     |
     */
 
@@ -38,27 +39,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Expiration Minutes
+    | Token Expiration Minutes
     |--------------------------------------------------------------------------
     |
-    | This value controls the number of minutes until an issued token will be
-    | considered expired. This will override any values set in the token's
-    | "expires_at" attribute, but first-party sessions are not affected.
+    | Cette valeur contrôle l'expiration du token Sanctum.
+    | null = pas d'expiration (recommandé pour SPA avec session)
+    | Pour les API mobiles : définir entre 24*60 et 30*24*60 minutes
     |
     */
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_TOKEN_EXPIRATION', null),
 
     /*
     |--------------------------------------------------------------------------
     | Token Prefix
     |--------------------------------------------------------------------------
     |
-    | Sanctum can prefix new tokens in order to take advantage of numerous
-    | security scanning initiatives maintained by open source platforms
-    | that notify developers if they commit tokens into repositories.
-    |
-    | See: https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning
+    | Préfixe des tokens Sanctum pour éviter les collisions avec d'autres tokens.
+    | Exemple : 'bitchest_'
     |
     */
 
@@ -69,9 +67,12 @@ return [
     | Sanctum Middleware
     |--------------------------------------------------------------------------
     |
-    | When authenticating your first-party SPA with Sanctum you may need to
-    | customize some of the middleware Sanctum uses while processing the
-    | request. You may change the middleware listed below as required.
+    | Middleware utilisés par Sanctum pour gérer l'authentification SPA.
+    |
+    | SÉCURITÉ :
+    | - AuthenticateSession : valide que la session est toujours valide
+    | - EncryptCookies : chiffre les cookies (incluant XSRF-TOKEN)
+    | - ValidateCsrfToken : protection CSRF automatique
     |
     */
 

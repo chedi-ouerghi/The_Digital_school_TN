@@ -20,7 +20,13 @@ class UploadProfileBannerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'profile_banner' => 'image|mimes:jpg,jpeg,png',
+            'profile_banner' => [
+                'nullable',  // Allow null (we'll check in controller)
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,gif,webp',
+                'max:10240',  // Max 10MB for banner
+            ],
         ];
     }
 
@@ -30,9 +36,11 @@ class UploadProfileBannerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'profile_banner.image' => 'Profile banner must be an image',
-            'profile_banner.mimes' => 'Profile banner must be JPG, JPEG, or PNG format',
-            // max removed to allow unrestricted uploads
+            'profile_banner.required' => 'La bannière est requise.',
+            'profile_banner.file' => 'Le fichier doit être valide.',
+            'profile_banner.image' => 'La bannière doit être une image valide.',
+            'profile_banner.mimes' => 'La bannière doit être au format JPG, JPEG, PNG ou WebP.',
+            'profile_banner.max' => 'La taille maximale est 10MB.',
         ];
     }
 }

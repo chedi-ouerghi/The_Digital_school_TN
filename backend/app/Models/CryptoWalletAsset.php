@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 class CryptoWalletAsset extends Pivot
 {
     use HasFactory;
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -18,13 +19,15 @@ class CryptoWalletAsset extends Pivot
         'wallet_id',
         'cryptomoney_id',
         'quantity',
-        'average_buy_price'
+        'average_buy_price',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:8',
-        'average_buy_price' => 'decimal:8'
+        'quantity' => 'decimal:18',
+        'average_buy_price' => 'decimal:18',
     ];
+
+    /* ===================== RELATIONS ===================== */
 
     public function wallet()
     {
@@ -41,6 +44,8 @@ class CryptoWalletAsset extends Pivot
         return $this->hasMany(Transaction::class, 'crypto_wallet_asset_id');
     }
 
+    /* ===================== CALCULS ===================== */
+
     public function getTotalInvested(): float
     {
         return (float) $this->quantity * (float) $this->average_buy_price;
@@ -48,14 +53,13 @@ class CryptoWalletAsset extends Pivot
 
     public function getCurrentValue(): float
     {
-        $price = $this->cryptomoney ? (float) $this->cryptomoney->price_eur : 0.0;
+        $price = (float) ($this->cryptomoney?->price_eur ?? 0);
         return (float) $this->quantity * $price;
     }
 
-    public function getPlusValue(): float
-    {
-        return $this->getCurrentValue() - $this->getTotalInvested();
-    }
+
+
+    /* ===================== BOOT ===================== */
 
     protected static function boot()
     {

@@ -77,21 +77,23 @@ export interface Wallet extends BaseModel {
   user?: User;
   cryptoWalletAssets?: CryptoWalletAsset[];
   transactions?: Transaction[];
+  totalValue?: number;
+  totalInvestment?: number;
+  assets?: any[]; // You might want to define a more specific interface for assets
+  totalUnits?: number;
+  buyCount?: number;
 }
 
 // Cryptomoney model
 export interface Cryptomoney extends BaseModel {
   name: string;
   symbol: string;
-  coingecko_id: string;
   image?: string;
   category?: string;
   website?: string;
   price_eur: number;
   market_cap: number;
-  volume_24h: number;
   change_24h_pct: number;
-  updated_at_api?: string;
   price: number; // alias for price_eur
   change_24h: number; // alias for change_24h_pct
   cryptoWalletAssets?: CryptoWalletAsset[];
@@ -112,7 +114,7 @@ export interface CryptoWalletAsset extends BaseModel {
 // Transaction model
 export interface Transaction extends BaseModel {
   crypto_wallet_asset_id: string;
-  type: 'buy' | 'sell';
+  type: 'ACHAT' | 'VENTE';
   quantity: number;
   price: number;
   total_eur: number;

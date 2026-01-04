@@ -4,12 +4,10 @@ namespace Tests\Feature\Controllers\Admin;
 
 use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AdminUserControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get all clients as admin
@@ -100,15 +98,13 @@ class AdminUserControllerTest extends TestCase
      */
     public function test_create_client_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/admin/clients', [
-                'name' => 'New Client',
-                'email' => 'newclient@example.com',
-                'initial_balance' => 1000.00
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/admin/clients', [
+            'name' => 'New Client',
+            'email' => 'newclient@example.com',
+            'initial_balance' => 1000.00
+        ], $admin);
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('users', [
@@ -122,16 +118,13 @@ class AdminUserControllerTest extends TestCase
      */
     public function test_create_client_with_duplicate_email()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         User::factory()->create(['email' => 'existing@example.com']);
         
-        $token = $admin->createToken('TestToken')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/admin/clients', [
-                'name' => 'New Client',
-                'email' => 'existing@example.com',
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/admin/clients', [
+            'name' => 'New Client',
+            'email' => 'existing@example.com',
+        ], $admin);
 
         $response->assertStatus(422);
     }
@@ -141,17 +134,15 @@ class AdminUserControllerTest extends TestCase
      */
     public function test_update_client_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         $client = User::factory()->create([
             'role' => 'CLIENT',
             'name' => 'Old Name'
         ]);
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson("/api/v1/admin/clients/{$client->id}", [
-                'name' => 'New Name'
-            ]);
+        $response = $this->authenticatedJson('PUT', "/api/v1/admin/clients/{$client->id}", [
+            'name' => 'New Name'
+        ], $admin);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('users', [
@@ -165,12 +156,10 @@ class AdminUserControllerTest extends TestCase
      */
     public function test_delete_client_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         $client = User::factory()->create(['role' => 'CLIENT']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson("/api/v1/admin/clients/{$client->id}");
+        $response = $this->authenticatedJson('DELETE', "/api/v1/admin/clients/{$client->id}", [], $admin);
 
         $response->assertStatus(200);
     }
@@ -180,12 +169,10 @@ class AdminUserControllerTest extends TestCase
      */
     public function test_get_client_transactions_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         $client = User::factory()->create(['role' => 'CLIENT']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson("/api/v1/admin/clients/{$client->id}/transactions");
+        $response = $this->authenticatedJson('GET', "/api/v1/admin/clients/{$client->id}/transactions", [], $admin);
 
         $response->assertStatus(200);
         
@@ -199,11 +186,9 @@ class AdminUserControllerTest extends TestCase
      */
     public function test_get_account_requests_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/admin/account-requests');
+        $response = $this->authenticatedJson('GET', '/api/v1/admin/account-requests', [], $admin);
 
         $response->assertStatus(200);
         

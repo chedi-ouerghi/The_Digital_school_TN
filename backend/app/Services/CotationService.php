@@ -1,22 +1,17 @@
 <?php
+// ============================================================================
+// FILE: app/Services/CotationService.php
+// RESPONSABILITÉ: Générer des prix synthétiques via cotation_generator.php
+// ============================================================================
 
 namespace App\Services;
 
-/**
- * Service centralisé pour la gestion des cotations
- * 
- * Responsabilités:
- * - Génération des prix initiaux
- * - Calcul des variations journalières
- * - Génération d'historiques
- * - Protection contre les prix négatifs
- * 
- * Dépend de: app/Helpers/cotation_generator.php
- */
+use Illuminate\Support\Carbon;
+
 class CotationService
 {
     /**
-     * Inclut le fichier generateur si pas déjà chargé
+     * Charger le fichier générateur de cotations
      */
     private function loadCotationGenerator(): void
     {
@@ -26,94 +21,121 @@ class CotationService
     }
 
     /**
-     * Retourne le prix initial pour une crypto
+     * Récupérer le prix initial synthétique pour une crypto
      * 
-     * Ordre de priorité:
-     * 1. Utilise getFirstCotation() du generator si disponible
-     * 2. Fallback: implémentation locale
+     * UTILISE: cotation_generator.php::getFirstCotation()
      * 
-     * @param string $name Symbole ou nom de la crypto
-     * @return float Prix initial (minimum 0.01)
+     * Retourne le code ASCII du 1er caractère + aléatoire
+     * Exemples:
+     * - BTC: ord('B') = 66 + rand(0-10) = 66-76
+     * - ETH: ord('E') = 69 + rand(0-10) = 69-79
+     * - XRP: ord('X') = 88 + rand(0-10) = 88-98
+     * 
+     * @param string $symbol Code de la crypto (BTC, ETH, etc.)
+     * @return float Prix synthétique brut
      */
-    public function getInitialPrice(string $name): float
+    public function getInitialPrice(string $symbol): float
     {
         $this->loadCotationGenerator();
 
         if (function_exists('getFirstCotation')) {
-            return max(0.01, (float) getFirstCotation($name));
+            $price = getFirstCotation($symbol);
+            return max(0.01, (float) $price);
         }
 
-        // Fallback si le fichier n'est pas trouvé
-        if (empty($name)) {
-            return (float) random_int(10, 100);
-        }
-
-        $basePrice = ord(substr($name, 0, 1)) + random_int(0, 10);
-        return max(0.01, (float) $basePrice);
+        return max(0.01, (float) random_int(10, 100));
     }
 
     /**
-     * Calcule la variation journalière
+     * Calculer la variation journalière
      * 
-     * Protections appliquées:
-     * - Prix ne peut jamais être négatif (min 0.01)
-     * - Variations réalistes (±10% maximum)
+     * UTILISE: cotation_generator.php::getCotationFor()
      * 
-     * @param string $name Symbole ou nom de la crypto
-     * @param float|null $currentPrice Prix actuel (sinon utilise le prix initial)
-     * @return array{delta: float, newPrice: float} Delta appliqué et nouveau prix
+     * ALGO:
+     * - 60% chance augmentation, 40% baisse
+     * - Amplitude basée sur les caractères du symbole
+     * - Multiplicateur aléatoire 0.01-0.10
+     * 
+     * Exemples:
+     * - BTC: variation entre ±0.66 et ±7.6
+     * - ETH: variation entre ±0.69 et ±6.9
+     * - XRP: variation entre ±0.88 et ±9.8
+     * 
+     * @param string $symbol Code de la crypto
+     * @param float|null $currentPrice Prix actuel (optionnel)
+     * @return array{delta: float, newPrice: float, changePercent: float, volume: float}
      */
-    public function getDailyVariation(string $name, ?float $currentPrice = null): array
+public function getDailyVariation(string $symbol, ?float $currentPrice = null): array
+{
+    $this->loadCotationGenerator();
+
+    $base = $currentPrice ?? $this->getInitialPrice($symbol);
+
+    // Sécurité absolue
+    if ($base <= 0.000001) {
+        return [
+            'delta' => 0,
+            'newPrice' => max(0.01, $base),
+            'changePercent' => 0,
+            'volume' => 0.0,
+        ];
+    }
+
+    // Variation RELATIVE (-5% → +5%)
+    $relativeChange = random_int(-500, 500) / 10000; // -0.05 → +0.05
+
+    $newPrice = round(max(0.01, $base * (1 + $relativeChange)), 6);
+
+    $changePercent = round($relativeChange * 100, 2);
+
+    $delta = round($newPrice - $base, 6);
+
+    // ✅ CORRECTION: Générer un volume réaliste basé sur le prix et le symbole
+    $volumeMultiplier = random_int(1000, 50000); // Volume aléatoire réaliste
+    $volume = round($newPrice * $volumeMultiplier, 2);
+
+    return [
+        'delta' => $delta,
+        'newPrice' => $newPrice,
+        'changePercent' => $changePercent,
+        'volume' => $volume,
+    ];
+}
+
+
+    /**
+     * Générer l'historique de prix pour 30 jours
+     * 
+     * UTILISE: cotation_generator.php (getFirstCotation + getCotationFor)
+     * 
+     * ⚠️ IMPORTANT: Les prix retournés sont SYNTHÉTIQUES (66-98, etc.)
+     * Ils seront AJUSTÉS plus tard par le CryptoService avec un facteur multiplicateur
+     * pour correspondre aux prix réels.
+     * 
+     * Exemple:
+     * - Généré: [timestamp, 76.42] (NEM synthétique)
+     * - Après ajustement ×0.00001570: [timestamp, 0.0012] (NEM réel) ✓
+     * 
+     * @param string $symbol Code de la crypto
+     * @param int $days Nombre de jours (défaut: 30)
+     * @return array Array de [timestamp_ms, prix]
+     */
+    public function generatePriceHistory(string $symbol, int $days = 30): array
     {
         $this->loadCotationGenerator();
 
-        if (function_exists('getCotationFor')) {
-            $delta = (float) getCotationFor($name);
-        } else {
-            // Fallback si le fichier n'est pas trouvé
-            $sign = (random_int(0, 99) > 40) ? 1 : -1;
-            $char = random_int(0, 99) > 49 
-                ? substr($name, 0, 1) 
-                : substr($name, -1);
-            $ordVal = ord($char);
-            $multiplier = random_int(1, 10) * 0.01;
-            $delta = round($sign * $ordVal * $multiplier, 2);
-        }
-
-        $base = $currentPrice ?? $this->getInitialPrice($name);
-        
-        // ✅ PROTECTION: Prix jamais négatif
-        $newPrice = round(max(0.01, $base + $delta), 2);
-
-        return ['delta' => $delta, 'newPrice' => $newPrice];
-    }
-
-    /**
-     * Génère un historique de prix (30 derniers jours)
-     * 
-     * Utilisé principalement pour:
-     * - Les tests et prototypage
-     * - Le fallback quand CoinGecko n'est pas disponible
-     * - Les données de démonstration
-     * 
-     * @param string $name Symbole ou nom de la crypto
-     * @param int $days Nombre de jours (défaut 30)
-     * @return array Array de [timestamp_ms, prix]
-     */
-    public function generatePriceHistory(string $name, int $days = 30): array
-    {
         $prices = [];
-        $currentPrice = $this->getInitialPrice($name);
+        $currentPrice = $this->getInitialPrice($symbol);
 
         for ($i = $days; $i >= 0; $i--) {
             $timestamp = now()->subDays($i)->timestamp * 1000;
 
             if ($i !== $days) {
-                $variation = $this->getDailyVariation($name, $currentPrice);
+                $variation = $this->getDailyVariation($symbol, $currentPrice);
                 $currentPrice = $variation['newPrice'];
             }
 
-            $prices[] = [$timestamp, $currentPrice];
+            $prices[] = [$timestamp, round($currentPrice, 2)];
         }
 
         return $prices;

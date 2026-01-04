@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class PortefeuilleController extends Controller
 {
@@ -44,26 +45,11 @@ class PortefeuilleController extends Controller
                 ], 403);
             }
 
-            $wallet = Wallet::with([
-                'cryptoWalletAssets.cryptomoney',
-                'transactions' => function($query) {
-                    $query->with('cryptoWalletAsset.cryptomoney');
-                }
-            ])
-                ->where('user_id', $user->id)
-                ->first();
-            
-            if (!$wallet) {
-                return response()->json([
-                    'error' => 'Wallet not found'
-                ], 404);
-            }
-            
-            return response()->json([
-                'wallet' => $wallet,
-                'balance_eur' => (float) $wallet->balance_eur,
-                'stats' => $this->walletService->calculatePortfolioStats($wallet->id)
-            ]);
+            $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
+
+            $portfolioDetails = $this->walletService->getPortfolioDetails($wallet->id);
+
+            return response()->json(array_merge($portfolioDetails, ['balance_eur' => (float) $wallet->balance_eur]));
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error retrieving wallet',
@@ -83,7 +69,7 @@ class PortefeuilleController extends Controller
      *         @OA\JsonContent(
      *             required={"symbol","type","quantity"},
      *             @OA\Property(property="symbol", type="string", description="Crypto symbol (e.g., BTC)"),
-     *             @OA\Property(property="type", type="string", enum={"BUY","SELL"}),
+     *             @OA\Property(property="type", type="string", enum={"ACHAT","VENTE"}),
      *             @OA\Property(property="quantity", type="number", format="float", description="Quantity to buy/sell")
      *         )
      *     ),
@@ -100,7 +86,7 @@ class PortefeuilleController extends Controller
 
             $validated = $request->validate([
                 'symbol' => 'required|string|exists:cryptomoney,symbol',
-                'type' => 'required|in:BUY,SELL',
+                'type' => 'required|in:ACHAT,VENTE',
                 'quantity' => 'required|numeric|min:0.00000001'
             ]);
 
@@ -163,9 +149,9 @@ class PortefeuilleController extends Controller
                 ], 404);
             }
 
-            $stats = $this->walletService->calculateCapitalGains($wallet->id);
+            $summary = $this->walletService->getPortfolioPlusValue($wallet->id);
 
-            return response()->json($stats);
+            return response()->json($summary);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error calculating capital gains',
@@ -173,6 +159,8 @@ class PortefeuilleController extends Controller
             ], 500);
         }
     }
+
+
 
     /**
      * @OA\Get(
@@ -210,6 +198,58 @@ class PortefeuilleController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/v1/wallets/transactions/history",
+     *     summary="Get transaction history of the wallet with optional type filter",
+     *     tags={"wallet"},
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="type",
+     *         in="query",
+     *         description="Filter transactions by type (ACHAT or VENTE)",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"ACHAT", "VENTE"})
+     *     ),
+     *     @OA\Response(response=200, description="Transaction history retrieved successfully"),
+     *     @OA\Response(response=403, description="Only clients can access their wallet"),
+     *     @OA\Response(response=404, description="Wallet not found"),
+     *     @OA\Response(response=500, description="Internal error")
+     * )
+     */
+    public function transactionsHistory(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Check if user is a client
+            if ($user->role !== 'CLIENT') {
+                return response()->json([
+                    'error' => 'Only clients can access their wallet'
+                ], 403);
+            }
+
+            $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
+
+            $type = $request->query('type');
+            
+            // Cache Redis pour l'historique des transactions - 2 minutes TTL
+            $cacheKey = 'transactions_history:user_' . $user->id . ':type_' . ($type ?? 'all');
+            $ttl = 60 * 2; // 2 minutes
+            
+            $transactions = Cache::remember($cacheKey, $ttl, function () use ($wallet, $type) {
+                return $this->walletService->getTransactionsHistory($wallet->id, $type);
+            });
+
+            return response()->json($transactions);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error retrieving transaction history',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/v1/wallets/{id}",
      *     summary="Get details of a specific wallet",
      *     tags={"wallet"},
@@ -233,7 +273,7 @@ class PortefeuilleController extends Controller
             $user = Auth::user();
             $wallet = Wallet::with([
                 'cryptoWalletAssets.cryptomoney',
-                'transactions' => function($query) {
+                'cryptoWalletAssets.transactions' => function($query) {
                     $query->with('cryptoWalletAsset.cryptomoney');
                 }
             ])
@@ -252,10 +292,7 @@ class PortefeuilleController extends Controller
             // Get details via service
             $details = $this->walletService->getPortfolioDetails($wallet->id);
 
-            return response()->json([
-                'wallet' => $details,
-                'balance_eur' => (float) $wallet->balance_eur,
-            ]);
+            return response()->json($details);
 
         } catch (\Exception $e) {
             return response()->json([

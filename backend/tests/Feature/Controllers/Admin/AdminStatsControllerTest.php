@@ -3,12 +3,10 @@
 namespace Tests\Feature\Controllers\Admin;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AdminStatsControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get admin stats as admin

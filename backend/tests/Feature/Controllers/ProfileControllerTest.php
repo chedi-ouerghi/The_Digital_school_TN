@@ -4,24 +4,20 @@ namespace Tests\Feature\Controllers;
 
 use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ProfileControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get profile overview for authenticated user
      */
     public function test_get_profile_overview_authenticated()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $wallet = Wallet::factory()->create(['user_id' => $user->id]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/profile/stats');
+        $response = $this->authenticatedJson('GET', '/api/v1/profile/stats', [], $user);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -49,15 +45,13 @@ class ProfileControllerTest extends TestCase
             $this->markTestSkipped('GD extension is not installed.');
         }
 
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
         $file = \Illuminate\Http\UploadedFile::fake()->image('avatar.jpg');
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/profile/picture/upload', [
-                'profile_picture' => $file
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/profile/picture/upload', [
+            'profile_picture' => $file
+        ], $user);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -72,11 +66,9 @@ class ProfileControllerTest extends TestCase
      */
     public function test_upload_profile_picture_without_file()
     {
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/profile/picture/upload', []);
+        $response = $this->authenticatedJson('POST', '/api/v1/profile/picture/upload', [], $user);
 
         $response->assertStatus(422);
     }
@@ -86,15 +78,13 @@ class ProfileControllerTest extends TestCase
      */
     public function test_upload_profile_picture_with_invalid_file_type()
     {
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
         $file = \Illuminate\Http\UploadedFile::fake()->create('document.txt');
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/profile/picture/upload', [
-                'profile_picture' => $file
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/profile/picture/upload', [
+            'profile_picture' => $file
+        ], $user);
 
         $response->assertStatus(422);
     }
@@ -109,15 +99,13 @@ class ProfileControllerTest extends TestCase
             $this->markTestSkipped('GD extension is not installed.');
         }
 
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
         $file = \Illuminate\Http\UploadedFile::fake()->image('banner.jpg');
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/profile/banner/upload', [
-                'profile_banner' => $file
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/profile/banner/upload', [
+            'profile_banner' => $file
+        ], $user);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -134,13 +122,11 @@ class ProfileControllerTest extends TestCase
      */
     public function test_delete_profile_picture_when_none_exists()
     {
-        $user = User::factory()->create([
+        $user = $this->createAuthenticatedUser([
             'profile_picture' => null
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson('/api/v1/profile/picture');
+        $response = $this->authenticatedJson('DELETE', '/api/v1/profile/picture', [], $user);
 
         $response->assertStatus(404);
         
@@ -154,13 +140,11 @@ class ProfileControllerTest extends TestCase
      */
     public function test_delete_profile_banner_when_none_exists()
     {
-        $user = User::factory()->create([
+        $user = $this->createAuthenticatedUser([
             'profile_banner' => null
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson('/api/v1/profile/banner');
+        $response = $this->authenticatedJson('DELETE', '/api/v1/profile/banner', [], $user);
 
         $response->assertStatus(404);
         

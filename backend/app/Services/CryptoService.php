@@ -1,12 +1,19 @@
 <?php
 
+
+// ============================================================================
+// FILE: app/Services/CryptoService.php
+// RESPONSABILITÉ: SANS API - Créer/gérer les cryptos avec données locales
+// ============================================================================
+
 namespace App\Services;
 
 use App\Models\Cryptomoney;
-use Illuminate\Support\Facades\Http;
+use App\Models\CryptoHistory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
-use App\Models\CryptoHistory;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 
 class CryptoService
 {
@@ -18,130 +25,418 @@ class CryptoService
     }
 
     /**
-     * Add or update a cryptocurrency from CoinGecko
-     * @throws \Exception
+     * 🚀 INITIALISER les 10 cryptos SANS API CoinGecko
+     * 
+     * Cette méthode est appelée UNE SEULE FOIS lors du seeding initial.
+     * 
+     * ÉTAPES:
+     * 1. Définir les 10 cryptos avec leurs prix de référence
+     * 2. Pour chaque: créer/mettre à jour + générer historique 30j
+     * 3. Copier les images depuis assests/
+     * 
+     * @return array Résultat de l'import {imported, failed, errors}
      */
-    public function addFromCoinGecko(string $cryptoId): string
+    public function ensureTopCryptos(): array
     {
-        $response = Http::withOptions(['verify' => false])
-            ->get("https://api.coingecko.com/api/v3/coins/{$cryptoId}");
+        Log::info('🚀 Initializing 10 cryptos WITHOUT CoinGecko API');
 
-        if (!$response->ok()) {
-            throw new \Exception('Crypto non trouvée sur CoinGecko.');
-        }
-
-        $data = $response->json();
-        
-        // ✅ Essayer d'abord CoinGecko
-        $priceEur = $data['market_data']['current_price']['eur'] ?? null;
-
-        // ✅ Si CoinGecko n'a pas le prix, utiliser le générateur local
-        if ($priceEur === null) {
-            $symbolForGen = $data['symbol'] ?? $data['id'] ?? $cryptoId;
-            $priceEur = $this->cotationService->getInitialPrice($symbolForGen);
-        }
-
-        $cryptodata = [
-            'name' => $data['name'] ?? null,
-            'symbol' => $data['symbol'] ?? null,
-            'image' => null,
-            'category' => $data['categories'][0] ?? null,
-            'website' => $data['links']['homepage'][0] ?? null,
-            'price_eur' => $priceEur,
-            'market_cap' => $data['market_data']['market_cap']['eur'] ?? null,
-            'volume_24h' => $data['market_data']['total_volume']['eur'] ?? null,
-            'change_24h_pct' => $data['market_data']['price_change_percentage_24h'] ?? null,
-            'updated_at_api' => isset($data['last_updated']) ? Carbon::parse($data['last_updated']) : now(),
-            'coingecko_id' => $data['id'] ?? null,
+        $results = [
+            'imported' => 0,
+            'failed' => 0,
+            'errors' => [],
         ];
 
+        // ✅ LES 10 CRYPTOS OBLIGATOIRES - HARDCODÉES (pas d'API)
+        $cryptos = [
+            'BTC' => [
+                'name' => 'Bitcoin',
+                'category' => 'Payment',
+                'website' => 'https://bitcoin.org',
+                'price_eur' => 95000.00,
+            ],
+            'ETH' => [
+                'name' => 'Ethereum',
+                'category' => 'Smart Contracts',
+                'website' => 'https://ethereum.org',
+                'price_eur' => 3500.00,
+            ],
+            'XRP' => [
+                'name' => 'Ripple',
+                'category' => 'Payment',
+                'website' => 'https://ripple.com',
+                'price_eur' => 2.50,
+            ],
+            'BCH' => [
+                'name' => 'Bitcoin Cash',
+                'category' => 'Payment',
+                'website' => 'https://bitcoincash.org',
+                'price_eur' => 450.00,
+            ],
+            'ADA' => [
+                'name' => 'Cardano',
+                'category' => 'Smart Contracts',
+                'website' => 'https://cardano.org',
+                'price_eur' => 1.05,
+            ],
+            'LTC' => [
+                'name' => 'Litecoin',
+                'category' => 'Payment',
+                'website' => 'https://litecoin.org',
+                'price_eur' => 180.00,
+            ],
+            'XEM' => [
+                'name' => 'NEM',
+                'category' => 'Smart Contracts',
+                'website' => 'https://nem.io',
+                'price_eur' => 0.0012,
+            ],
+            'XLM' => [
+                'name' => 'Stellar',
+                'category' => 'Payment',
+                'website' => 'https://stellar.org',
+                'price_eur' => 0.35,
+            ],
+            'IOTA' => [
+                'name' => 'IOTA',
+                'category' => 'IoT',
+                'website' => 'https://www.iota.org',
+                'price_eur' => 0.30,
+            ],
+            'DASH' => [
+                'name' => 'Dash',
+                'category' => 'Payment',
+                'website' => 'https://www.dash.org',
+                'price_eur' => 40.00,
+            ],
+        ];
+
+        // ✅ PROCESSUS: Créer/mettre à jour + générer historique
+        foreach ($cryptos as $symbol => $data) {
+            try {
+                Log::info("📝 Processing {$symbol}...", [
+                    'name' => $data['name'],
+                    'price' => $data['price_eur'],
+                ]);
+
+                // Créer/mettre à jour la crypto
+                $this->createOrUpdate($symbol, $data);
+
+                Log::info("✅ {$symbol}: {$data['name']} | €{$data['price_eur']}");
+                $results['imported']++;
+
+            } catch (\Exception $e) {
+                $results['failed']++;
+                $results['errors'][] = [
+                    'symbol' => $symbol,
+                    'error' => $e->getMessage(),
+                ];
+                Log::error("❌ Failed to create {$symbol}", [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        Log::info('✅ Top cryptos initialization complete', [
+            'imported' => $results['imported'],
+            'failed' => $results['failed'],
+        ]);
+
+        return $results;
+    }
+
+    /**
+     * Créer ou mettre à jour une crypto SANS API
+     * 
+     * ÉTAPES:
+     * 1. Valider les données
+     * 2. Créer/mettre à jour en BD
+     * 3. Générer historique 30j avec ajustement aux prix réels
+     * 
+     * @param string $symbol Code (BTC, ETH, etc.)
+     * @param array $data {name, price_eur, category, website, ...}
+     * @return string ID de la crypto
+     * @throws \Exception
+     */
+    private function createOrUpdate(string $symbol, array $data): string
+    {
+        $this->validateCryptoData($symbol, $data);
+
+        $symbol = strtoupper($symbol);
+        $name = $data['name'];
+        $priceEur = (float) $data['price_eur'];
+
+        // ✅ Construire les données complètes
+        $cryptoData = [
+            'name' => $name,
+            'symbol' => $symbol,
+            'category' => $data['category'] ?? 'Layer 1',
+            'website' => $data['website'] ?? null,
+            'price_eur' => round($priceEur, 8),
+            'market_cap' => isset($data['market_cap']) ? round((float) $data['market_cap'], 8) : null,
+            'change_24h_pct' => 0.00, // Sera calculé après historique
+        ];
+
+        // ✅ Sauvegarder ou mettre à jour
         $crypto = Cryptomoney::updateOrCreate(
-            ['symbol' => $cryptodata['symbol']],
-            $cryptodata
+            ['symbol' => $symbol],
+            $cryptoData
         );
+
+        Log::info('✅ Crypto saved', [
+            'id' => $crypto->id,
+            'symbol' => $symbol,
+            'name' => $name,
+            'price_eur' => $priceEur,
+        ]);
+
+        // ✅ Générer historique 30j avec ajustement aux prix réels
+        $this->generateHistoryWithRealPrices($crypto, $priceEur, 30);
 
         return $crypto->id;
     }
 
     /**
-     * Get market chart (last X days) from CoinGecko
-     * Fallback to synthetic prices if CoinGecko fails
+     * Générer l'historique 30 jours AVEC ajustement aux prix réels
+     * 
+     * ALGO:
+     * 1. Générer prix synthétiques (structure de variation)
+     * 2. Calculer facteur d'ajustement: realPrice / generatedPrice
+     * 3. Appliquer le facteur à TOUS les prix
+     * 4. Sauvegarder en BD
+     * 
+     * Exemple pour NEM:
+     * - Prix réel actuel: €0.0012
+     * - Prix généré: 76.42
+     * - Facteur: 0.0012 / 76.42 = 0.00001570
+     * - Prix j-30 généré: 75.8 → ajusté: 75.8 × 0.00001570 = €0.00119
+     * - Prix j0 généré: 76.42 → ajusté: 76.42 × 0.00001570 = €0.0012 ✓
+     * 
+     * @param Cryptomoney $crypto
+     * @param float $currentRealPrice Prix réel actuel (EUR)
+     * @param int $days Nombre de jours
+     * @return void
      */
-    public function getMarketChart(string $coingeckoId, int $days = 30): array
+    private function generateHistoryWithRealPrices(
+        Cryptomoney $crypto,
+        float $currentRealPrice,
+        int $days = 30
+    ): void {
+        Log::info('📊 Generating price history with adjustment', [
+            'symbol' => $crypto->symbol,
+            'realPrice' => $currentRealPrice,
+            'days' => $days,
+        ]);
+
+        // ✅ ÉTAPE 1: Générer les prix synthétiques
+        $generatedPrices = $this->cotationService->generatePriceHistory($crypto->symbol, $days);
+
+        if (empty($generatedPrices)) {
+            Log::warning('No prices generated', ['crypto_id' => $crypto->id]);
+            return;
+        }
+
+        // ✅ ÉTAPE 2: Récupérer le prix généré "aujourd'hui" (dernier élément)
+        $generatedToday = end($generatedPrices)[1];
+
+        // ✅ ÉTAPE 3: Calculer le facteur d'ajustement
+        $adjustmentFactor = $generatedToday > 0 ? ($currentRealPrice / $generatedToday) : 1;
+
+        Log::info('📐 Adjustment factor', [
+            'generatedToday' => $generatedToday,
+            'realPrice' => $currentRealPrice,
+            'factor' => $adjustmentFactor,
+        ]);
+
+        // ✅ ÉTAPE 4: Appliquer le facteur et sauvegarder
+        $adjustedPrices = [];
+        foreach ($generatedPrices as [$timestamp, $generatedPrice]) {
+            $adjustedPrice = round($generatedPrice * $adjustmentFactor, 8);
+            $adjustedPrices[] = [$timestamp, $adjustedPrice];
+        }
+
+        // ✅ ÉTAPE 5: Sauvegarder en BD
+        $this->savePricesToDatabase($crypto->id, $adjustedPrices);
+    }
+
+    /**
+     * Sauvegarder les prix en BD
+     * 
+     * @param string $cryptoId ID de la crypto
+     * @param array $prices Array de [timestamp_ms, prix]
+     */
+    private function savePricesToDatabase(string $cryptoId, array $prices): void
     {
-        $cacheKey = 'crypto_history:' . ($coingeckoId ?: 'synthetic_' . uniqid()) . ':' . $days;
-        $ttl = 60 * 60 * 24 * 30;
+        if (empty($prices)) {
+            return;
+        }
 
-        return Cache::remember($cacheKey, $ttl, function () use ($coingeckoId, $days) {
-            // Cas 1: Pas de coingecko_id → Générer les prix localement
-            if (empty($coingeckoId)) {
-                $prices = $this->cotationService->generatePriceHistory($coingeckoId, $days);
-                return $prices;
+        $saved = 0;
+        $failed = 0;
+
+        foreach ($prices as [$timestamp, $price]) {
+            try {
+                $date = Carbon::createFromTimestampMs($timestamp);
+
+                CryptoHistory::updateOrCreate(
+                    [
+                        'cryptomoney_id' => $cryptoId,
+                        'recorded_at' => $date,
+                    ],
+                    [
+                        'price' => round($price, 10),
+                        'volume' => 0,
+                    ]
+                );
+
+                $saved++;
+
+            } catch (\Exception $e) {
+                Log::warning('Error saving price', [
+                    'crypto_id' => $cryptoId,
+                    'timestamp' => $timestamp,
+                    'error' => $e->getMessage(),
+                ]);
+                $failed++;
             }
+        }
 
-            // Cas 2: Essayer CoinGecko d'abord
-            $url = "https://api.coingecko.com/api/v3/coins/{$coingeckoId}/market_chart";
-            $response = Http::withOptions(['verify' => false])->get($url, [
-                'vs_currency' => 'eur',
+        Log::info('✅ Prices saved', [
+            'crypto_id' => $cryptoId,
+            'saved' => $saved,
+            'failed' => $failed,
+        ]);
+    }
+
+
+    /**
+     * ✅ VERSION CORRIGÉE - Calcule VRAIMENT le change_24h_pct
+     * 
+     * Le problème était:
+     * 1. Le cache retient les anciennes données
+     * 2. La boucle foreach retourne toujours index 0
+     * 
+     * SOLUTION: Vider le cache ET recalculer proprement
+     * 
+     * @param string $cryptoId ID de la crypto
+     * @param int $days Nombre de jours
+     * @return array Array de [timestamp_ms, prix, change_24h_pct]
+     */
+    public function getMarketChart(string $cryptoId, int $days = 30): array
+    {
+        $cacheKey = 'crypto_history:' . $cryptoId . ':' . $days;
+        $ttl = 60 * 60 * 24; // Cache 24h
+
+        // ✅ MODIFICATION: Utiliser forget() pour forcer la recalcul
+        Cache::forget($cacheKey);
+
+        return Cache::remember($cacheKey, $ttl, function () use ($cryptoId, $days) {
+            
+            Log::info('📊 Fetching market chart', [
+                'crypto_id' => $cryptoId,
                 'days' => $days,
             ]);
 
-            if (!$response->ok()) {
-                // ❌ CoinGecko a échoué → Fallback au générateur local
-                return $this->cotationService->generatePriceHistory($coingeckoId, $days);
+            // ✅ Récupérer l'historique en BDD - ORDONNÉ CORRECTEMENT
+            $history = CryptoHistory::where('cryptomoney_id', $cryptoId)
+                ->where('recorded_at', '>=', now()->subDays($days))
+                ->orderBy('recorded_at', 'asc')
+                ->get()
+                ->toArray(); // ✅ Convertir en array pour accès facile aux index
+
+            if (empty($history)) {
+                Log::warning('No history found', ['crypto_id' => $cryptoId]);
+                return [];
             }
 
-            $data = $response->json();
-            $prices = $data['prices'] ?? [];
+            // ✅ DÉBOGAGE: Logger le nombre d'entrées
+            Log::info('History count: ' . count($history));
 
-            // Persist points to CryptoHistory
-            $cryptoModel = Cryptomoney::where('coingecko_id', $coingeckoId)->first();
-            if ($cryptoModel && !empty($prices)) {
-                foreach ($prices as [$timestamp, $price]) {
-                    $date = Carbon::createFromTimestampMs($timestamp);
-                    CryptoHistory::updateOrCreate(
-                        [
-                            'cryptomoney_id' => $cryptoModel->id,
-                            'recorded_at' => $date,
-                        ],
-                        [
-                            'price' => $price,
-                            'market_cap' => $cryptoModel->market_cap,
-                            'volume' => $cryptoModel->volume_24h,
-                        ]
-                    );
+            // ✅ Construire le tableau avec change_24h_pct CORRECTEMENT
+            $prices = [];
+
+            for ($i = 0; $i < count($history); $i++) {
+                $currentRecord = $history[$i];
+                $change24h = 0.00;
+
+                // ✅ Si ce n'est pas le premier élément (index 0)
+                if ($i > 0) {
+                    $prevPrice = (float) $history[$i - 1]['price'];
+                    $currentPrice = (float) $currentRecord['price'];
+
+                    if ($prevPrice > 0) {
+                        $change24h = (($currentPrice - $prevPrice) / $prevPrice) * 100;
+                        $change24h = round($change24h, 2);
+
+                        // ✅ DÉBOGAGE: Logger le calcul
+                        Log::debug("Day {$i}: {$prevPrice} → {$currentPrice} = {$change24h}%");
+                    }
                 }
+
+                $prices[] = [
+                    (int) strtotime($currentRecord['recorded_at']) * 1000,
+                    (float) $currentRecord['price'],
+                    $change24h, // ✅ CLÉS: Index 2 = change_24h_pct
+                ];
             }
+
+            Log::info('Prices array created', [
+                'count' => count($prices),
+                'sample' => array_slice($prices, 0, 2), // Voir les 2 premiers
+            ]);
 
             return $prices;
         });
     }
 
+
+
     /**
-     * Import and sync top 10 cryptos
+     * Lister toutes les cryptos (paginated)
+     * 
+     * @param int $perPage
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function ensureTopCryptos(array $coingeckoIds = [], int $days = 30): array
+public function listCryptos(int $perPage = 10)
+{
+    return Cryptomoney::paginate($perPage);
+}
+
+
+    /**
+     * Obtenir une crypto par ID
+     * 
+     * @param string $id
+     * @return Cryptomoney
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function getCryptoById(string $id): Cryptomoney
     {
-        $results = ['imported' => 0, 'failed' => 0, 'errors' => []];
+        return Cryptomoney::findOrFail($id);
+    }
 
-        if (empty($coingeckoIds)) {
-            $coingeckoIds = [
-                'bitcoin', 'ethereum', 'tether', 'binancecoin', 'usd-coin',
-                'ripple', 'cardano', 'dogecoin', 'polygon', 'solana'
-            ];
+    /**
+     * Valider les données d'une crypto
+     * 
+     * @param string $symbol
+     * @param array $data
+     * @throws \Exception
+     */
+    private function validateCryptoData(string $symbol, array $data): void
+    {
+        if (empty($symbol)) {
+            throw new \Exception('Symbol is required');
         }
 
-        foreach ($coingeckoIds as $id) {
-            try {
-                $this->addFromCoinGecko($id);
-                $this->getMarketChart($id, $days);
-                $results['imported']++;
-            } catch (\Exception $e) {
-                $results['failed']++;
-                $results['errors'][] = ['id' => $id, 'error' => $e->getMessage()];
-            }
+        if (empty($data['name'])) {
+            throw new \Exception('Name is required');
         }
 
-        return $results;
+        if (!isset($data['price_eur'])) {
+            throw new \Exception('Price EUR is required');
+        }
+
+        if (!is_numeric($data['price_eur'])) {
+            throw new \Exception('Price EUR must be numeric');
+        }
     }
 }

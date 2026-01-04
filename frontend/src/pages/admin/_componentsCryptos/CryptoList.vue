@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { computed, ref } from 'vue'
-import api from '../../../services/api'; // ajouté pour la synchronisation d'historique
+import api from '../../../services/api'
 
 interface Props {
   cryptos: any[]
@@ -33,8 +33,6 @@ interface Props {
 
 interface Emits {
   (e: 'viewDetails', id: number): void
-  (e: 'editCrypto', crypto: any): void
-  (e: 'deleteCrypto', crypto: any): void
   (e: 'changePage', page: number): void
   (e: 'refresh'): void
 }
@@ -46,8 +44,6 @@ const emit = defineEmits<Emits>()
 const query = ref('')
 const sortBy = ref<'name'|'price'|'change'>('price')
 const viewMode = ref<'grid'|'list'>('grid')
-
-// nouvel état pour sync-history
 const syncLoading = ref(false)
 
 // Fonctions utilitaires
@@ -95,19 +91,16 @@ const filteredCryptos = computed(() => {
   return list
 })
 
-// add image error handler
 function handleImgError(e: Event) {
   const target = e.target as HTMLImageElement | null
   if (target) target.style.display = 'none'
 }
 
-// Nouvelle fonction : appeler l'API sync-history
 async function handleSyncHistory() {
   if (syncLoading.value) return
   syncLoading.value = true
   try {
     await api.crypto.syncHistory()
-    // rafraîchir la liste côté parent
     emit('refresh')
   } catch (err: any) {
     const msg = err?.message || 'Erreur lors de la synchronisation'
@@ -173,7 +166,7 @@ async function handleSyncHistory() {
               🔄
             </Button>
 
-            <!-- Nouveau bouton avec AlertDialog pour Sync history -->
+            <!-- Bouton Sync history avec AlertDialog -->
             <AlertDialog>
               <AlertDialogTrigger as-child>
                 <Button
@@ -181,10 +174,8 @@ async function handleSyncHistory() {
                   class="relative bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold overflow-hidden group"
                   title="Synchroniser l'historique (admin)"
                 >
-                  <!-- Animation de pulsation en arrière-plan -->
                   <div class="absolute inset-0 bg-gradient-to-r from-[#01FF19]/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                   
-                  <!-- Contenu du bouton -->
                   <span class="relative flex items-center gap-2">
                     <span v-if="syncLoading" class="animate-spin">⏳</span>
                     <span v-else>🔁</span>
@@ -219,7 +210,6 @@ async function handleSyncHistory() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-
           </div>
         </div>
       </CardContent>
@@ -241,7 +231,7 @@ async function handleSyncHistory() {
         <div class="text-6xl mb-4">🔍</div>
         <h3 class="text-xl font-semibold text-[#38618C] mb-2">Aucune crypto trouvée</h3>
         <p class="text-gray-500 mb-6">
-          {{ query ? 'Essayez de modifier votre recherche' : 'Ajoutez votre première cryptomonnaie' }}
+          {{ query ? 'Essayez de modifier votre recherche' : 'Aucune cryptomonnaie disponible' }}
         </p>
       </CardContent>
     </Card>
@@ -301,28 +291,12 @@ async function handleSyncHistory() {
             </div>
           </div>
 
-          <div class="flex gap-2">
-            <Button 
-              class="flex-1 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
-              @click.stop="emit('viewDetails', crypto.id)"
-            >
-              📊 details
-            </Button>
-            <Button 
-              variant="outline"
-              class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-              @click.stop="emit('editCrypto', crypto)"
-            >
-              ✏️
-            </Button>
-            <Button 
-              variant="outline"
-              class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
-              @click.stop="emit('deleteCrypto', crypto)"
-            >
-              🗑️
-            </Button>
-          </div>
+          <Button 
+            class="w-full bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+            @click.stop="emit('viewDetails', crypto.id)"
+          >
+            📊 View Details
+          </Button>
         </CardContent>
       </Card>
     </div>
@@ -379,31 +353,13 @@ async function handleSyncHistory() {
               </div>
             </div>
 
-            <div class="flex gap-2 w-full sm:w-auto">
-              <Button 
-                size="sm"
-                class="flex-1 sm:flex-none bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
-                @click.stop="emit('viewDetails', crypto.id)"
-              >
-                📊 details
-              </Button>
-              <Button 
-                size="sm"
-                variant="outline"
-                class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-                @click.stop="emit('editCrypto', crypto)"
-              >
-                ✏️
-              </Button>
-              <Button 
-                size="sm"
-                variant="outline"
-                class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
-                @click.stop="emit('deleteCrypto', crypto)"
-              >
-                🗑️
-              </Button>
-            </div>
+            <Button 
+              size="sm"
+              class="w-full sm:w-auto bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+              @click.stop="emit('viewDetails', crypto.id)"
+            >
+              📊 View Details
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -480,10 +436,6 @@ async function handleSyncHistory() {
   background-color: #38618C;
 }
 
-:deep(.hover\:bg-\[#FF5964\]:hover) {
-  background-color: #FF5964;
-}
-
 :deep(.hover\:border-\[#35A7FF\]:hover) {
   border-color: #35A7FF;
 }
@@ -492,15 +444,10 @@ async function handleSyncHistory() {
   border-color: #35A7FF;
 }
 
-:deep(.border-\[#FF5964\]) {
-  border-color: #FF5964;
-}
-
 :deep(.hover\:text-white:hover) {
   color: white;
 }
 
-/* Animation de glow pour le bouton Sync */
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 5px #01FF19;

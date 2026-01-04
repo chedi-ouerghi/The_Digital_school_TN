@@ -27,9 +27,10 @@ class Transaction extends Model
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:8',
-        'price' => 'decimal:8',
-        'total_eur' => 'decimal:8',
+        'type' => 'string',
+        'quantity' => 'decimal:18',
+        'price' => 'decimal:18',
+        'total_eur' => 'decimal:18',
         'admin_operation' => 'boolean',
         'cancelled_at' => 'datetime',
     ];
@@ -40,12 +41,19 @@ class Transaction extends Model
 
     public function cryptoWalletAsset()
     {
-        return $this->belongsTo(CryptoWalletAsset::class, 'crypto_wallet_asset_id');
+        return $this->belongsTo(
+            CryptoWalletAsset::class,
+            'crypto_wallet_asset_id'
+        );
     }
 
+    /**
+     * Accès indirect au wallet via crypto_wallet_assets
+     * (plus simple et plus fiable que hasOneThrough ici)
+     */
     public function wallet()
     {
-        return $this->cryptoWalletAsset ? $this->cryptoWalletAsset->wallet : null;
+        return $this->cryptoWalletAsset?->wallet();
     }
 
     /* ===================== BOOT ===================== */
@@ -61,4 +69,3 @@ class Transaction extends Model
         });
     }
 }
-

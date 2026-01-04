@@ -4,12 +4,11 @@ namespace Tests\Feature\Controllers;
 
 use App\Models\BlogPost;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class BlogControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get all blog posts (public)
@@ -79,17 +78,15 @@ public function test_get_all_blog_posts()
      */
     public function test_create_blog_post_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/admin/blogs', [
-                'title' => 'New Blog Post',
-                'category' => 'Tutorial',
-                'summary' => 'A short summary',
-                'content' => 'Full blog content here',
-                'published_at' => now()
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/admin/blogs', [
+            'title' => 'New Blog Post',
+            'category' => 'Tutorial',
+            'summary' => 'A short summary',
+            'content' => 'Full blog content here',
+            'published_at' => now()
+        ], $admin);
 
         $response->assertStatus(201)
             ->assertJsonStructure([
@@ -109,14 +106,12 @@ public function test_get_all_blog_posts()
      */
     public function test_create_blog_post_as_non_admin()
     {
-        $user = User::factory()->create(['role' => 'CLIENT']);
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser(['role' => 'CLIENT']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/admin/blogs', [
-                'title' => 'New Blog Post',
-                'content' => 'Content'
-            ]);
+        $response = $this->authenticatedJson('POST', '/api/v1/admin/blogs', [
+            'title' => 'New Blog Post',
+            'content' => 'Content'
+        ], $user);
 
         $response->assertStatus(403);
     }
@@ -126,15 +121,13 @@ public function test_get_all_blog_posts()
      */
     public function test_update_blog_post_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         $post = BlogPost::factory()->create(['user_id' => $admin->id]);
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson("/api/v1/admin/blogs/{$post->id}", [
-                'title' => 'Updated Title',
-                'content' => 'Updated content'
-            ]);
+        $response = $this->authenticatedJson('PUT', "/api/v1/admin/blogs/{$post->id}", [
+            'title' => 'Updated Title',
+            'content' => 'Updated content'
+        ], $admin);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('blog_posts', [
@@ -148,12 +141,10 @@ public function test_get_all_blog_posts()
      */
     public function test_delete_blog_post_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         $post = BlogPost::factory()->create(['user_id' => $admin->id]);
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson("/api/v1/admin/blogs/{$post->id}");
+        $response = $this->authenticatedJson('DELETE', "/api/v1/admin/blogs/{$post->id}", [], $admin);
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'Blog post deleted successfully']);

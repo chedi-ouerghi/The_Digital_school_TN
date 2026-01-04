@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Mail, Lock, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-vue-next'
+import DottedSurface from '@/components/DottedSurface.vue'
+import { Loader2, Mail, Lock, AlertCircle, CheckCircle2, Eye, EyeOff, Shield, Sparkles } from 'lucide-vue-next'
 
 const router = useRouter()
 const email = ref('')
@@ -41,7 +42,7 @@ function togglePasswordVisibility() {
   <div class="min-h-screen flex flex-col lg:flex-row overflow-hidden relative">
     <!-- DottedSurface amélioré -->
     <div class="absolute inset-0 hidden lg:block">
-      <DottedSurface class-name="w-full h-full opacity-100" />
+      <DottedSurface className="w-full h-full opacity-100" />
       <!-- Effets de gradient améliorés -->
       <div class="absolute inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/50 to-gray-900/80" />
     </div>

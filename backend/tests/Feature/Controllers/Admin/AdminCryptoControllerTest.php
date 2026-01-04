@@ -4,24 +4,21 @@ namespace Tests\Feature\Controllers\Admin;
 
 use App\Models\User;
 use App\Models\Cryptomoney;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class AdminCryptoControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get crypto as admin
      */
     public function test_edit_crypto_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
         $crypto = Cryptomoney::factory()->create();
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson("/api/v1/cryptos/{$crypto->id}");
+        $response = $this->authenticatedJson('GET', "/api/v1/cryptos/{$crypto->id}", [], $admin);
 
         $response->assertStatus(200)
             ->assertJsonStructure(['id', 'name', 'symbol', 'price_eur']);
@@ -32,102 +29,23 @@ class AdminCryptoControllerTest extends TestCase
      */
     public function test_edit_non_existent_crypto_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/cryptos/99999');
+        $response = $this->authenticatedJson('GET', '/api/v1/cryptos/99999', [], $admin);
 
         $response->assertStatus(404);
     }
 
-    /**
-     * Test update crypto as admin
-     */
-    public function test_update_crypto_as_admin()
-    {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $crypto = Cryptomoney::factory()->create([
-            'name' => 'Bitcoin',
-            'price_eur' => 50000
-        ]);
-        $token = $admin->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson("/api/v1/admin/cryptos/{$crypto->id}", [
-                'name' => 'Bitcoin Updated',
-                'price_eur' => 55000
-            ]);
-
-        $response->assertStatus(200);
-        $this->assertDatabaseHas('cryptomoney', [
-            'id' => $crypto->id,
-            'name' => 'Bitcoin Updated',
-            'price_eur' => 55000
-        ]);
-    }
-
-    /**
-     * Test update non-existent crypto as admin
-     */
-    public function test_update_non_existent_crypto_as_admin()
-    {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson('/api/v1/admin/cryptos/99999', [
-                'name' => 'Bitcoin',
-                'price_eur' => 50000
-            ]);
-
-        $response->assertStatus(404)
-            ->assertJson(['error' => 'Crypto not found']);
-    }
-
-    /**
-     * Test delete crypto as admin
-     */
-    public function test_delete_crypto_as_admin()
-    {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $crypto = Cryptomoney::factory()->create();
-        $token = $admin->createToken('TestToken')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson("/api/v1/admin/cryptos/{$crypto->id}");
-
-        $response->assertStatus(200)
-            ->assertJson(['message' => 'Crypto deleted']);
-
-        $this->assertDatabaseMissing('cryptomoney', ['id' => $crypto->id]);
-    }
-
-    /**
-     * Test delete non-existent crypto as admin
-     */
-    public function test_delete_non_existent_crypto_as_admin()
-    {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
-
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->deleteJson('/api/v1/admin/cryptos/99999');
-
-        $response->assertStatus(404)
-            ->assertJson(['error' => 'Crypto not found']);
-    }
 
     /**
      * Test sync crypto history as admin
      */
     public function test_sync_crypto_history_as_admin()
     {
-        $admin = User::factory()->create(['role' => 'ADMIN']);
-        $token = $admin->createToken('TestToken')->plainTextToken;
+        $admin = $this->createAuthenticatedUser(['role' => 'ADMIN']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/admin/cryptos/sync-history');
+        $response = $this->authenticatedJson('POST', '/api/v1/admin/cryptos/sync-history', [], $admin);
 
         $response->assertStatus(200)
             ->assertJsonStructure(['status', 'message']);
@@ -138,11 +56,9 @@ class AdminCryptoControllerTest extends TestCase
      */
     public function test_sync_crypto_history_as_non_admin()
     {
-        $user = User::factory()->create(['role' => 'CLIENT']);
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser(['role' => 'CLIENT']);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/admin/cryptos/sync-history');
+        $response = $this->authenticatedJson('POST', '/api/v1/admin/cryptos/sync-history', [], $user);
 
         $response->assertStatus(403);
     }

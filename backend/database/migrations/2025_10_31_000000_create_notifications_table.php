@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->string('title');
             $table->text('message');
-            $table->enum('type', ['account_request', 'transaction', 'price_update', 'admin_action']);
+            $table->enum('type', ['account_request', 'transaction', 'price_update', 'admin_action', 'welcome']);
             $table->boolean('is_read')->default(false);
             $table->timestamps();
         });

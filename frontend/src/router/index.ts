@@ -11,6 +11,8 @@ import CryptoDetails from '../pages/admin/CryptoDetails.vue'
 import Cryptos from '../pages/admin/Cryptos.vue'
 import AdminOverview from '../pages/admin/Overview.vue'
 import Settings from '../pages/admin/Settings.vue'
+import Blogs from '../pages/admin/Blogs.vue'
+
 import AdminTransactionDetails from '../pages/admin/TransactionDetails.vue'
 import AdminTransactions from '../pages/admin/Transactions.vue'
 import ClientCryptosDetails from '../pages/client/CryptosDetails.vue'
@@ -20,8 +22,8 @@ import ClientTransactions from '../pages/client/Transactions.vue'
 import auth from '../services/auth'
 
 const routes = [
-  { 
-    path: '/', 
+  {
+    path: '/',
     name: '/Bitchest',
     component: Landing,
   },
@@ -35,9 +37,9 @@ const routes = [
     name: 'BlogPost',
     component: BlogPost,
   },
-  { 
-    path: '/signin', 
-    name: 'SignIn', 
+  {
+    path: '/signin',
+    name: 'SignIn',
     component: SignIn,
     meta: { requiresGuest: true }
   },
@@ -47,12 +49,12 @@ const routes = [
     component: VerifyEmail,
     meta: { requiresGuest: false }
   },
-  
+
   {
-  path: '/:pathMatch(.*)*',
-  name: 'NotFound',
-  component: () => import('../pages/NotFound.vue')
-},
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('../pages/NotFound.vue')
+  },
 
   // Dashboard principal
   {
@@ -108,13 +110,19 @@ const routes = [
         component: AdminTransactionDetails,
         meta: { requiresAuth: true, roles: ['ADMIN'] }
       },
-{
+      {
+        path: 'admin/blogs',
+        name: 'AdminBlogs',
+        component: Blogs,
+        meta: { requiresAuth: true, roles: ['ADMIN'] }
+      },
+      {
         path: 'admin/settings',
         name: 'AdminSettings',
         component: Settings,
         meta: { requiresAuth: true, roles: ['ADMIN'] }
       },
-      
+
 
       // === CLIENT ROUTES ===
       {
@@ -165,27 +173,30 @@ const router = createRouter({
 
 // === GUARDES DE NAVIGATION ===
 router.beforeEach(async (to, from) => {
-  const isAuthenticated = await auth.isAuthenticated()
-  const userRole = auth.getRole()?.toUpperCase()
-  
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    return { path: '/signin', query: { redirect: to.fullPath } }
-  }
+  // Only check authentication for routes that require it
+  if (to.meta.requiresAuth || to.meta.requiresGuest) {
+    const isAuthenticated = await auth.isAuthenticated()
+    const userRole = auth.getRole()?.toUpperCase()
 
-  if (to.meta.requiresGuest && isAuthenticated) {
-    const redirectPath = from.query.redirect as string
-    if (redirectPath) return { path: redirectPath }
-    return userRole === 'ADMIN' 
-      ? { path: '/dashboard/admin/overview' }
-      : { path: '/dashboard/overview' }
-  }
+    if (to.meta.requiresAuth && !isAuthenticated) {
+      return { path: '/signin', query: { redirect: to.fullPath } }
+    }
 
-  if (to.meta.requiresAuth && to.meta.roles) {
-    const requiredRoles = (to.meta.roles as string[]).map(role => role.toUpperCase())
-    if (!requiredRoles.includes(userRole)) {
-      return userRole === 'ADMIN' 
+    if (to.meta.requiresGuest && isAuthenticated) {
+      const redirectPath = from.query.redirect as string
+      if (redirectPath) return { path: redirectPath }
+      return userRole === 'ADMIN'
         ? { path: '/dashboard/admin/overview' }
         : { path: '/dashboard/overview' }
+    }
+
+    if (to.meta.requiresAuth && to.meta.roles) {
+      const requiredRoles = (to.meta.roles as string[]).map(role => role.toUpperCase())
+      if (!requiredRoles.includes(userRole)) {
+        return userRole === 'ADMIN'
+          ? { path: '/dashboard/admin/overview' }
+          : { path: '/dashboard/overview' }
+      }
     }
   }
 })

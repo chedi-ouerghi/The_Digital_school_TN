@@ -2,6 +2,7 @@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import api from '@/services/api'
+import { initializeCsrf } from '@/services/auth'
 import { AlertCircle, ArrowRight, CheckCircle2, Home, Loader2, Mail } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -24,6 +25,9 @@ onMounted(async () => {
   }
 
   try {
+    // 🔥 CSRF Protection: Initialiser le token avant la vérification
+    await initializeCsrf()
+    
     const response = await api.auth.verifyEmail({ token: token.value })
     
     if (response.success || response) {

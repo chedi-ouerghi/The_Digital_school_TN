@@ -6,12 +6,10 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Cryptomoney;
 use App\Models\CryptoWalletAsset;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ClientAdminControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get client portfolio as admin

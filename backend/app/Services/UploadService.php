@@ -25,13 +25,23 @@ class UploadService
             ]);
 
             // Delete old picture if exists
-            if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
-                $deleted = Storage::disk('public')->delete($user->profile_picture);
-                \Log::info('Deleted previous profile picture', [
-                    'user_id' => $user->id,
-                    'previous_path' => $user->profile_picture,
-                    'deleted' => $deleted,
-                ]);
+            if ($user->profile_picture) {
+                if (Storage::disk('public')->exists($user->profile_picture)) {
+                    $deleted = Storage::disk('public')->delete($user->profile_picture);
+                    \Log::info('Deleted previous profile picture', [
+                        'user_id' => $user->id,
+                        'previous_path' => $user->profile_picture,
+                        'deleted' => $deleted,
+                    ]);
+                } else {
+                    \Log::warning('Previous profile picture path found in DB but file does not exist on disk', [
+                        'user_id' => $user->id,
+                        'path' => $user->profile_picture,
+                    ]);
+                }
+                // Always set to null if a path existed, to prevent broken links if file was missing or deletion failed
+                $user->profile_picture = null;
+                $user->save();
             }
 
             // Create user-specific directory
@@ -95,13 +105,23 @@ class UploadService
             ]);
 
             // Delete old banner if exists
-            if ($user->profile_banner && Storage::disk('public')->exists($user->profile_banner)) {
-                $deleted = Storage::disk('public')->delete($user->profile_banner);
-                \Log::info('Deleted previous profile banner', [
-                    'user_id' => $user->id,
-                    'previous_path' => $user->profile_banner,
-                    'deleted' => $deleted,
-                ]);
+            if ($user->profile_banner) {
+                if (Storage::disk('public')->exists($user->profile_banner)) {
+                    $deleted = Storage::disk('public')->delete($user->profile_banner);
+                    \Log::info('Deleted previous profile banner', [
+                        'user_id' => $user->id,
+                        'previous_path' => $user->profile_banner,
+                        'deleted' => $deleted,
+                    ]);
+                } else {
+                    \Log::warning('Previous profile banner path found in DB but file does not exist on disk', [
+                        'user_id' => $user->id,
+                        'path' => $user->profile_banner,
+                    ]);
+                }
+                // Always set to null if a path existed, to prevent broken links if file was missing or deletion failed
+                $user->profile_banner = null;
+                $user->save();
             }
 
             // Create user-specific directory
@@ -155,8 +175,15 @@ class UploadService
     public function deleteProfilePicture(User $user): bool
     {
         try {
-            if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
-                Storage::disk('public')->delete($user->profile_picture);
+            if ($user->profile_picture) {
+                if (Storage::disk('public')->exists($user->profile_picture)) {
+                    Storage::disk('public')->delete($user->profile_picture);
+                } else {
+                    \Log::warning('Profile picture path found in DB but file does not exist on disk during deletion attempt', [
+                        'user_id' => $user->id,
+                        'path' => $user->profile_picture,
+                    ]);
+                }
                 $user->update(['profile_picture' => null]);
                 
                 \Log::info('Profile picture deleted successfully', [
@@ -181,8 +208,15 @@ class UploadService
     public function deleteProfileBanner(User $user): bool
     {
         try {
-            if ($user->profile_banner && Storage::disk('public')->exists($user->profile_banner)) {
-                Storage::disk('public')->delete($user->profile_banner);
+            if ($user->profile_banner) {
+                if (Storage::disk('public')->exists($user->profile_banner)) {
+                    Storage::disk('public')->delete($user->profile_banner);
+                } else {
+                    \Log::warning('Profile banner path found in DB but file does not exist on disk during deletion attempt', [
+                        'user_id' => $user->id,
+                        'path' => $user->profile_banner,
+                    ]);
+                }
                 $user->update(['profile_banner' => null]);
                 
                 \Log::info('Profile banner deleted successfully', [

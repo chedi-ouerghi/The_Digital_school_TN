@@ -4,12 +4,11 @@ namespace Tests\Feature\Controllers;
 
 use App\Models\User;
 use App\Models\Notification;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class NotificationControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test get notifications for authenticated user
@@ -17,16 +16,20 @@ class NotificationControllerTest extends TestCase
     public function test_get_notifications_authenticated()
     {
         $user = User::factory()->create();
+        $user->email_verified_at = now();
+        $user->save();
+        
         Notification::factory()->count(3)->create(['user_id' => $user->id]);
         
-        $token = $user->createToken('TestToken')->plainTextToken;
+        Auth::login($user);
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/notifications');
+        $response = $this->getJson('/api/v1/notifications');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                '*' => ['id', 'user_id', 'title', 'message', 'is_read']
+                'data' => [
+                    '*' => ['id', 'user_id', 'title', 'message', 'is_read']
+                ]
             ]);
     }
 
@@ -45,11 +48,9 @@ class NotificationControllerTest extends TestCase
      */
     public function test_get_empty_notifications()
     {
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->getJson('/api/v1/notifications');
+        $response = $this->authenticatedJson('GET', '/api/v1/notifications', [], $user);
 
         $response->assertStatus(200)
             ->assertJson([]);
@@ -60,15 +61,13 @@ class NotificationControllerTest extends TestCase
      */
     public function test_mark_notification_as_read()
     {
-        $user = User::factory()->create();
+        $user = $this->createAuthenticatedUser();
         $notification = Notification::factory()->create([
             'user_id' => $user->id,
             'is_read' => false
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson("/api/v1/notifications/{$notification->id}/read");
+        $response = $this->authenticatedJson('PUT', "/api/v1/notifications/{$notification->id}/read", [], $user);
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'Notification marked as read.']);
@@ -85,13 +84,10 @@ class NotificationControllerTest extends TestCase
     public function test_mark_notification_as_read_forbidden()
     {
         $user1 = User::factory()->create();
-        $user2 = User::factory()->create();
+        $user2 = $this->createAuthenticatedUser();
         $notification = Notification::factory()->create(['user_id' => $user1->id]);
-        
-        $token = $user2->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson("/api/v1/notifications/{$notification->id}/read");
+        $response = $this->authenticatedJson('PUT', "/api/v1/notifications/{$notification->id}/read", [], $user2);
 
         $response->assertStatus(403)
             ->assertJson(['error' => 'Access denied.']);
@@ -102,11 +98,9 @@ class NotificationControllerTest extends TestCase
      */
     public function test_mark_non_existent_notification_as_read()
     {
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson('/api/v1/notifications/99999/read');
+        $response = $this->authenticatedJson('PUT', '/api/v1/notifications/99999/read', [], $user);
 
         $response->assertStatus(404);
     }

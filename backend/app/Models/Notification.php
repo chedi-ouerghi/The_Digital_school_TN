@@ -33,6 +33,7 @@ class Notification extends Model
     public const TYPE_TRANSACTION = 'transaction';
     public const TYPE_PRICE_UPDATE = 'price_update';
     public const TYPE_ADMIN_ACTION = 'admin_action';
+    public const TYPE_WELCOME = 'welcome';
 
     /**
      * Notification belongs to a User (nullable for global notifications)
@@ -52,6 +53,7 @@ class Notification extends Model
             self::TYPE_TRANSACTION => 'swap-horizontal',
             self::TYPE_PRICE_UPDATE => 'trending-up',
             self::TYPE_ADMIN_ACTION => 'shield-check',
+            self::TYPE_WELCOME => 'gift',
             default => 'bell'
         };
     }
@@ -66,6 +68,7 @@ class Notification extends Model
             self::TYPE_TRANSACTION => 'blue',
             self::TYPE_PRICE_UPDATE => 'green',
             self::TYPE_ADMIN_ACTION => 'red',
+            self::TYPE_WELCOME => 'green',
             default => 'gray'
         };
     }

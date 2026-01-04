@@ -1,62 +1,20 @@
 <?php
 
 /**
- * Génère le prix initial d'une cryptomonnaie
- * Basé sur le premier caractère du symbole
- * 
- * Exemple:
- * - Bitcoin (B = 66) → prix entre 66 et 76 EUR
- * - Ethereum (E = 69) → prix entre 69 et 79 EUR
- * 
- * @param string $cryptoname Symbole ou nom de la crypto
- * @return float Prix initial entre 0.01 et 200+ EUR
+ * Renvoie la valeur de mise sur le marché de la crypto monnaie
+ * @param $cryptoname {string} Le nom de la crypto monnaie
  */
-function getFirstCotation($cryptoname): float
-{
-    // Vérifier que l'entrée n'est pas vide
-    if (empty($cryptoname)) {
-        return random_int(10, 100);
-    }
-
-    // Caractère ASCII du premier caractère + random de 0 à 10
-    $basePrice = ord(substr($cryptoname, 0, 1)) + rand(0, 10);
-    
-    // S'assurer que le prix est positif (minimum 0.01)
-    return max(0.01, (float) $basePrice);
+function getFirstCotation($cryptoname){
+  return ord(substr($cryptoname,0,1)) + rand(0, 10);
 }
 
 /**
- * Génère la variation journalière d'une cryptomonnaie
- * Résultat: entre -10 et +10% de variation basée sur les caractères
- * 
- * Exemple:
- * - "BTC" avec signe positif → +5% ou +6% du premier caractère
- * - "ETH" avec signe négatif → -5% ou -6% du dernier caractère
- * 
- * @param string $cryptoname Symbole ou nom de la crypto
- * @return float Delta de prix (peut être négatif)
+ * Renvoie la variation de cotation de la crypto monnaie sur un jour
+ * @param $cryptoname {string} Le nom de la crypto monnaie
  */
-function getCotationFor($cryptoname): float
-{
-    if (empty($cryptoname)) {
-        return (random_int(0, 99) > 40) ? random_int(1, 10) : -random_int(1, 10);
-    }
-
-    // 60% de chance baisse, 40% de chance hausse
-    $sign = (rand(0, 99) > 40) ? 1 : -1;
-
-    // Utiliser le premier ou dernier caractère pour varier
-    $useFirst = rand(0, 99) > 49;
-    $char = $useFirst ? substr($cryptoname, 0, 1) : substr($cryptoname, -1);
-    $ordVal = ord($char);
-
-    // Variation: ordVal × 1-10% (ex: 66 × 0.05 = 3.30)
-    $multiplier = rand(1, 10) * 0.01;
-    $delta = $sign * $ordVal * $multiplier;
-
-    return round($delta, 2);
+function getCotationFor($cryptoname){	
+	return ((rand(0, 99)>40) ? 1 : -1) * ((rand(0, 99)>49) ? ord(substr($cryptoname,0,1)) : ord(substr($cryptoname,-1))) * (rand(1,10) * .01);
 }
-
 /**
  * Génère les prix historiques (30 derniers jours)
  * Utilisé principalement pour les tests et le prototypage

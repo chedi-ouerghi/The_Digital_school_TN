@@ -18,16 +18,13 @@ class PortefeuilleService
     {
         $wallet = Wallet::with('cryptoWalletAssets.cryptomoney')->findOrFail($walletId);
         
-        $totalInvested = 0.0;
-        $currentValue = 0.0;
-        
-        foreach ($wallet->cryptoWalletAssets as $asset) {
-            // CORRECTION: Utilise 'average_buy_price' au lieu de 'avg_buy_price_eur'
-            $invested = (float) $asset->average_buy_price * (float) $asset->quantity;
-            $current = (float) ($asset->cryptomoney?->price_eur ?? 0) * (float) $asset->quantity;
-            $totalInvested += $invested;
-            $currentValue += $current;
-        }
+        $totalInvested = $wallet->cryptoWalletAssets
+            ->filter(fn($asset) => (float)$asset->quantity > 0)
+            ->sum(fn($asset) => (float)$asset->average_buy_price * (float)$asset->quantity);
+
+        $currentValue = $wallet->cryptoWalletAssets
+            ->filter(fn($asset) => (float)$asset->quantity > 0)
+            ->sum(fn($asset) => (float)($asset->cryptomoney?->price_eur ?? 0) * (float)$asset->quantity);
         
         $plusValue = $currentValue - $totalInvested;
         
@@ -63,8 +60,8 @@ class PortefeuilleService
                     'symbol' => $asset->cryptomoney?->symbol,
                     'name' => $asset->cryptomoney?->name,
                     'quantity' => (float) $asset->quantity,
-                    'avg_buy_price_eur' => (float) $asset->average_buy_price,
-                    'current_price_eur' => (float) ($asset->cryptomoney?->price_eur ?? 0),
+                    'avg_buy_price_eur' => round((float) $asset->average_buy_price, 8),
+                    'current_price_eur' => round((float) ($asset->cryptomoney?->price_eur ?? 0), 8),
                     'invested_eur' => round($invested, 2),
                     'current_value_eur' => round($current, 2),
                     'plus_value_eur' => round($plusValue, 2),
@@ -94,23 +91,28 @@ class PortefeuilleService
             // Pour chaque asset du portefeuille
             foreach ($wallet->cryptoWalletAssets as $asset) {
                 // Calcule la quantité détenue à cette date
-                $quantity = Transaction::where('crypto_wallet_asset_id', $asset->id)
+                $transactions = Transaction::where('crypto_wallet_asset_id', $asset->id)
                     ->where('created_at', '<=', $date->endOfDay())
-                    ->whereNull('cancelled_at') // Exclut les transactions annulées
-                    ->get()
-                    ->reduce(function ($carry, $transaction) {
-                        return $transaction->type === 'ACHAT'
-                            ? $carry + (float)$transaction->quantity
-                            : $carry - (float)$transaction->quantity;
-                    }, 0);
+                    ->whereNull('cancelled_at')
+                    ->get();
+
+                $quantity = 0;
+                foreach ($transactions as $transaction) {
+                    if (in_array($transaction->type, ['ACHAT', 'BUY'], true)) {
+                        $quantity += (float)$transaction->quantity;
+                    } elseif (in_array($transaction->type, ['VENTE', 'SELL'], true)) {
+                        $quantity -= (float)$transaction->quantity;
+                    }
+                }
 
                 if ($quantity > 0) {
-                    // Récupère le prix historique pour cette date
+                    // Récupère le prix historique le plus récent avant ou à cette date
                     $history = CryptoHistory::where('cryptomoney_id', $asset->cryptomoney_id)
                         ->where('recorded_at', '<=', $date->endOfDay())
                         ->orderBy('recorded_at', 'desc')
                         ->first();
                     
+                    // Utilise le prix historique trouvé, sinon le prix actuel de la cryptomonnaie
                     $price = $history ? (float)$history->price : (float)($asset->cryptomoney?->price_eur ?? 0);
                     $value += $quantity * $price;
                 }
@@ -153,8 +155,8 @@ class PortefeuilleService
                     'symbol' => $asset->cryptomoney?->symbol,
                     'name' => $asset->cryptomoney?->name,
                     'quantity' => $quantity,
-                    'avg_buy_price_eur' => $avgBuyPrice,
-                    'current_price_eur' => $currentPrice,
+                    'avg_buy_price_eur' => round($avgBuyPrice, 8),
+                    'current_price_eur' => round($currentPrice, 8),
                     'invested_eur' => round($invested, 2),
                     'current_value_eur' => round($current, 2),
                     'plus_value_eur' => round($plusValue, 2),
@@ -167,7 +169,7 @@ class PortefeuilleService
                                 'id' => $t->id,
                                 'type' => $t->type,
                                 'quantity' => (float) $t->quantity,
-                                'unit_price_eur' => (float) $t->price,
+                                'unit_price_eur' => round((float) $t->price, 8),
                                 'total_eur' => round((float) $t->quantity * (float) $t->price, 2),
                                 'date' => optional($t->created_at)->toDateTimeString(),
                             ];
@@ -175,18 +177,136 @@ class PortefeuilleService
                 ];
             })->values()->all();
 
+        $totalInvested = round(
+            $wallet->cryptoWalletAssets
+                ->filter(fn($a) => (float)$a->quantity > 0)
+                ->sum(fn($a) => (float)$a->average_buy_price * (float)$a->quantity),
+            2
+        );
+        $totalCurrentValue = round(
+            $wallet->cryptoWalletAssets
+                ->filter(fn($a) => (float)$a->quantity > 0)
+                ->sum(fn($a) => (float)($a->cryptomoney?->price_eur ?? 0) * (float)$a->quantity),
+            2
+        );
+
+        $totalUnits = 0;
+        $buyCount = 0;
+        foreach ($positions as $position) {
+            $totalUnits += $position['quantity'];
+            foreach ($position['transactions'] as $transaction) {
+                if ($transaction['type'] === 'ACHAT') {
+                    $buyCount++;
+                }
+            }
+        }
+
+    
+
         return [
-            'id' => $wallet->id,
-            'balance_eur' => (float) $wallet->balance_eur,
-            'total_invested_eur' => round(
-                $wallet->cryptoWalletAssets->sum(fn($a) => (float)$a->average_buy_price * (float)$a->quantity),
-                2
-            ),
-            'total_current_value_eur' => round(
-                $wallet->cryptoWalletAssets->sum(fn($a) => (float)($a->cryptomoney?->price_eur ?? 0) * (float)$a->quantity),
-                2
-            ),
-            'positions' => $positions,
+            'totalValue' => $totalCurrentValue,
+            'totalInvestment' => $totalInvested,
+            'totalPlusValue' => round($totalCurrentValue - $totalInvested, 2),
+            'totalPlusValuePercent' => $totalInvested > 0 ? round((($totalCurrentValue - $totalInvested) / $totalInvested) * 100, 2) : 0,
+            'assets' => $positions,
+            'totalUnits' => $totalUnits,
+            'buyCount' => $buyCount,
         ];
     }
+
+    public function getPortfolioPlusValue(string $walletId): array
+    {
+        $wallet = Wallet::with('cryptoWalletAssets.cryptomoney')->findOrFail($walletId);
+
+        $assets = [];
+        $totalInvested = 0.0;
+        $totalCurrentValue = 0.0;
+
+        foreach ($wallet->cryptoWalletAssets as $asset) {
+            if ((float)$asset->quantity <= 0) {
+                continue;
+            }
+            $quantity = (float)$asset->quantity;
+            $avg = (float)$asset->average_buy_price;
+            $price = (float)($asset->cryptomoney?->price_eur ?? 0);
+            $invested = $avg * $quantity;
+            $current = $price * $quantity;
+            $pnl = $current - $invested;
+            $pnlPct = $invested > 0 ? ($pnl / $invested) * 100 : 0;
+
+            $assets[] = [
+                'symbol' => $asset->cryptomoney?->symbol,
+                'name' => $asset->cryptomoney?->name,
+                'quantity' => $quantity,
+                'avg_buy_price_eur' => round($avg, 8),
+                'current_price_eur' => round($price, 8),
+                'invested_eur' => round($invested, 2),
+                'current_value_eur' => round($current, 2),
+                'plus_value_eur' => round($pnl, 2),
+                'plus_value_percent' => round($pnlPct, 2),
+            ];
+
+            $totalInvested += $invested;
+            $totalCurrentValue += $current;
+        }
+
+        $totalPnl = $totalCurrentValue - $totalInvested;
+        $totalPct = $totalInvested > 0 ? ($totalPnl / $totalInvested) * 100 : 0;
+
+        return [
+            'total_invested' => round($totalInvested, 2),
+            'total_current_value' => round($totalCurrentValue, 2),
+            'total_plus_value_eur' => round($totalPnl, 2),
+            'total_plus_value_percent' => round($totalPct, 2),
+            'assets' => $assets,
+        ];
+    }
+
+/**
+ * Get transaction history for a wallet, with optional type filter.
+ *
+ * @param string $walletId
+ * @param string|null $type
+ * @return array
+ */
+public function getTransactionsHistory(string $walletId, ?string $type = null): array
+{
+    $wallet = Wallet::with([
+        'cryptoWalletAssets.cryptomoney',
+        'cryptoWalletAssets.transactions' => function ($query) use ($type) {
+            if ($type) {
+                $query->where('type', $type);
+            }
+            $query->whereNull('cancelled_at')->orderBy('created_at', 'desc');
+        }
+    ])->findOrFail($walletId);
+
+    $allTransactions = [];
+
+    foreach ($wallet->cryptoWalletAssets as $asset) {
+        foreach ($asset->transactions as $transaction) {
+            $allTransactions[] = [
+                    'id' => $transaction->id,
+                    'crypto_id' => $asset->cryptomoney->id,
+                    'crypto_symbol' => $asset->cryptomoney->symbol,
+                    'crypto_name' => $asset->cryptomoney->name,
+                    'crypto_image' => $asset->cryptomoney->image,
+                    'crypto_image_url' => $asset->cryptomoney->image_url,
+                    'type' => $transaction->type,
+                    'quantity' => (float) $transaction->quantity,
+                    'price' => (float) $transaction->price,
+                    'unit_price_eur' => (float) $transaction->price,
+                    'total_eur' => round((float) $transaction->quantity * (float) $transaction->price, 2),
+                    'date' => optional($transaction->created_at)->toDateTimeString(),
+            ];
+        }
+    }
+
+    // Sort all transactions by date in descending order
+    usort($allTransactions, function ($a, $b) {
+        return strtotime($b['date']) - strtotime($a['date']);
+    });
+
+    return $allTransactions;
+}
 }

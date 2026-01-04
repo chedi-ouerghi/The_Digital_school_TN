@@ -12,6 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // 🔥 SANCTUM : Route pour obtenir le token XSRF
+        'sanctum/csrf-cookie',
     ];
 }

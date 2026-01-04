@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('blog_posts', function (Blueprint $table) {
             $table->string('id')->primary();
+            $table->string('user_id', 64)->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('title');
             $table->string('slug')->unique();
             $table->string('category')->nullable();

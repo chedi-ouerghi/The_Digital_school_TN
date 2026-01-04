@@ -22,10 +22,11 @@ return new class extends Migration
             $table->string('email')->unique();
 
             // Statut de la demande
-            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED'])->default('PENDING');
+            $table->enum('status', ['PENDING', 'VERIFIED', 'APPROVED', 'REJECTED', 'EXPIRED'])->default('PENDING');
 
             // Token unique pour validation par lien
             $table->string('token')->unique();
+            $table->timestamp('email_verified_at')->nullable();
 
             // Informations de traitement
             $table->timestamp('processed_at')->nullable();

@@ -1,692 +1,535 @@
 <script setup lang="ts">
-import { CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js'
-import { computed, onMounted, ref } from 'vue'
-import { Line } from 'vue-chartjs'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import api from '../../services/api'
+import api from '@/services/api'
 
-// Import des composants shadcn-vue
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+interface HistoryEntry {
+  timestamp: number
+  date: string
+  price: number
+  change_24h_pct: number
+}
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+interface HistoryResponse {
+  crypto: { id: string; symbol: string; name: string }
+  meta: { count: number; from: string; to: string; days: number }
+  history: HistoryEntry[]
+}
 
+interface CryptoData {
+  id: string
+  name: string
+  symbol: string
+  category: string
+  website: string
+  price_eur: string
+  change_24h_pct: string
+  created_at: string
+  updated_at: string
+  image_url: string
+  price: string
+  change_24h: string
+}
+
+// State
 const route = useRoute()
 const router = useRouter()
-const crypto = ref<any>(null)
-const history = ref<any[]>([])
-const historyMetadata = ref<any>(null)
+const crypto = ref<CryptoData | null>(null)
+const history = ref<HistoryEntry[]>([])
 const loading = ref(false)
-const error = ref<string | null>(null)
+const selectedPeriod = ref('30d')
+const hoveredData = ref<HistoryEntry | null>(null)
+const currentPage = ref(1)
+const itemsPerPage = 7
 
-// Fonctions utilitaires améliorées
-function formatCurrency(value: any, decimals: number = 5): string {
-  const n = Number(value ?? 0)
-  if (!isFinite(n) || isNaN(n)) return `0.${'0'.repeat(decimals)} €`
+// Computed
+const isPositiveTrend = computed(() => {
+  if (!history.value.length) return true
+  const first = history.value[0].price
+  const last = history.value[history.value.length - 1].price
+  return last >= first
+})
+
+const currentPrice = computed(() => {
+  return crypto.value?.price_eur ? parseFloat(crypto.value.price_eur) : 0
+})
+
+const change24h = computed(() => {
+  return crypto.value?.change_24h_pct ? parseFloat(crypto.value.change_24h_pct) : 0
+})
+
+const filteredHistory = computed(() => {
+  if (!history.value.length) return []
   
-  const absValue = Math.abs(n)
-  if (absValue > 0 && absValue < 0.01) {
-    decimals = Math.max(decimals, 8)
-  }
+  const days = selectedPeriod.value === '24h' ? 1 : selectedPeriod.value === '7d' ? 7 : 30
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - days)
   
-  const options = {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-    useGrouping: true
-  }
+  return history.value.filter(h => new Date(h.date) >= cutoffDate)
+})
+
+const chartData = computed(() => {
+  const data = filteredHistory.value
+  if (data.length < 2) return null
   
-  const formatted = n.toLocaleString('en-US', options)
-  return `${formatted} €`
-}
-
-function formatLargeNumber(value: any): string {
-  const n = Number(value ?? 0)
-  if (Math.abs(n) >= 1e12) return `${(n / 1e12).toFixed(2)}T €`
-  if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)}B €`
-  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(2)}M €`
-  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(2)}K €`
-  return formatCurrency(n, 2)
-}
-
-function formatPercentage(value: any, decimals: number = 2): string {
-  const n = Number(value ?? 0)
-  const sign = n >= 0 ? '+' : ''
-  return `${sign}${n.toFixed(decimals)}%`
-}
-
-function formatDate(dateString: string): string {
-  if (!dateString) return 'N/A'
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    })
-  } catch {
-    return dateString
+  const prices = data.map(d => d.price)
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  const priceRange = maxPrice - minPrice || 1
+  
+  return {
+    data,
+    minPrice,
+    maxPrice,
+    priceRange,
+    points: data.map((d, i) => ({
+      ...d,
+      x: (i / (data.length - 1)) * 100,
+      y: 100 - ((d.price - minPrice) / priceRange) * 100,
+      index: i
+    }))
   }
+})
+
+const chartMetrics = computed(() => {
+  if (!chartData.value) return null
+  const data = chartData.value.data
+  const high = Math.max(...data.map(d => d.price))
+  const low = Math.min(...data.map(d => d.price))
+  const change = ((data[data.length - 1].price - data[0].price) / data[0].price) * 100
+  
+  return { high, low, change }
+})
+
+// Pagination
+const paginatedHistory = computed(() => {
+  const sorted = filteredHistory.value.slice().reverse()
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return sorted.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredHistory.value.length / itemsPerPage)
+})
+
+// Format functions
+const formatCurrency = (v: number, decimals = 2) => 
+  `€${v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+
+const formatPercent = (v: number) => {
+  const sign = v >= 0 ? '+' : ''
+  return `${sign}${v.toFixed(2)}%`
 }
 
-// Récupération des données
+const formatDate = (date: string) => {
+  const d = new Date(date)
+  return d.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
+// Fetch data
 async function fetchData() {
   loading.value = true
-  error.value = null
-  
   try {
-    const id = route.params.id
-    
-    // Récupérer les détails de la crypto
-    const cryptoData = await api.crypto.show(id)
-    crypto.value = cryptoData
-    
-    // Récupérer l'historique
-    try {
-      const historyData = await api.crypto.history(id)
-      
-      if (historyData.data?.prices) {
-        history.value = historyData.data.prices || []
-        historyMetadata.value = {
-          symbol: historyData.data.symbol,
-          name: historyData.data.name,
-          count: historyData.data.count,
-          from: historyData.data.from,
-          to: historyData.data.to
-        }
-      } else if (historyData.prices) {
-        history.value = historyData.prices || []
-        historyMetadata.value = {
-          symbol: historyData.symbol,
-          name: historyData.name,
-          count: historyData.count,
-          from: historyData.from,
-          to: historyData.to
-        }
-      } else {
-        history.value = []
-        historyMetadata.value = null
-      }
-    } catch (err) {
-      console.warn('History not available:', err)
-      history.value = []
-      historyMetadata.value = null
-    }
-  } catch (err: any) {
-    error.value = err.message || 'Error loading data'
+    const cryptoId = route.params.id as string
+    crypto.value = await api.crypto.show(cryptoId)
+    const historyData: HistoryResponse = await api.crypto.history(cryptoId)
+    history.value = historyData.history || []
+    currentPage.value = 1
+  } catch (e) {
+    console.error('Error fetching data:', e)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(() => {
-  fetchData()
-})
-
-// Calcul des variations
-const get7DayChange = computed(() => {
-  if (history.value.length < 7) return 0
-  const now = history.value[history.value.length - 1]?.[1] || 0
-  const before = history.value[history.value.length - 7]?.[1] || now
-  return before !== 0 ? ((now - before) / before) * 100 : 0
-})
-
-const get30DayChange = computed(() => {
-  if (history.value.length < 2) return 0
-  const now = history.value[history.value.length - 1]?.[1] || 0
-  const before = history.value[0]?.[1] || now
-  return before !== 0 ? ((now - before) / before) * 100 : 0
-})
-
-// Configuration du graphique
-const chartData = computed(() => {
-  if (!history.value?.length) return null
-
-  const labels = history.value.map(p => 
-    new Date(p[0]).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
-    })
-  )
-  
-  const isPositive = history.value[history.value.length - 1]?.[1] >= history.value[0]?.[1]
-  
-  return {
-    labels,
-    datasets: [{
-      label: 'Price (EUR)',
-      data: history.value.map(p => p[1]),
-      borderColor: isPositive ? '#01FF19' : '#FF5964',
-      backgroundColor: isPositive ? 'rgba(1, 255, 25, 0.1)' : 'rgba(255, 89, 100, 0.1)',
-      borderWidth: 3,
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: isPositive ? '#01FF19' : '#FF5964',
-      pointBorderColor: '#FFFFFF',
-      pointBorderWidth: 2,
-      pointRadius: 0,
-      pointHoverRadius: 6,
-      pointHitRadius: 10
-    }]
-  }
-})
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: {
-    mode: 'nearest' as const,
-    axis: 'x' as const,
-    intersect: false
-  },
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: '#FFFFFF',
-      titleColor: '#38618C',
-      bodyColor: '#38618C',
-      borderColor: '#38618C',
-      borderWidth: 1,
-      padding: 12,
-      displayColors: false,
-      callbacks: {
-        label: (context: any) => `${formatCurrency(context.parsed.y, 5)}`,
-        title: (context: any) => {
-          const index = context[0].dataIndex
-          if (history.value[index]) {
-            return new Date(history.value[index][0]).toLocaleDateString('en-US', {
-              weekday: 'short',
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-          }
-          return ''
-        }
-      }
-    }
-  },
-  scales: {
-    x: {
-      grid: { 
-        color: 'rgba(56, 97, 140, 0.1)',
-        drawBorder: false
-      },
-      ticks: { 
-        color: '#38618C',
-        maxRotation: 0,
-        font: {
-          size: 11
-        }
-      }
-    },
-    y: {
-      grid: { 
-        color: 'rgba(56, 97, 140, 0.1)',
-        drawBorder: false
-      },
-      ticks: { 
-        color: '#38618C',
-        callback: (value: number) => formatCurrency(value, 2),
-        font: {
-          size: 11
-        }
-      }
-    }
-  }
+// Chart interaction
+function handleChartHover(index: number) {
+  hoveredData.value = filteredHistory.value[index]
 }
 
+function handleChartLeave() {
+  hoveredData.value = null
+}
+
+// Lifecycle
+onMounted(() => fetchData())
+watch(selectedPeriod, () => {
+  hoveredData.value = null
+  currentPage.value = 1
+})
+
 function goBack() {
-  router.push('/dashboard/admin/cryptos')
+  router.back()
 }
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="min-h-screen bg-white">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <Button 
-          variant="outline"
-          class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white transition-all duration-200"
+    <div class="bg-white border-b border-gray-200 p-6">
+      <div class="max-w-7xl mx-auto">
+        <button 
           @click="goBack"
+          class="mb-6 px-4 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 flex items-center gap-2 text-sm font-medium"
         >
-          ← Back
-        </Button>
-        <div v-if="crypto">
-          <h1 class="text-3xl font-bold text-[#38618C]">{{ crypto.name }}</h1>
-          <div class="text-sm text-gray-500">Cryptocurrency Analytics</div>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Back
+        </button>
+
+        <!-- Crypto Header -->
+        <div v-if="crypto" class="flex items-center gap-5">
+          <div v-if="crypto.image_url" class="w-20 h-20 rounded-2xl bg-gray-100 p-2">
+            <img :src="crypto.image_url" :alt="crypto.name" class="w-full h-full object-contain" />
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <h1 class="text-4xl font-bold text-gray-900">{{ crypto.name }}</h1>
+              <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium">
+                {{ crypto.symbol.toUpperCase() }}
+              </span>
+            </div>
+            
+            <div class="flex items-baseline gap-4">
+              <span class="text-3xl font-bold" style="color: #35A7FF;">
+                {{ formatCurrency(currentPrice) }}
+              </span>
+              <span 
+                :style="{ color: change24h >= 0 ? '#01FF19' : '#FF5964' }"
+                class="text-xl font-semibold"
+              >
+                {{ formatPercent(change24h) }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-      <Button 
-        :disabled="loading"
-        class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold transition-all duration-200"
-        @click="fetchData"
-      >
-        🔄 Refresh
-      </Button>
     </div>
 
     <!-- Loading State -->
-    <Card v-if="loading" class="border-[#35A7FF]">
-      <CardContent class="p-12 text-center">
-        <div class="animate-pulse space-y-4">
-          <div class="text-4xl mb-4">⏳</div>
-          <div class="h-2 bg-[#35A7FF]/20 rounded w-24 mx-auto"></div>
-          <div class="text-gray-600">Loading cryptocurrency data...</div>
-        </div>
-      </CardContent>
-    </Card>
-
-    <!-- Error State -->
-    <Card v-else-if="error" class="border-[#FF5964]">
-      <CardContent class="p-12 text-center">
-        <div class="text-4xl mb-4">⚠️</div>
-        <h3 class="text-xl font-semibold text-[#FF5964] mb-2">Error Loading Data</h3>
-        <div class="text-gray-600 mb-4">{{ error }}</div>
-        <Button 
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white transition-all duration-200"
-          @click="fetchData"
-        >
-          Try Again
-        </Button>
-      </CardContent>
-    </Card>
+    <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+      <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-600">Loading data...</p>
+    </div>
 
     <!-- Main Content -->
-    <div v-else-if="crypto" class="space-y-6">
-      <!-- Price Header Card -->
-      <Card class="border-[#35A7FF] bg-gradient-to-r from-white to-blue-50">
-        <CardContent class="p-6">
-          <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <!-- Crypto Image -->
-            <div class="h-20 w-20 rounded-full border-4 border-[#35A7FF] bg-white flex items-center justify-center flex-shrink-0 shadow-lg">
-              <img 
-                :src="crypto.image_url || crypto.image" 
-                :alt="crypto.name"
-                class="h-16 w-16 rounded-full object-cover"
-                @error="(e) => {
-                  const target = e.target as HTMLImageElement
-                  if (target?.parentNode) {
-                    target.style.display = 'none'
-                  }
-                }"
-              />
-              <div v-if="!crypto.image_url && !crypto.image" class="text-3xl">💎</div>
-            </div>
-            
-            <!-- Price Info -->
-            <div class="flex-1">
-              <div class="flex flex-wrap items-center gap-2 mb-3">
-                <h2 class="text-2xl font-bold text-[#38618C]">{{ crypto.name }}</h2>
-                <Badge class="bg-[#38618C] text-white px-3 py-1 text-sm font-mono">
-                  {{ String(crypto.symbol || '').toUpperCase() }}
-                </Badge>
-                <Badge 
-                  :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                  class="text-white px-3 py-1"
-                >
-                  {{ formatPercentage(crypto.change_24h_pct) }}
-                </Badge>
-              </div>
-              
-              <!-- Current Price -->
-              <div class="flex items-baseline gap-3">
-                <div class="text-4xl md:text-5xl font-bold text-[#35A7FF] tracking-tight">
-                  {{ formatCurrency(crypto.price_eur, 5) }}
-                </div>
-                <div class="text-sm text-gray-500">Current Price</div>
-              </div>
-              
-              <!-- Additional Prices -->
-              <div v-if="crypto.price_usd || crypto.price_btc" class="flex flex-wrap gap-4 mt-3 text-sm">
-                <div v-if="crypto.price_usd" class="flex items-center gap-1 bg-gray-50 px-3 py-1 rounded">
-                  <span class="text-gray-600">USD:</span>
-                  <span class="font-medium">{{ formatCurrency(crypto.price_usd, 5).replace('€', '$') }}</span>
-                </div>
-                <div v-if="crypto.price_btc" class="flex items-center gap-1 bg-gray-50 px-3 py-1 rounded">
-                  <span class="text-gray-600">BTC:</span>
-                  <span class="font-medium">{{ Number(crypto.price_btc).toFixed(8) }}</span>
-                </div>
-              </div>
-            </div>
+    <div v-else-if="crypto" class="max-w-7xl mx-auto p-6 space-y-8">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Current Price -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-300">
+          <div class="text-gray-600 text-sm font-medium mb-3">Current Price</div>
+          <div style="color: #35A7FF;" class="text-2xl font-bold mb-2">{{ formatCurrency(currentPrice) }}</div>
+          <div class="text-gray-500 text-xs">EUR</div>
+        </div>
+
+        <!-- 24h Change -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-300">
+          <div class="text-gray-600 text-sm font-medium mb-3">24h Change</div>
+          <div 
+            :style="{ color: change24h >= 0 ? '#01FF19' : '#FF5964' }"
+            class="text-2xl font-bold mb-2"
+          >
+            {{ formatPercent(change24h) }}
           </div>
-        </CardContent>
-      </Card>
+          <div class="text-gray-500 text-xs">Percentage</div>
+        </div>
 
-      <!-- Key Metrics Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-200 group">
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Market Cap</div>
-            <div class="text-xl font-bold text-[#38618C] group-hover:text-[#35A7FF] transition-colors">
-              {{ formatLargeNumber(crypto.market_cap) }}
-            </div>
-            <div v-if="crypto.market_cap_rank" class="text-xs text-gray-500 mt-1">
-              Rank <Badge class="bg-gray-100 text-gray-800 ml-1">#{{ crypto.market_cap_rank }}</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <!-- Category -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-300">
+          <div class="text-gray-600 text-sm font-medium mb-3">Category</div>
+          <div style="color: #35A7FF;" class="text-2xl font-bold mb-2">{{ crypto.category }}</div>
+          <div class="text-gray-500 text-xs">Classification</div>
+        </div>
 
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-200 group">
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">24h Volume</div>
-            <div class="text-xl font-bold text-[#38618C] group-hover:text-[#35A7FF] transition-colors">
-              {{ formatLargeNumber(crypto.volume_24h) }}
-            </div>
-            <div v-if="crypto.market_cap" class="text-xs text-gray-500 mt-1">
-              {{ (crypto.volume_24h / crypto.market_cap * 100).toFixed(1) }}% of market cap
-            </div>
-          </CardContent>
-        </Card>
+        <!-- Data Points -->
+        <div class="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-300">
+          <div class="text-gray-600 text-sm font-medium mb-3">Data Points</div>
+          <div style="color: #35A7FF;" class="text-2xl font-bold mb-2">{{ filteredHistory.length }}</div>
+          <div class="text-gray-500 text-xs">Price entries</div>
+        </div>
+      </div>
 
-        <Card 
-          class="border-gray-200 transition-all duration-200 group"
-          :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'hover:border-[#01FF19]' : 'hover:border-[#FF5964]'"
+      <!-- Period Selector -->
+      <div class="flex gap-3 justify-center">
+        <button 
+          v-for="period in ['24h', '7d', '30d']" 
+          :key="period"
+          @click="selectedPeriod = period"
+          :style="selectedPeriod === period 
+            ? { backgroundColor: '#35A7FF', color: 'white' }
+            : { backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }"
+          class="px-6 py-2.5 rounded-lg font-medium transition-all duration-300 min-w-[100px]"
         >
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">24h Change</div>
-            <div 
-              class="text-xl font-bold transition-colors"
-              :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'text-[#01FF19] group-hover:text-[#01FF19]/90' : 'text-[#FF5964] group-hover:text-[#FF5964]/90'"
-            >
-              {{ formatPercentage(crypto.change_24h_pct) }}
-            </div>
-            <div class="text-xs text-gray-500 mt-1">
-              {{ formatCurrency(crypto.low_24h, 2) }} → {{ formatCurrency(crypto.high_24h, 2) }}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-200 group">
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Current Price</div>
-            <div class="text-xl font-bold text-[#35A7FF]">
-              {{ formatCurrency(crypto.price_eur, 5) }}
-            </div>
-            <div class="text-xs text-gray-500 mt-1">Updated in real-time</div>
-          </CardContent>
-        </Card>
+          {{ period }}
+        </button>
       </div>
 
       <!-- Chart Section -->
-      <Card class="border-[#38618C]/20">
-        <CardHeader class="pb-3">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <CardTitle class="text-lg font-bold text-[#38618C] flex items-center gap-2">
-                <span class="text-[#35A7FF]">📈</span>
-                Price History
-                <Badge class="ml-2 bg-[#35A7FF] text-white">30D</Badge>
-              </CardTitle>
-              <div v-if="historyMetadata" class="text-sm text-gray-500 mt-1">
-                {{ historyMetadata.count }} data points from {{ formatDate(historyMetadata.from) }} to {{ formatDate(historyMetadata.to) }}
+      <div v-if="chartData" class="space-y-6">
+        <!-- Chart Container -->
+        <div class="bg-white border border-gray-200 rounded-xl p-8 hover:shadow-lg transition-shadow duration-300">
+          <!-- Chart Metrics -->
+          <div v-if="chartMetrics" class="flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
+            <div class="text-center">
+              <div class="text-gray-600 text-sm mb-1">Period High</div>
+              <div style="color: #01FF19;" class="text-lg font-bold">{{ formatCurrency(chartMetrics.high) }}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-gray-600 text-sm mb-1">Period Low</div>
+              <div style="color: #FF5964;" class="text-lg font-bold">{{ formatCurrency(chartMetrics.low) }}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-gray-600 text-sm mb-1">Period Change</div>
+              <div 
+                :style="{ color: chartMetrics.change >= 0 ? '#01FF19' : '#FF5964' }"
+                class="text-lg font-bold"
+              >
+                {{ formatPercent(chartMetrics.change) }}
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <Badge 
-                variant="outline" 
-                class="border-[#38618C] text-[#38618C]"
-              >
-                {{ historyMetadata?.symbol || crypto.symbol }}
-              </Badge>
-              <Badge 
-                :class="get30DayChange >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                class="text-white"
-              >
-                {{ formatPercentage(get30DayChange) }}
-              </Badge>
-            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div v-if="!chartData" class="h-[300px] flex flex-col items-center justify-center">
-            <div class="text-4xl mb-3">📊</div>
-            <div class="text-gray-500">No historical data available</div>
-            <div class="text-sm text-gray-400 mt-1">Data will appear when available</div>
-          </div>
-          <div v-else class="h-[300px]">
-            <Line :data="chartData" :options="chartOptions" />
-          </div>
-          
-          <!-- Performance Overview -->
-          <div v-if="history.length" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
-              <CardContent class="p-4 text-center">
-                <div class="text-sm text-gray-500 mb-1">24H</div>
-                <div 
-                  class="text-xl font-bold"
-                  :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                >
-                  {{ formatPercentage(crypto.change_24h_pct) }}
-                </div>
-                <div class="text-xs text-gray-500 mt-1">
-                  {{ formatCurrency(crypto.high_24h, 2) }} high
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
-              <CardContent class="p-4 text-center">
-                <div class="text-sm text-gray-500 mb-1">7D</div>
-                <div 
-                  class="text-xl font-bold"
-                  :class="get7DayChange >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                >
-                  {{ formatPercentage(get7DayChange) }}
-                </div>
-                <div v-if="history.length >= 7" class="text-xs text-gray-500 mt-1">
-                  Week ago: {{ formatCurrency(history[history.length - 7][1], 2) }}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
-              <CardContent class="p-4 text-center">
-                <div class="text-sm text-gray-500 mb-1">30D</div>
-                <div 
-                  class="text-xl font-bold"
-                  :class="get30DayChange >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                >
-                  {{ formatPercentage(get30DayChange) }}
-                </div>
-                <div v-if="history.length >= 2" class="text-xs text-gray-500 mt-1">
-                  Month ago: {{ formatCurrency(history[0][1], 2) }}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
 
-      <!-- Detailed Information Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Asset Details -->
-        <Card class="border-[#38618C]/20">
-          <CardHeader>
-            <CardTitle class="text-base font-bold text-[#38618C] flex items-center gap-2">
-              <span class="text-[#35A7FF]">🔍</span>
-              Asset Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-1">
-                <div class="text-xs text-gray-500">Symbol</div>
-                <Badge class="bg-[#38618C] text-white font-mono px-3 py-1.5">
-                  {{ String(crypto.symbol || '').toUpperCase() }}
-                </Badge>
-              </div>
+          <!-- SVG Chart -->
+          <svg 
+            class="w-full h-80"
+            viewBox="0 0 1200 300"
+            preserveAspectRatio="xMidYMid meet"
+            @mouseleave="handleChartLeave"
+          >
+            <!-- Gradient Definitions -->
+            <defs>
+              <linearGradient id="chart-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop 
+                  offset="0%" 
+                  :stop-color="isPositiveTrend ? '#01FF19' : '#FF5964'"
+                  stop-opacity="0.15"
+                />
+                <stop 
+                  offset="100%" 
+                  :stop-color="isPositiveTrend ? '#01FF19' : '#FF5964'"
+                  stop-opacity="0"
+                />
+              </linearGradient>
+            </defs>
+
+            <!-- Grid -->
+            <g class="opacity-30">
+              <line x1="80" y1="40" x2="80" y2="340" stroke="#d1d5db" stroke-width="1.5" />
+              <line x1="80" y1="340" x2="1120" y2="340" stroke="#d1d5db" stroke-width="1.5" />
               
-            </div>
-            
-            <div class="space-y-1">
-              <div class="text-xs text-gray-500">Category</div>
-              <div class="font-semibold text-[#38618C]">{{ crypto.category || 'Uncategorized' }}</div>
-            </div>
-            
-            <div class="space-y-1">
-              <div class="text-xs text-gray-500">Website</div>
-              <div v-if="crypto.website">
-                <a 
-                  :href="crypto.website" 
-                  target="_blank"
-                  class="text-[#35A7FF] hover:text-[#35A7FF]/80 hover:underline transition-colors text-sm flex items-center gap-1"
+              <template v-for="i in 5" :key="`grid-${i}`">
+                <line 
+                  x1="80" 
+                  :y1="60 + (i * 70)" 
+                  x2="1120" 
+                  :y2="60 + (i * 70)" 
+                  stroke="#e5e7eb" 
+                  stroke-width="1" 
+                  stroke-dasharray="4,4"
+                />
+              </template>
+            </g>
+
+            <!-- Y-Axis Labels -->
+            <g class="text-sm fill-gray-600" font-family="system-ui" font-weight="500">
+              <template v-for="i in 6" :key="`y-label-${i}`">
+                <text 
+                  x="60" 
+                  :y="50 + (i * 70)" 
+                  text-anchor="end"
+                  dominant-baseline="middle"
+                  class="select-none"
                 >
-                  Visit website
-                  <span class="text-xs">↗</span>
-                </a>
-              </div>
-              <div v-else class="text-gray-400 text-sm">Not available</div>
-            </div>
-          </CardContent>
-        </Card>
+                  {{ formatCurrency(chartData.maxPrice - (chartData.priceRange / 5) * (i - 1)) }}
+                </text>
+              </template>
+            </g>
 
-        <!-- Supply & Market Data -->
-        <Card class="border-[#38618C]/20">
-          <CardHeader>
-            <CardTitle class="text-base font-bold text-[#38618C] flex items-center gap-2">
-              <span class="text-[#35A7FF]">📊</span>
-              Supply & Valuation
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-4">
-            <!-- Supply Information -->
-            <div v-if="crypto.circulating_supply || crypto.total_supply" class="space-y-3">
-              <div class="text-sm font-medium text-gray-700">Supply Overview</div>
-              <div class="grid grid-cols-2 gap-4">
-                <div v-if="crypto.circulating_supply" class="space-y-1">
-                  <div class="text-xs text-gray-500">Circulating</div>
-                  <div class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.circulating_supply) }}</div>
-                </div>
-                <div v-if="crypto.total_supply" class="space-y-1">
-                  <div class="text-xs text-gray-500">Total Supply</div>
-                  <div class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.total_supply) }}</div>
-                </div>
-              </div>
-              <div v-if="crypto.max_supply" class="space-y-1">
-                <div class="text-xs text-gray-500">Max Supply</div>
-                <div class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.max_supply) }}</div>
-              </div>
-            </div>
+            <!-- Area Path -->
+            <path 
+              :d="`M ${chartData.points[0].x * 10.4 + 80} ${chartData.points[0].y * 2.8 + 40} 
+                ${chartData.points.slice(1).map(p => `L ${p.x * 10.4 + 80} ${p.y * 2.8 + 40}`).join(' ')} 
+                L ${chartData.points[chartData.points.length - 1].x * 10.4 + 80} 340
+                L 80 340 Z`"
+              fill="url(#chart-gradient)"
+            />
 
-            <!-- Valuation -->
-            <div class="space-y-3 pt-3 border-t border-gray-100">
-              <div class="text-sm font-medium text-gray-700">Valuation</div>
-              <div class="space-y-2">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Market Cap</span>
-                  <span class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.market_cap) }}</span>
-                </div>
-                <div v-if="crypto.fully_diluted_valuation" class="flex justify-between items-center">
-                  <span class="text-sm text-gray-600">Fully Diluted</span>
-                  <span class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.fully_diluted_valuation) }}</span>
-                </div>
+            <!-- Line Path -->
+            <polyline 
+              :points="chartData.points.map(p => `${p.x * 10.4 + 80},${p.y * 2.8 + 40}`).join(' ')"
+              fill="none"
+              :stroke="isPositiveTrend ? '#01FF19' : '#FF5964'"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+
+            <!-- Data Points -->
+            <g class="cursor-crosshair">
+              <circle 
+                v-for="(point, i) in chartData.points.filter((_, idx) => idx % Math.ceil(chartData.points.length / 15) === 0 || idx === chartData.points.length - 1)"
+                :key="i"
+                :cx="point.x * 10.4 + 80"
+                :cy="point.y * 2.8 + 40"
+                r="5"
+                :fill="hoveredData?.index === point.index ? 'white' : isPositiveTrend ? '#01FF19' : '#FF5964'"
+                :stroke="isPositiveTrend ? '#01FF19' : '#FF5964'"
+                stroke-width="2"
+                @mouseenter="handleChartHover(point.index)"
+                @mouseleave="handleChartLeave"
+                class="transition-all duration-200 hover:r-6 hover:stroke-gray-900"
+              />
+            </g>
+
+            <!-- Hover Line -->
+            <line 
+              v-if="hoveredData"
+              :x1="hoveredData.x * 10.4 + 80"
+              y1="40"
+              :x2="hoveredData.x * 10.4 + 80"
+              y2="340"
+              stroke="#9ca3af"
+              stroke-width="1.5"
+              stroke-dasharray="5,5"
+            />
+
+            <!-- X-Axis Labels -->
+            <g class="text-sm fill-gray-600" font-family="system-ui" font-weight="500">
+              <text 
+                v-for="(point, i) in chartData.points.filter((_, idx) => idx % Math.ceil(chartData.points.length / 8) === 0 || idx === chartData.points.length - 1)"
+                :key="`x-label-${i}`"
+                :x="point.x * 10.4 + 80"
+                y="365"
+                text-anchor="middle"
+                class="select-none"
+              >
+                {{ formatDate(point.date) }}
+              </text>
+            </g>
+          </svg>
+
+          <!-- Hover Tooltip -->
+          <div 
+            v-if="hoveredData"
+            class="absolute z-50 transform -translate-x-1/2"
+            :style="{ left: `${hoveredData.x}%` }"
+          >
+            <div class="bg-gray-900 text-white rounded-lg shadow-lg p-4 min-w-[180px] text-center" style="margin-top: -360px;">
+              <div class="text-gray-300 text-sm mb-1">
+                {{ formatDate(hoveredData.date) }}
+              </div>
+              <div style="color: #35A7FF;" class="text-xl font-bold mb-1">
+                {{ formatCurrency(hoveredData.price, 2) }}
+              </div>
+              <div 
+                :style="{ color: hoveredData.change_24h_pct >= 0 ? '#01FF19' : '#FF5964' }"
+                class="text-sm font-semibold"
+              >
+                {{ formatPercent(hoveredData.change_24h_pct) }}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <!-- Historical Data Summary -->
-      <Card v-if="historyMetadata" class="border-[#38618C]/20">
-        <CardHeader>
-          <CardTitle class="text-base font-bold text-[#38618C] flex items-center gap-2">
-            <span class="text-[#35A7FF]">📅</span>
-            Historical Data Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div class="space-y-2 text-center">
-              <div class="text-xs text-gray-500">Data Points</div>
-              <div class="text-2xl font-bold text-[#35A7FF]">{{ historyMetadata.count }}</div>
-              <div class="text-xs text-gray-500">Price records</div>
-            </div>
-            
-            <div class="space-y-2 text-center">
-              <div class="text-xs text-gray-500">Period</div>
-              <div class="text-lg font-semibold text-[#38618C]">
-                {{
-                  Math.round(
-                    (new Date(historyMetadata.to).getTime() - new Date(historyMetadata.from).getTime()) 
-                    / (1000 * 60 * 60 * 24)
-                  )
-                }} days
-              </div>
-              <div class="text-xs text-gray-500">{{ formatDate(historyMetadata.from) }}</div>
-            </div>
-            
-            <div v-if="history.length" class="space-y-2 text-center">
-              <div class="text-xs text-gray-500">Starting Price</div>
-              <div class="text-lg font-semibold text-gray-700">{{ formatCurrency(history[0][1], 5) }}</div>
-              <div class="text-xs text-gray-500">Month ago</div>
-            </div>
-            
-            <div v-if="history.length" class="space-y-2 text-center">
-              <div class="text-xs text-gray-500">Current Price</div>
-              <div class="text-lg font-semibold text-[#35A7FF]">{{ formatCurrency(history[history.length - 1][1], 5) }}</div>
-              <div class="text-xs text-gray-500">Latest</div>
-            </div>
+      <!-- History Table -->
+      <div v-if="filteredHistory.length" class="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="text-lg font-bold text-gray-900">Price History</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200">
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-900">Date</th>
+                <th class="px-6 py-4 text-right text-sm font-semibold text-gray-900">Price</th>
+                <th class="px-6 py-4 text-right text-sm font-semibold text-gray-900">24h Change</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr 
+                v-for="(entry, i) in paginatedHistory" 
+                :key="i"
+                class="hover:bg-gray-50 transition-colors duration-150"
+              >
+                <td class="px-6 py-4 text-sm text-gray-900">{{ formatDate(entry.date) }}</td>
+                <td class="px-6 py-4 text-right">
+                  <span style="color: #35A7FF;" class="font-semibold">{{ formatCurrency(entry.price, 2) }}</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <span 
+                    :style="{ color: entry.change_24h_pct >= 0 ? '#01FF19' : '#FF5964' }"
+                    class="font-semibold"
+                  >
+                    {{ formatPercent(entry.change_24h_pct) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+          <div class="text-sm text-gray-600">
+            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredHistory.length) }} of {{ filteredHistory.length }} entries
           </div>
-        </CardContent>
-      </Card>
+          
+          <div class="flex gap-2">
+            <button 
+              @click="currentPage = Math.max(1, currentPage - 1)"
+              :disabled="currentPage === 1"
+              class="px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200"
+              :style="currentPage === 1 
+                ? { backgroundColor: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }
+                : { backgroundColor: '#f3f4f6', color: '#374151' }"
+            >
+              Previous
+            </button>
+            
+            <div class="flex gap-1">
+              <button 
+                v-for="page in totalPages" 
+                :key="page"
+                @click="currentPage = page"
+                class="px-2.5 py-1 rounded-lg text-sm font-medium transition-all duration-200"
+                :style="currentPage === page 
+                  ? { backgroundColor: '#35A7FF', color: 'white' }
+                  : { backgroundColor: '#f3f4f6', color: '#374151' }"
+              >
+                {{ page }}
+              </button>
+            </div>
+            
+            <button 
+              @click="currentPage = Math.min(totalPages, currentPage + 1)"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200"
+              :style="currentPage === totalPages 
+                ? { backgroundColor: '#f3f4f6', color: '#9ca3af', cursor: 'not-allowed' }
+                : { backgroundColor: '#f3f4f6', color: '#374151' }"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
-  border-color: #38618C;
-}
-
-:deep(.text-\[#38618C\]) {
-  color: #38618C;
-}
-
-:deep(.bg-\[#01FF19\]) {
-  background-color: #01FF19;
-}
-
-:deep(.bg-\[#35A7FF\]) {
-  background-color: #35A7FF;
-}
-
-:deep(.bg-\[#FF5964\]) {
-  background-color: #FF5964;
-}
-
-:deep(.hover\:bg-\[#38618C\]:hover) {
-  background-color: #38618C;
-}
-
-:deep(.hover\:bg-\[#35A7FF\]\/90:hover) {
-  background-color: rgba(53, 167, 255, 0.9);
-}
-
-:deep(.hover\:border-\[#35A7FF\]:hover) {
-  border-color: #35A7FF;
-}
-
-/* Smooth transitions */
-:deep(.transition-all) {
-  transition-property: all;
-}
-
-:deep(.duration-200) {
-  transition-duration: 200ms;
-}
-
-/* Chart improvements */
-:deep(.chartjs-tooltip) {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  backdrop-filter: blur(10px);
-}
-
-:deep(.chartjs-grid) {
-  border-color: rgba(56, 97, 140, 0.05);
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

@@ -1,6 +1,20 @@
 <script setup lang="ts">
 import Header from '@/components/landing/Header.vue';
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+
+// Color palette from requirements
+const colors = {
+  primary: '#01FF19',    // Green accent
+  secondary: '#35A7FF',  // Blue accent  
+  accent: '#FF5964',     // Red accent (for borders)
+  textPrimary: '#38618C', // Dark blue text
+  textSecondary: '#5A6175', // Gray text
+  textTertiary: '#8C94A8', // Light gray text
+  background: '#FFFFFF',  // White background
+  surface: '#F8FAFF',    // Light blue background
+  border: '#E2E8F0',     // Light border
+  borderAccent: '#FF5964' // Red border accent
+}
 
 const dashboardItems = ref([
   {
@@ -9,6 +23,7 @@ const dashboardItems = ref([
     value: '2,458',
     trend: '+12% this month',
     icon: '👥',
+    color: colors.primary,
   },
   {
     title: 'Total Volume',
@@ -16,6 +31,7 @@ const dashboardItems = ref([
     value: '$4.2M',
     trend: '+8.5% weekly',
     icon: '📈',
+    color: colors.secondary,
   },
   {
     title: 'Security Score',
@@ -23,76 +39,170 @@ const dashboardItems = ref([
     value: '99.8%',
     trend: 'A+ rating',
     icon: '🔒',
+    color: colors.accent,
   }
-])
+]);
+
+const features = ref([
+  {
+    title: 'Enterprise-Grade Security',
+    description: 'Bank-level encryption and multi-signature wallets protect every transaction',
+    icon: '🔐'
+  },
+  {
+    title: 'White-Label Ready',
+    description: 'Seamlessly integrate into your ecosystem with full customization options',
+    icon: '🏷️'
+  },
+  {
+    title: 'Real-Time Analytics',
+    description: 'Deep insights into market trends and user behavior with instant reporting',
+    icon: '📊'
+  }
+]);
+
+const stats = ref([
+  { value: '99.8%', label: 'Uptime SLA', color: colors.primary },
+  { value: '$4.2M', label: 'Daily Volume', color: colors.secondary },
+  { value: '2.4K+', label: 'Active Users', color: colors.accent },
+]);
+
+const isLoading = ref(true);
+const activeStat = ref(0);
+
+onMounted(() => {
+  // Simulate data loading
+  setTimeout(() => {
+    isLoading.value = false;
+  }, 800);
+  
+  // Auto rotate stats
+  setInterval(() => {
+    activeStat.value = (activeStat.value + 1) % stats.value.length;
+  }, 3000);
+});
 </script>
 
 <template>
-  <div class="min-h-screen" style="background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 100%)">
-    <!-- Header - NO CHANGES -->
+  <div class="min-h-screen overflow-hidden" :style="{ backgroundColor: colors.background }">
+    <!-- Header -->
     <Header />
+    
+    <!-- Loading State -->
+    <div v-if="isLoading" class="fixed inset-0 z-50 flex items-center justify-center" :style="{ backgroundColor: colors.background }">
+      <div class="flex flex-col items-center gap-4">
+        <div class="relative">
+          <div class="w-16 h-16 rounded-full border-4" :style="{ borderColor: colors.border }"></div>
+          <div class="absolute inset-0 w-16 h-16 rounded-full border-4 border-t-transparent animate-spin" :style="{ borderColor: colors.primary }"></div>
+        </div>
+        <p class="text-sm font-medium" :style="{ color: colors.textSecondary }">Loading Platform...</p>
+      </div>
+    </div>
 
     <!-- Hero Section -->
-    <section class="pt-40 pb-24 px-6 container mx-auto relative overflow-hidden">
-      <div class="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-10" style="background: radial-gradient(circle, #01FF19 0%, transparent 70%); filter: blur(60px)"></div>
-      <div class="absolute bottom-0 -left-40 w-80 h-80 rounded-full opacity-10" style="background: radial-gradient(circle, #35A7FF 0%, transparent 70%); filter: blur(60px)"></div>
+    <section class="pt-32 md:pt-40 pb-20 md:pb-24 px-4 sm:px-6 container mx-auto relative">
+      <!-- Background accents -->
+      <div class="absolute top-20 -right-20 w-72 h-72 md:w-96 md:h-96 rounded-full opacity-5" 
+           :style="{ background: `radial-gradient(circle, ${colors.primary} 0%, transparent 70%)` }"></div>
+      <div class="absolute bottom-0 -left-20 w-64 h-64 md:w-80 md:h-80 rounded-full opacity-5" 
+           :style="{ background: `radial-gradient(circle, ${colors.secondary} 0%, transparent 70%)` }"></div>
       
-      <div class="grid lg:grid-cols-2 gap-16 items-center relative z-10">
-        <!-- Left Side -->
-        <div class="space-y-8">
-          <div class="inline-block px-4 py-2 rounded-full text-xs font-bold tracking-widest" style="background: rgba(1, 255, 25, 0.1); color: #01FF19; border: 1px solid rgba(1, 255, 25, 0.3)">
-            🚀 SECURE CRYPTO TRADING
+      <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10 max-w-7xl mx-auto">
+        <!-- Left Content -->
+        <div class="space-y-6 md:space-y-8">
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 hover:scale-105"
+               :style="{ 
+                 backgroundColor: `${colors.primary}10`, 
+                 borderColor: `${colors.primary}30`,
+                 color: colors.primary,
+                 borderWidth: '1.5px'
+               }">
+            <span class="w-2 h-2 rounded-full animate-pulse" :style="{ backgroundColor: colors.primary }"></span>
+            <span class="text-xs font-bold tracking-wider">🚀 SECURE CRYPTO TRADING</span>
           </div>
 
-          <h1 class="text-6xl lg:text-7xl font-black leading-tight" style="color: #38618C">
+          <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-tight" 
+              :style="{ color: colors.textPrimary }">
             Secure Crypto Trading
-            <span class="relative inline-block" style="color: #01FF19">
-              Made Simple
-              <div class="absolute -inset-2 rounded-lg opacity-20" style="background: linear-gradient(135deg, #01FF19, #35A7FF); filter: blur(12px); z-index: -1"></div>
+            <br>
+            <span class="relative inline-block">
+              <span :style="{ color: colors.primary }">Made Simple</span>
+              <div class="absolute -inset-2 rounded-lg opacity-20 blur-lg z-[-1]" 
+                   :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }"></div>
             </span>
           </h1>
           
-          <p class="text-xl font-semibold leading-relaxed max-w-2xl" style="color: #38618C; opacity: 0.8">
+          <p class="text-lg md:text-xl leading-relaxed max-w-2xl font-semibold opacity-80" 
+             :style="{ color: colors.textPrimary }">
             BitChest is a white-label platform prototype for secure crypto buying/selling, designed to integrate cryptocurrency into existing financial ecosystems with enterprise-grade security.
           </p>
           
-          <div class="flex flex-col sm:flex-row gap-4 pt-4">
-            <button class="px-8 py-4 font-bold rounded-xl text-lg transition-all duration-300 group relative overflow-hidden" style="background: linear-gradient(135deg, #01FF19, #00E617); color: #38618C; box-shadow: 0 20px 40px rgba(1, 255, 25, 0.2)">
-              <div class="absolute inset-0 opacity-0 group-hover:opacity-30 transition-all" style="background: #01FF19; filter: blur(20px)"></div>
+          <div class="flex flex-col sm:flex-row gap-3 md:gap-4 pt-4">
+            <button class="group relative px-6 md:px-8 py-3 md:py-4 font-bold rounded-xl text-sm md:text-base transition-all duration-300 overflow-hidden hover:scale-105"
+                    :style="{ 
+                      background: `linear-gradient(135deg, ${colors.primary}, #00E617)`,
+                      color: colors.textPrimary,
+                      boxShadow: `0 10px 30px ${colors.primary}30`
+                    }">
+              <div class="absolute inset-0 opacity-0 group-hover:opacity-30 transition-all duration-300" 
+                   :style="{ backgroundColor: colors.primary, filter: 'blur(20px)' }"></div>
               <span class="relative">Explore Demo</span>
             </button>
-            <button class="px-8 py-4 font-bold rounded-xl text-lg border-2 transition-all duration-300 group backdrop-blur-sm hover:scale-105" style="border-color: #FF5964; color: #FF5964; background: rgba(255, 89, 100, 0.05)">
-              📚 Documentation
+            
+            <button class="px-6 md:px-8 py-3 md:py-4 font-bold rounded-xl text-sm md:text-base border-2 transition-all duration-300 group hover:scale-105"
+                    :style="{ 
+                      borderColor: colors.accent,
+                      color: colors.accent,
+                      backgroundColor: `${colors.accent}05`
+                    }">
+              <span class="relative">📚 Documentation</span>
             </button>
           </div>
         </div>
         
-        <!-- Right Side - Dashboard Card -->
+        <!-- Dashboard Card -->
         <div class="relative group">
-          <div class="absolute -inset-1 rounded-3xl opacity-20 group-hover:opacity-40 transition-all duration-300" style="background: linear-gradient(135deg, #01FF19, #35A7FF); filter: blur(20px)"></div>
-          <div class="relative bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/40 p-8 hover:border-white/60 transition-all">
-            <div class="flex justify-between items-center mb-8">
-              <h3 class="font-black text-2xl" style="color: #38618C">Platform Dashboard</h3>
-              <div class="flex items-center gap-2 px-4 py-2 rounded-full animate-pulse" style="background: rgba(1, 255, 25, 0.2); color: #01FF19">
-                <div class="w-2 h-2 rounded-full" style="background: #01FF19"></div>
+          <div class="absolute -inset-1 rounded-3xl opacity-20 group-hover:opacity-30 transition-all duration-300 blur-lg"
+               :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }"></div>
+          
+          <div class="relative rounded-3xl p-6 md:p-8 transition-all duration-300 border hover:border-opacity-50"
+               :style="{ 
+                 backgroundColor: `${colors.background}80`,
+                 backdropFilter: 'blur(10px)',
+                 border: `1.5px solid ${colors.borderAccent}40`,
+                 color: colors.textPrimary
+               }">
+            
+            <div class="flex justify-between items-center mb-6 md:mb-8">
+              <h3 class="text-xl md:text-2xl font-black" :style="{ color: colors.textPrimary }">Platform Dashboard</h3>
+              <div class="flex items-center gap-2 px-4 py-2 rounded-full animate-pulse"
+                   :style="{ backgroundColor: `${colors.primary}20`, color: colors.primary }">
+                <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: colors.primary }"></div>
                 <span class="text-sm font-bold">LIVE</span>
               </div>
             </div>
             
             <div class="space-y-4">
-              <div v-for="item in dashboardItems" :key="item.title" class="flex items-center justify-between p-4 rounded-xl transition-all" style="background: rgba(1, 255, 25, 0.05); border: 1px solid rgba(53, 167, 255, 0.1)">
+              <div v-for="item in dashboardItems" :key="item.title" 
+                   class="flex items-center justify-between p-4 rounded-xl transition-all duration-300 hover:scale-102 hover:shadow-lg"
+                   :style="{ 
+                     backgroundColor: `${item.color}08`,
+                     border: `1.5px solid ${colors.border}`,
+                     borderLeft: `4px solid ${item.color}`
+                   }">
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background: rgba(1, 255, 25, 0.2)">
+                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
+                       :style="{ backgroundColor: `${item.color}20`, color: item.color }">
                     {{ item.icon }}
                   </div>
                   <div>
-                    <h4 class="font-bold" style="color: #38618C">{{ item.title }}</h4>
-                    <p class="text-sm" style="color: #38618C; opacity: 0.6">{{ item.subtitle }}</p>
+                    <h4 class="text-base font-bold" :style="{ color: colors.textPrimary }">{{ item.title }}</h4>
+                    <p class="text-sm" :style="{ color: colors.textSecondary }">{{ item.subtitle }}</p>
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-2xl font-black" style="color: #38618C">{{ item.value }}</div>
-                  <div class="text-sm font-bold" style="color: #01FF19">{{ item.trend }}</div>
+                  <div class="text-2xl font-black" :style="{ color: colors.textPrimary }">{{ item.value }}</div>
+                  <div class="text-sm font-bold" :style="{ color: item.color }">{{ item.trend }}</div>
                 </div>
               </div>
             </div>
@@ -101,154 +211,229 @@ const dashboardItems = ref([
       </div>
     </section>
 
-    <!-- Project Context Section - Minimalist & Attractive -->
-    <section class="py-32 px-6 relative overflow-hidden">
-      <div class="absolute top-20 right-0 w-96 h-96 rounded-full opacity-5" style="background: radial-gradient(circle, #01FF19 0%, transparent 70%); filter: blur(60px)"></div>
-      <div class="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-5" style="background: radial-gradient(circle, #35A7FF 0%, transparent 70%); filter: blur(60px)"></div>
+    <!-- Features Section -->
+    <section class="py-16 md:py-32 px-4 sm:px-6 relative" :style="{ backgroundColor: colors.surface }">
+      <div class="container mx-auto max-w-7xl">
+        <div class="text-center mb-16">
+          <h2 class="text-4xl md:text-5xl font-black mb-6" :style="{ color: colors.textPrimary }">
+            Why Choose <span :style="{ color: colors.primary }">BitChest</span>
+          </h2>
+          <p class="text-xl max-w-3xl mx-auto opacity-80" :style="{ color: colors.textPrimary }">
+            Engineered for performance, built for scale, trusted by thousands
+          </p>
+        </div>
 
-      <div class="container mx-auto relative z-10">
-        <div class="grid lg:grid-cols-2 gap-24 items-center max-w-6xl mx-auto">
-          
-          <!-- Left - Visual Element -->
-          <div class="flex items-center justify-center h-96 relative">
-            <div class="relative w-64 h-64 flex items-center justify-center">
-              <!-- Animated background -->
-              <div class="absolute inset-0 rounded-3xl opacity-20" style="background: linear-gradient(135deg, #01FF19, #35A7FF); filter: blur(40px); animation: pulse 4s ease-in-out infinite"></div>
-              
-              <!-- Rock-like shape with icon -->
-              <div class="relative z-10 text-center">
-                <div class="text-9xl mb-4 opacity-60" style="filter: grayscale(50%); animation: float 6s ease-in-out infinite">🪨</div>
+        <div class="grid md:grid-cols-3 gap-8 mb-20">
+          <div v-for="(feature, index) in features" :key="index"
+               class="group p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer"
+               :style="{ 
+                 backgroundColor: colors.background,
+                 border: `2px solid ${colors.border}`,
+                 boxShadow: `0 20px 40px ${colors.border}20`
+               }">
+            <div class="w-16 h-16 rounded-xl flex items-center justify-center text-2xl mb-6 transition-all duration-300 group-hover:scale-110"
+                 :style="{ backgroundColor: `${colors.primary}15`, color: colors.primary }">
+              {{ feature.icon }}
+            </div>
+            <h3 class="text-xl font-bold mb-4" :style="{ color: colors.textPrimary }">{{ feature.title }}</h3>
+            <p class="opacity-80" :style="{ color: colors.textSecondary }">{{ feature.description }}</p>
+          </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <!-- Left - Visual -->
+          <div class="relative">
+            <div class="relative w-full max-w-lg mx-auto">
+              <!-- Trading Interface Mockup -->
+              <div class="aspect-video rounded-2xl p-6 relative overflow-hidden"
+                   :style="{ 
+                     backgroundColor: colors.background,
+                     border: `2px solid ${colors.borderAccent}`,
+                     boxShadow: `0 25px 50px ${colors.borderAccent}15`
+                   }">
+                <!-- Chart -->
+                <div class="h-32 mb-6 rounded-lg" 
+                     :style="{ background: `linear-gradient(90deg, ${colors.primary}20, ${colors.secondary}20)` }"></div>
+                
+                <!-- Stats Indicators -->
+                <div class="grid grid-cols-3 gap-4">
+                  <div v-for="stat in stats" :key="stat.label"
+                       class="text-center p-4 rounded-lg transition-all duration-300"
+                       :class="{ 'scale-110': stat.value === stats[activeStat]?.value }"
+                       :style="{ 
+                         backgroundColor: stat.color === colors.accent ? `${stat.color}10` : `${stat.color}08`,
+                         border: `1.5px solid ${stat.color === colors.accent ? colors.borderAccent : colors.border}`
+                       }">
+                    <div class="text-2xl font-bold mb-1" :style="{ color: stat.color }">{{ stat.value }}</div>
+                    <div class="text-sm font-medium" :style="{ color: colors.textSecondary }">{{ stat.label }}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Right - Content -->
-          <div class="space-y-12">
-            <div>
-              <h2 class="text-5xl font-black mb-8 leading-tight" style="color: #38618C">
-                The Future of 
-                <span style="background: linear-gradient(135deg, #01FF19, #35A7FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text">Crypto Trading</span>
-              </h2>
+          <div class="space-y-8">
+            <h2 class="text-4xl md:text-5xl font-black leading-tight" :style="{ color: colors.textPrimary }">
+              Real-Time 
+              <span class="bg-gradient-to-r bg-clip-text text-transparent"
+                    :style="{ backgroundImage: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }">
+                Analytics
+              </span>
+              Dashboard
+            </h2>
 
-              <p class="text-xl font-semibold leading-relaxed mb-8" style="color: #38618C; opacity: 0.8">
-                BitChest represents a paradigm shift in cryptocurrency trading. We've engineered a white-label platform that combines security, simplicity, and scalability into one comprehensive solution.
-              </p>
+            <p class="text-lg md:text-xl leading-relaxed opacity-80" :style="{ color: colors.textPrimary }">
+              Monitor your trading performance with precision. Our advanced analytics dashboard provides real-time insights into market trends, portfolio performance, and user behavior.
+            </p>
 
-              <div class="space-y-6">
-                <div class="flex items-start gap-4 group">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style="background: rgba(1, 255, 25, 0.2); color: #01FF19">
-                    ✓
+            <div class="space-y-6">
+              <div v-for="stat in stats" :key="stat.label" 
+                   class="flex items-center justify-between p-4 rounded-xl transition-all duration-300 hover:bg-white"
+                   :style="{ 
+                     backgroundColor: `${colors.background}80`,
+                     border: `1.5px solid ${colors.border}`,
+                     borderLeft: `4px solid ${stat.color}`
+                   }">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold"
+                       :style="{ backgroundColor: `${stat.color}15`, color: stat.color }">
+                    {{ stat.label === 'Uptime SLA' ? '⚡' : stat.label === 'Daily Volume' ? '💰' : '👥' }}
                   </div>
                   <div>
-                    <h3 class="text-lg font-bold mb-2" style="color: #38618C">Enterprise-Grade Security</h3>
-                    <p class="font-semibold" style="color: #38618C; opacity: 0.7">Bank-level encryption and multi-signature wallets protect every transaction</p>
+                    <h4 class="font-bold" :style="{ color: colors.textPrimary }">{{ stat.label }}</h4>
+                    <p class="text-sm" :style="{ color: colors.textSecondary }">Live tracking and monitoring</p>
                   </div>
                 </div>
-
-                <div class="flex items-start gap-4 group">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style="background: rgba(1, 255, 25, 0.2); color: #01FF19">
-                    ✓
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold mb-2" style="color: #38618C">White-Label Ready</h3>
-                    <p class="font-semibold" style="color: #38618C; opacity: 0.7">Seamlessly integrate into your ecosystem with full customization options</p>
-                  </div>
-                </div>
-
-                <div class="flex items-start gap-4 group">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl" style="background: rgba(1, 255, 25, 0.2); color: #01FF19">
-                    ✓
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold mb-2" style="color: #38618C">Real-Time Analytics</h3>
-                    <p class="font-semibold" style="color: #38618C; opacity: 0.7">Deep insights into market trends and user behavior with instant reporting</p>
-                  </div>
-                </div>
+                <div class="text-2xl font-black" :style="{ color: stat.color }">{{ stat.value }}</div>
               </div>
             </div>
 
-            <!-- Stats highlight -->
-            <div class="grid grid-cols-3 gap-4 pt-8">
-              <div class="group bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-white/40 hover:border-white/60 transition-all" style="border-color: rgba(1, 255, 25, 0.2)">
-                <div class="text-3xl font-black mb-2" style="color: #01FF19">99.8%</div>
-                <div class="text-sm font-bold" style="color: #38618C; opacity: 0.7">Uptime SLA</div>
-              </div>
-              <div class="group bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-white/40 hover:border-white/60 transition-all" style="border-color: rgba(35, 167, 255, 0.2)">
-                <div class="text-3xl font-black mb-2" style="color: #35A7FF">$4.2M</div>
-                <div class="text-sm font-bold" style="color: #38618C; opacity: 0.7">Daily Volume</div>
-              </div>
-              <div class="group bg-white/50 backdrop-blur-sm rounded-xl p-6 border border-white/40 hover:border-white/60 transition-all" style="border-color: rgba(255, 89, 100, 0.2)">
-                <div class="text-3xl font-black mb-2" style="color: #FF5964">2.4K+</div>
-                <div class="text-sm font-bold" style="color: #38618C; opacity: 0.7">Active Users</div>
-              </div>
-            </div>
+            <button class="group px-8 py-4 font-bold rounded-xl text-lg border-2 transition-all duration-300 hover:scale-105"
+                    :style="{ 
+                      borderColor: colors.borderAccent,
+                      color: colors.borderAccent,
+                      backgroundColor: `${colors.borderAccent}05`
+                    }">
+              <span class="relative">View All Metrics →</span>
+            </button>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- CTA Section -->
+    <section class="py-20 px-4 sm:px-6 relative overflow-hidden">
+      <div class="absolute inset-0 opacity-5"
+           :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }"></div>
+      
+      <div class="container mx-auto max-w-4xl text-center relative z-10">
+        <div class="inline-block px-6 py-3 rounded-full mb-8" 
+             :style="{ backgroundColor: `${colors.primary}15`, color: colors.primary }">
+          <span class="font-bold">🚀 READY TO START</span>
+        </div>
+        
+        <h2 class="text-4xl md:text-5xl font-black mb-6" :style="{ color: colors.textPrimary }">
+          Start Trading with 
+          <span :style="{ color: colors.primary }">Confidence</span>
+        </h2>
+        
+        <p class="text-xl mb-10 max-w-2xl mx-auto opacity-80" :style="{ color: colors.textPrimary }">
+          Join thousands of traders who trust BitChest for secure, reliable, and professional crypto trading.
+        </p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button class="px-8 py-4 font-bold rounded-xl text-lg transition-all duration-300 hover:scale-105"
+                  :style="{ 
+                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+                    color: colors.background,
+                    boxShadow: `0 20px 40px ${colors.primary}30`
+                  }">
+            Get Started Free
+          </button>
+          
+          <button class="px-8 py-4 font-bold rounded-xl text-lg border-2 transition-all duration-300 hover:scale-105"
+                  :style="{ 
+                    borderColor: colors.textPrimary,
+                    color: colors.textPrimary,
+                    backgroundColor: `${colors.textPrimary}05`
+                  }">
+            Schedule a Demo
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Footer -->
-    <footer class="border-t py-16 px-6" style="background: rgba(56, 97, 140, 0.95); border-color: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px)">
-      <div class="container mx-auto">
+    <footer class="py-12 md:py-16 px-4 sm:px-6 border-t" :style="{ borderColor: colors.borderAccent }">
+      <div class="container mx-auto max-w-7xl">
         <!-- Main Footer Content -->
-        <div class="grid md:grid-cols-4 gap-12 mb-12 max-w-6xl">
+        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-8 md:gap-12 mb-12">
           <!-- Brand -->
-          <div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background: linear-gradient(135deg, #01FF19, #35A7FF)">
+          <div class="lg:col-span-2">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                   :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`, color: colors.background }">
                 ⚡
               </div>
               <div>
-                <h2 class="text-xl font-black text-white">Bit<span style="color: #01FF19">CHEST</span></h2>
+                <h2 class="text-2xl font-black" :style="{ color: colors.textPrimary }">
+                  Bit<span :style="{ color: colors.primary }">CHEST</span>
+                </h2>
+                <p class="text-sm font-semibold opacity-70" :style="{ color: colors.textSecondary }">
+                  White-label crypto trading platform
+                </p>
               </div>
             </div>
-            <p class="font-semibold" style="color: rgba(255, 255, 255, 0.6)">White-label crypto trading platform for the future</p>
+            <p class="max-w-xs opacity-80" :style="{ color: colors.textSecondary }">
+              Secure, scalable, and professional crypto trading solutions for the modern financial ecosystem.
+            </p>
           </div>
 
-          <!-- Product -->
-          <div>
-            <h3 class="text-sm font-bold tracking-widest mb-6" style="color: #01FF19">PRODUCT</h3>
+          <!-- Links -->
+          <div v-for="section in [
+            { title: 'PRODUCT', links: ['Features', 'Pricing', 'Security', 'API Docs'] },
+            { title: 'COMPANY', links: ['About', 'Blog', 'Careers', 'Contact'] },
+            { title: 'LEGAL', links: ['Privacy', 'Terms', 'Compliance', 'Cookies'] }
+          ]" :key="section.title">
+            <h3 class="text-xs font-bold tracking-widest mb-6 opacity-70" :style="{ color: colors.primary }">
+              {{ section.title }}
+            </h3>
             <ul class="space-y-3">
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Features</a></li>
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Pricing</a></li>
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Security</a></li>
-            </ul>
-          </div>
-
-          <!-- Company -->
-          <div>
-            <h3 class="text-sm font-bold tracking-widest mb-6" style="color: #01FF19">COMPANY</h3>
-            <ul class="space-y-3">
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">About</a></li>
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Blog</a></li>
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Careers</a></li>
-            </ul>
-          </div>
-
-          <!-- Legal -->
-          <div>
-            <h3 class="text-sm font-bold tracking-widest mb-6" style="color: #01FF19">LEGAL</h3>
-            <ul class="space-y-3">
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Privacy</a></li>
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Terms</a></li>
-              <li><a href="#" class="font-semibold transition-colors" style="color: #35A7FF; opacity: 0.8" @mouseenter="(e) => (e.target as HTMLElement).style.opacity = '1'" @mouseleave="(e) => (e.target as HTMLElement).style.opacity = '0.8'">Compliance</a></li>
+              <li v-for="link in section.links" :key="link">
+                <a href="#" class="text-sm font-medium transition-all duration-300 hover:translate-x-2 inline-block"
+                   :style="{ color: colors.textPrimary }">
+                  {{ link }}
+                </a>
+              </li>
             </ul>
           </div>
         </div>
 
         <!-- Bottom Section -->
-        <div class="border-t pt-8" style="border-color: rgba(255, 255, 255, 0.1)">
-          <div class="flex flex-col md:flex-row justify-between items-center gap-8">
-            <p class="font-semibold" style="color: rgba(255, 255, 255, 0.6)">© 2024 BitChest. All rights reserved.</p>
+        <div class="pt-8 border-t" :style="{ borderColor: `${colors.border}80` }">
+          <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+            <p class="text-sm font-medium opacity-70" :style="{ color: colors.textSecondary }">
+              © 2024 BitChest. All rights reserved.
+            </p>
             
-            <div class="flex gap-8">
-              <a href="#" class="text-lg transition-colors hover:scale-125" style="color: #01FF19">𝕏</a>
-              <a href="#" class="text-lg transition-colors hover:scale-125" style="color: #35A7FF">f</a>
-              <a href="#" class="text-lg transition-colors hover:scale-125" style="color: #FF5964">▶</a>
-              <a href="#" class="text-lg transition-colors hover:scale-125" style="color: #01FF19">✈️</a>
+            <div class="flex gap-6">
+              <a v-for="(social, index) in [
+                { icon: '𝕏', color: colors.primary },
+                { icon: 'f', color: colors.secondary },
+                { icon: '▶', color: colors.accent },
+                { icon: '✈️', color: colors.textPrimary }
+              ]" :key="index" href="#" 
+                 class="text-lg transition-all duration-300 hover:scale-125 hover:rotate-12"
+                 :style="{ color: social.color }">
+                {{ social.icon }}
+              </a>
             </div>
             
-            <p class="text-sm font-semibold" style="color: rgba(255, 255, 255, 0.5)">Prototype for educational purposes</p>
+            <p class="text-xs font-medium opacity-50" :style="{ color: colors.textSecondary }">
+              Prototype for educational purposes
+            </p>
           </div>
         </div>
       </div>
@@ -258,41 +443,78 @@ const dashboardItems = ref([
 
 <style scoped>
 * {
-  font-family: 'Celias', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-30px); }
+.hover\:scale-102:hover {
+  transform: scale(1.02);
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.2; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.05); }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out;
 }
 
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #F8FAFF;
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #01FF19;
-  border-radius: 4px;
+  background: #E2E8F0;
+  border-radius: 5px;
+  border: 2px solid #F8FAFF;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #35A7FF;
+  background: #01FF19;
+}
+
+/* Performance optimizations */
+img {
+  content-visibility: auto;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
 }
 </style>

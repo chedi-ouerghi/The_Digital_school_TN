@@ -42,18 +42,28 @@ function storageUrl(path?: string | null) {
 // ---------------------------------------------------------------------
 async function fetchProfile() {
   try {
+    console.log('📥 Fetching profile data...')
     const res = await api.auth.profile()
     profile.value = res.user || res
+    console.log('✅ Profile loaded:', profile.value)
 
     if (profile.value?.profile_picture) {
-      avatarPreview.value = storageUrl(profile.value.profile_picture)
+      const picUrl = storageUrl(profile.value.profile_picture)
+      avatarPreview.value = picUrl
+      console.log('🖼️ Avatar preview set:', picUrl)
+    } else {
+      console.log('⚠️ No profile picture found')
     }
 
     if (profile.value?.profile_banner) {
-      bannerPreview.value = storageUrl(profile.value.profile_banner)
+      const bannerUrl = storageUrl(profile.value.profile_banner)
+      bannerPreview.value = bannerUrl
+      console.log('🖼️ Banner preview set:', bannerUrl)
+    } else {
+      console.log('⚠️ No profile banner found')
     }
   } catch (e: any) {
-    console.error('Error loading profile:', e)
+    console.error('❌ Error loading profile:', e)
   }
 }
 
@@ -83,35 +93,77 @@ const handleBannerUpload = (event: Event) => {
 }
 
 const uploadImages = async () => {
-  if (!avatarFile.value && !bannerFile.value) return
+  if (!avatarFile.value && !bannerFile.value) {
+    console.warn('⚠️ No files selected for upload')
+    return
+  }
 
   uploadLoading.value = true
   message.value = null
 
   try {
+    let uploadedCount = 0
+
     if (avatarFile.value) {
-      const form = new FormData()
-      form.append('profile_picture', avatarFile.value)
-      await api.auth.uploadProfilePicture(form)
+      try {
+        const form = new FormData()
+        form.append('profile_picture', avatarFile.value)
+        console.log('📸 Uploading profile picture...', {
+          name: avatarFile.value.name,
+          size: avatarFile.value.size,
+          type: avatarFile.value.type
+        })
+        
+        const response = await api.auth.uploadProfilePicture(form)
+        console.log('✅ Profile picture uploaded successfully', response)
+        uploadedCount++
+      } catch (e: any) {
+        console.error('❌ Profile picture upload failed:', e.message)
+        throw new Error(`Photo de profil: ${e.message}`)
+      }
     }
 
     if (bannerFile.value) {
-      const form = new FormData()
-      form.append('profile_banner', bannerFile.value)
-      await api.auth.uploadProfileBanner(form)
+      try {
+        const form = new FormData()
+        form.append('profile_banner', bannerFile.value)
+        console.log('🖼️ Uploading profile banner...', {
+          name: bannerFile.value.name,
+          size: bannerFile.value.size,
+          type: bannerFile.value.type
+        })
+        
+        const response = await api.auth.uploadProfileBanner(form)
+        console.log('✅ Profile banner uploaded successfully', response)
+        uploadedCount++
+      } catch (e: any) {
+        console.error('❌ Profile banner upload failed:', e.message)
+        throw new Error(`Bannière: ${e.message}`)
+      }
     }
 
-    message.value = 'Media uploaded successfully'
+    // Success message
+    if (uploadedCount === 2) {
+      message.value = '✅ Photo et bannière téléchargées avec succès'
+      console.log('✅ All media uploaded successfully')
+    } else if (uploadedCount === 1) {
+      message.value = '✅ Fichier téléchargé avec succès'
+      console.log('✅ One file uploaded successfully')
+    }
+
     avatarFile.value = null
     bannerFile.value = null
 
     // Reload images from backend
+    console.log('🔄 Reloading profile data...')
     await fetchProfile()
+    console.log('✅ Profile data reloaded')
 
-    setTimeout(() => (message.value = null), 3000)
+    setTimeout(() => (message.value = null), 4000)
   } catch (e: any) {
-    console.error('Upload failed:', e)
-    message.value = e?.message || 'Upload failed'
+    console.error('❌ Upload error:', e)
+    message.value = `❌ Erreur: ${e?.message || 'Téléchargement échoué'}`
+    console.error('Full error object:', e)
   } finally {
     uploadLoading.value = false
   }

@@ -3,12 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class AuthControllerTest extends TestCase
 {
-    use RefreshDatabase;
 
     /**
      * Test user login with valid credentials
@@ -21,15 +19,19 @@ class AuthControllerTest extends TestCase
             'role' => 'CLIENT'
         ]);
 
-        $response = $this->postJson('/api/v1/login', [
-            'email' => 'chediouerghi88@gmail.com',
-            'password' => 'Admin123!',
-        ]);
+        // Obtenir le token CSRF pour les endpoints publics
+        $csrfToken = $this->getCsrfToken();
+        
+        $response = $this->withHeader('X-XSRF-TOKEN', $csrfToken)
+            ->postJson('/api/v1/login', [
+                'email' => 'chediouerghi88@gmail.com',
+                'password' => 'Admin123!',
+            ]);
 
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'user' => ['id', 'name', 'email', 'role'],
-                'token'
+                'message'
             ]);
     }
 
@@ -38,10 +40,14 @@ class AuthControllerTest extends TestCase
      */
     public function test_login_with_invalid_email()
     {
-        $response = $this->postJson('/api/v1/login', [
-            'email' => 'nonexistent@example.com',
-            'password' => 'Admin123!',
-        ]);
+        // Obtenir le token CSRF pour les endpoints publics
+        $csrfToken = $this->getCsrfToken();
+        
+        $response = $this->withHeader('X-XSRF-TOKEN', $csrfToken)
+            ->postJson('/api/v1/login', [
+                'email' => 'nonexistent@example.com',
+                'password' => 'Admin123!',
+            ]);
 
         $response->assertStatus(401)
             ->assertJson(['message' => 'Invalid credentials']);
@@ -57,10 +63,14 @@ class AuthControllerTest extends TestCase
             'password' => bcrypt('Admin123!'),
         ]);
 
-        $response = $this->postJson('/api/v1/login', [
-            'email' => 'test@example.com',
-            'password' => 'wrongpassword',
-        ]);
+        // Obtenir le token CSRF pour les endpoints publics
+        $csrfToken = $this->getCsrfToken();
+        
+        $response = $this->withHeader('X-XSRF-TOKEN', $csrfToken)
+            ->postJson('/api/v1/login', [
+                'email' => 'test@example.com',
+                'password' => 'wrongpassword',
+            ]);
 
         $response->assertStatus(401);
     }
@@ -70,11 +80,9 @@ class AuthControllerTest extends TestCase
      */
     public function test_logout_authenticated_user()
     {
-        $user = User::factory()->create();
-        $token = $user->createToken('TestToken')->plainTextToken;
+        $user = $this->createAuthenticatedUser();
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson('/api/v1/logout');
+        $response = $this->authenticatedJson('POST', '/api/v1/logout', [], $user);
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'Logout successful']);
@@ -122,17 +130,15 @@ class AuthControllerTest extends TestCase
      */
     public function test_update_profile()
     {
-        $user = User::factory()->create([
+        $user = $this->createAuthenticatedUser([
             'name' => 'Old Name',
             'email' => 'old@example.com'
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson('/api/v1/profile', [
-                'name' => 'New Name',
-                'email' => 'new@example.com',
-            ]);
+        $response = $this->authenticatedJson('PUT', '/api/v1/profile', [
+            'name' => 'New Name',
+            'email' => 'new@example.com',
+        ], $user);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('users', [
@@ -147,17 +153,15 @@ class AuthControllerTest extends TestCase
      */
     public function test_change_password()
     {
-        $user = User::factory()->create([
+        $user = $this->createAuthenticatedUser([
             'password' => bcrypt('oldpassword')
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson('/api/v1/profile/password', [
-                'current_password' => 'oldpassword',
-                'password' => 'newAdmin123!',
-                'password_confirmation' => 'newAdmin123!',
-            ]);
+        $response = $this->authenticatedJson('PUT', '/api/v1/profile/password', [
+            'current_password' => 'oldpassword',
+            'password' => 'newAdmin123!',
+            'password_confirmation' => 'newAdmin123!',
+        ], $user);
 
         $response->assertStatus(200)
             ->assertJson(['message' => 'Password updated successfully.']);
@@ -168,17 +172,15 @@ class AuthControllerTest extends TestCase
      */
     public function test_change_password_with_wrong_current_password()
     {
-        $user = User::factory()->create([
+        $user = $this->createAuthenticatedUser([
             'password' => bcrypt('oldpassword')
         ]);
-        $token = $user->createToken('TestToken')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->putJson('/api/v1/profile/password', [
-                'current_password' => 'wrongpassword',
-                'password' => 'newAdmin123!',
-                'password_confirmation' => 'newAdmin123!',
-            ]);
+        $response = $this->authenticatedJson('PUT', '/api/v1/profile/password', [
+            'current_password' => 'wrongpassword',
+            'password' => 'newAdmin123!',
+            'password_confirmation' => 'newAdmin123!',
+        ], $user);
 
         $response->assertStatus(400);
     }
@@ -188,10 +190,14 @@ class AuthControllerTest extends TestCase
      */
     public function test_request_account()
     {
-        $response = $this->postJson('/api/v1/request-account', [
-            'name' => 'John Doe',
-            'email' => 'john@example.com',
-        ]);
+        // Obtenir le token CSRF pour les endpoints publics
+        $csrfToken = $this->getCsrfToken();
+        
+        $response = $this->withHeader('X-XSRF-TOKEN', $csrfToken)
+            ->postJson('/api/v1/request-account', [
+                'name' => 'John Doe',
+                'email' => 'john@example.com',
+            ]);
 
         $response->assertStatus(200)
             ->assertJsonFragment([
@@ -212,10 +218,14 @@ class AuthControllerTest extends TestCase
     {
         User::factory()->create(['email' => 'existing@example.com']);
 
-        $response = $this->postJson('/api/v1/request-account', [
-            'name' => 'John Doe',
-            'email' => 'existing@example.com',
-        ]);
+        // Obtenir le token CSRF pour les endpoints publics
+        $csrfToken = $this->getCsrfToken();
+        
+        $response = $this->withHeader('X-XSRF-TOKEN', $csrfToken)
+            ->postJson('/api/v1/request-account', [
+                'name' => 'John Doe',
+                'email' => 'existing@example.com',
+            ]);
 
         $response->assertStatus(422);
     }

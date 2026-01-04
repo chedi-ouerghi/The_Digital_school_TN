@@ -321,10 +321,16 @@ public function show($id): JsonResponse
 
     /**
      * Approuver une demande de compte
+     * Accepte un mot de passe temporaire fourni par l'admin
      */
-    public function approveRequest($id, TransactionService $transactionService): JsonResponse
+    public function approveRequest(Request $request, $id, TransactionService $transactionService): JsonResponse
     {
         try {
+            // Valider les données reçues
+            $validated = $request->validate([
+                'temporary_password' => 'required|string|min:8|max:50'
+            ]);
+
             DB::beginTransaction();
             
             $accountRequest = \App\Models\AccountRequest::findOrFail($id);
@@ -333,14 +339,15 @@ public function show($id): JsonResponse
                 return response()->json(['error' => 'This request has already been processed'], 400);
             }
 
-            $tempPassword = Str::random(12);
+            $tempPassword = $validated['temporary_password'];
 
             // Créer l'utilisateur
             $user = User::create([
                 'name' => $accountRequest->name,
                 'email' => $accountRequest->email,
                 'password' => $tempPassword,
-                'role' => 'CLIENT'
+                'role' => 'CLIENT',
+                'email_verified_at' => now() // Marquer l'email comme vérifié immédiatement
             ]);
 
             // Créer le wallet initial avec 500 EUR
@@ -353,6 +360,15 @@ public function show($id): JsonResponse
                 'status' => 'APPROVED',
                 'processed_at' => now(),
                 'processed_by' => Auth::id()
+            ]);
+
+            // Créer la notification de bienvenue
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'type' => \App\Models\Notification::TYPE_WELCOME,
+                'title' => '🎉 Welcome to Bitchest!',
+                'message' => 'Welcome to Bitchest! You\'ve been credited with €500 to explore and start your crypto journey. This is your time to discover the opportunities and build your portfolio. Start trading, learn, and grow your wealth with us!',
+                'is_read' => false
             ]);
 
             // Envoyer l'email
@@ -370,9 +386,10 @@ public function show($id): JsonResponse
             $user = $user->fresh(['wallets']);
 
             $response = [
-                'message' => 'Account created successfully',
+                'message' => 'Account approved and created successfully',
                 'user' => $user,
                 'wallet' => $user->wallets->first(),
+                'mail_sent' => $mailSent
             ];
 
             if (!$mailSent) {
@@ -382,6 +399,12 @@ public function show($id): JsonResponse
 
             return response()->json($response, 201);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Validation error',
+                'details' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error during account request approval: ' . $e->getMessage());

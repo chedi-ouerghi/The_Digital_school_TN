@@ -1,50 +1,96 @@
-import api, { clearToken as apiClearToken, getToken as apiGetToken, setToken as apiSetToken } from './api';
+import api, { API_BASE } from './api';
+
+/**
+ * SÉCURITÉ : Authentification basée sur les cookies HttpOnly + Secure
+ * 
+ * Modèle :
+ * 1. Appeler /sanctum/csrf-cookie pour obtenir le token XSRF
+ * 2. Login : le serveur retourne un cookie HttpOnly (XSRF-TOKEN + Laravel session)
+ * 3. Stockage user : UNIQUEMENT en mémoire ou sessionStorage (jamais localStorage)
+ * 4. Logout : le serveur efface les cookies
+ * 
+ * Ce modèle prévient :
+ * - CSRF : protection Sanctum via X-XSRF-TOKEN header (automatique)
+ * - XSS : les cookies HttpOnly ne sont pas accessibles via JS
+ * - Token hijacking : pas de token à voler
+ */
 
 type Credentials = { email: string; password: string }
 
 const STORAGE_USER_KEY = 'user'
+const STORAGE_TYPE = 'sessionStorage'
+
+/**
+ * 🔥 CRITIQUE : Initialiser le CSRF token
+ * 
+ * Cet appel DOIT être fait avant le premier login/logout
+ * Sanctum définira le cookie XSRF-TOKEN que nous enverrons dans X-XSRF-TOKEN header
+ * 
+ * IMPORTANT : La route est /sanctum/csrf-cookie (PAS /api/v1/sanctum/csrf-cookie)
+ */
+export async function initializeCsrf() {
+  try {
+    const apiUrl = API_BASE.replace('/api/v1', ''); // Retirer v1 du prefix
+    await fetch(`${apiUrl}/sanctum/csrf-cookie`, {
+      method: 'GET',
+      credentials: 'include',  // ← Inclure les cookies
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    console.log('✅ CSRF token initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize CSRF token:', error);
+  }
+}
 
 export const auth = {
+  /**
+   * Login avec cookies HttpOnly + CSRF protection
+   * 
+   * IMPORTANT : Appeler initializeCsrf() d'abord
+   */
   async login(payload: Credentials) {
     try {
+      // Ensure CSRF token is initialized
+      await initializeCsrf();
+
       const res = await api.auth.login(payload)
 
-      // Accepter plusieurs structures de réponse courantes
-      const token = res?.token || res?.access_token || res?.data?.token || res?.data?.access_token
+      // Parser les réponses possibles
       const user = res?.user || res?.data?.user || null
 
-      if (token) {
-        apiSetToken(token)
+      if (!user) {
+        throw new Error('Format de réponse de login invalide')
       }
 
-      // Si l'API a renvoyé aussi l'utilisateur, on le stocke
-      if (user) {
-        try { localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user)) } catch (e) { console.warn('Erreur de stockage local:', e) }
-        return { token, user }
-      }
-
-      // Si pas d'utilisateur dans la réponse mais token présent, récupérer le profil
-      if (token) {
-        try {
-          const profile = await api.auth.profile()
-          const profileUser = profile?.user || profile || null
-          if (profileUser) {
-            try { localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(profileUser)) } catch (e) { console.warn('Erreur de stockage local:', e) }
-            return { token, user: profileUser }
-          }
-        } catch (e) {
-          // ignore profile fetch error, will be handled by isAuthenticated later
+      // SÉCURITÉ : Stocker UNIQUEMENT les infos non-sensibles en sessionStorage
+      const safeUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      };
+      
+      try { 
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.setItem(STORAGE_USER_KEY, JSON.stringify(safeUser))
         }
+      } catch (e) { 
+        console.warn('Impossible de stocker l\'utilisateur :', e)
       }
 
-      // Si aucune info utile, lancer une erreur
-      throw new Error('Format de réponse de login invalide')
+      // Le cookie est automatiquement géré par le navigateur et Sanctum
+      return { user: safeUser }
     } catch (error) {
       console.error('Erreur de connexion:', error)
       throw error
     }
   },
 
+  /**
+   * Logout : le serveur efface les cookies
+   */
   async logout() {
     try {
       await api.auth.logout()
@@ -55,34 +101,47 @@ export const auth = {
     }
   },
 
+  /**
+   * Vérifier si l'utilisateur est authentifié
+   * Le serveur valide la session via les cookies HttpOnly
+   */
   async isAuthenticated() {
-    const token = apiGetToken()
-    if (!token) {
-      // No token stored -> not authenticated. Avoid calling profile (prevents unnecessary 401 requests).
-      this.clearLocalAuth()
-      return false
-    }
-
-    // Vérifier l'authentification en récupérant le profil
     try {
       const response = await api.auth.profile()
       const profileUser = response?.user || response || null
+      
       if (profileUser) {
-        try { localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(profileUser)) } catch {}
+        const safeUser = {
+          id: profileUser.id,
+          email: profileUser.email,
+          name: profileUser.name,
+          role: profileUser.role,
+        };
+        try { 
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem(STORAGE_USER_KEY, JSON.stringify(safeUser))
+          }
+        } catch {}
         return true
       }
       this.clearLocalAuth()
       return false
     } catch (e) {
-      console.warn('Token invalide ou erreur de profil:', e)
+      console.warn('Session invalide ou erreur de profil:', e)
       this.clearLocalAuth()
       return false
     }
   },
 
+  /**
+   * Récupérer l'utilisateur depuis sessionStorage
+   * Les données sensibles ne sont JAMAIS accessibles au frontend
+   */
   getUser() {
     try {
-      const raw = localStorage.getItem(STORAGE_USER_KEY)
+      const raw = typeof window !== 'undefined' && window.sessionStorage 
+        ? window.sessionStorage.getItem(STORAGE_USER_KEY)
+        : null
       return raw ? JSON.parse(raw) : null
     } catch {
       return null
@@ -94,22 +153,24 @@ export const auth = {
     return u?.role || 'CLIENT'
   },
 
-  // Nouvelle méthode pour vider les données d'authentification locales
+  /**
+   * Effacer les données d'authentification locales
+   * Les cookies sont effacés par le serveur lors du logout
+   */
   clearLocalAuth() {
-    apiClearToken()
     try {
-      localStorage.removeItem(STORAGE_USER_KEY)
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.removeItem(STORAGE_USER_KEY)
+      }
     } catch (e) {
-      console.warn('Erreur lors du nettoyage du stockage local:', e)
+      console.warn('Erreur lors du nettoyage du stockage:', e)
     }
   },
 
-  // Méthode utilitaire pour vérifier si l'utilisateur est admin
   isAdmin(): boolean {
     return this.getRole().toUpperCase() === 'ADMIN'
   },
 
-  // Méthode utilitaire pour vérifier si l'utilisateur est client
   isClient(): boolean {
     return this.getRole().toUpperCase() === 'CLIENT'
   }

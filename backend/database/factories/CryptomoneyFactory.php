@@ -19,8 +19,11 @@ class CryptomoneyFactory extends Factory
             'name' => fake()->word(),
             'symbol' => fake()->unique()->regexify('[A-Z]{3,5}'),
             'price_eur' => fake()->randomFloat(2, 0.01, 100000),
-            'coingecko_id' => fake()->unique()->slug(),
-            'updated_at_api' => now(),
+            'image' => null,
+            'category' => null,
+            'website' => null,
+            'market_cap' => fake()->randomFloat(2, 0.01, 100000000),
+            'change_24h_pct' => fake()->randomFloat(2, -100, 100),
         ];
     }
 }

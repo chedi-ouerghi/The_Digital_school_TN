@@ -32,8 +32,24 @@ return [
     |
     */
 
+    /**
+     * SÉCURITÉ : Durée de vie de la session
+     * 
+     * - Développement : 120 minutes (2h)
+     * - Production : 60-120 minutes
+     * 
+     * Les sessions expirées ne peuvent plus être utilisées.
+     */
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    /**
+     * SÉCURITÉ : Expiration à la fermeture du navigateur
+     * 
+     * false = le cookie persiste (Remember Me)
+     * true  = le cookie disparaît en fermant le navigateur
+     * 
+     * Recommandé : false pour UX, mais avec 'lifetime' court
+     */
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
@@ -41,13 +57,15 @@ return [
     | Session Encryption
     |--------------------------------------------------------------------------
     |
-    | This option allows you to easily specify that all of your session data
-    | should be encrypted before it's stored. All encryption is performed
-    | automatically by Laravel and you may use the session like normal.
-    |
+    | SÉCURITÉ CRITIQUE : Chiffrer les données de session stockées en base
+    | 
+    | true = les données de session sont chiffrées avec APP_KEY
+    |        protection contre l'accès direct à la base de données
+    | 
+    | Même si Laravel chiffre les cookies, il faut aussi chiffrer la session en DB
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => env('SESSION_ENCRYPT', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -163,40 +181,55 @@ return [
     | HTTPS Only Cookies
     |--------------------------------------------------------------------------
     |
-    | By setting this option to true, session cookies will only be sent back
-    | to the server if the browser has a HTTPS connection. This will keep
-    | the cookie from being sent to you when it can't be done securely.
-    |
+    | SÉCURITÉ CRITIQUE : En production, TOUJOURS true
+    | 
+    | true = les cookies ne sont envoyés que via HTTPS
+    |        protection contre Man-in-the-Middle (MITM) attacks
+    | 
+    | Développement :
+    |   - localhost : false (pas de HTTPS en local)
+    |   - avec SSL local : true
+    | 
+    | Production : TOUJOURS true
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', false), // Mettre true en production
 
     /*
     |--------------------------------------------------------------------------
-    | HTTP Access Only
+    | HTTP Access Only (SÉCURITÉ CRITIQUE)
     |--------------------------------------------------------------------------
     |
-    | Setting this value to true will prevent JavaScript from accessing the
-    | value of the cookie and the cookie will only be accessible through
-    | the HTTP protocol. It's unlikely you should disable this option.
+    | TOUJOURS true pour les sessions d'authentification
+    | 
+    | true = les cookies ne sont pas accessibles via JavaScript
+    |        protection contre les attaques XSS
+    |        seul le navigateur enverra le cookie automatiquement
     |
+    | false = le cookie est accessible via document.cookie
+    |         JAMAIS false pour les sessions d'authentification
     */
 
     'http_only' => env('SESSION_HTTP_ONLY', true),
 
     /*
     |--------------------------------------------------------------------------
-    | Same-Site Cookies
+    | Same-Site Cookies (SÉCURITÉ CSRF)
     |--------------------------------------------------------------------------
     |
-    | This option determines how your cookies behave when cross-site requests
-    | take place, and can be used to mitigate CSRF attacks. By default, we
-    | will set this value to "lax" to permit secure cross-site requests.
+    | Protection contre les attaques CSRF (Cross-Site Request Forgery)
     |
-    | See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+    | 'strict' = le cookie ne se envoie QUE pour les requêtes du même site
+    |            protection maximale mais impact UX (liens externes)
     |
-    | Supported: "lax", "strict", "none", null
+    | 'lax'    = le cookie est envoyé pour les requêtes GET same-site
+    |            bon compromis sécurité / UX
     |
+    | 'none'   = le cookie est envoyé pour les requêtes cross-site
+    |            requiert Secure=true
+    |            JAMAIS en développement sans HTTPS
+    |
+    | Recommandé : 'lax' (défaut sécurisé)
     */
 
     'same_site' => env('SESSION_SAME_SITE', 'lax'),

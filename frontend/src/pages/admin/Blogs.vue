@@ -1,186 +1,166 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../../services/api'
+import { blogApi } from '../../services/api'
 
-// UI
+// Components
+import BlogList from './_componentsBlogs/BlogList.vue'
+import BlogForm from './_componentsBlogs/BlogForm.vue'
+import DeleteConfirmationDialog from './_componentsBlogs/DeleteConfirmationDialog.vue'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Dialog } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 
 const router = useRouter()
+
+// Data
 const blogs = ref<any[]>([])
 const loading = ref(false)
-const page = ref(1)
-const total = ref(0)
-const itemsPerPage = 12
+const currentPage = ref(1)
+const totalPages = ref(1)
 
-// Dialog / form state
-const dialogOpen = ref(false)
+// Form dialog state
+const formOpen = ref(false)
 const isEdit = ref(false)
-const editingId = ref<number | string | null>(null)
-const form = ref({
-  title: '',
-  category: '',
-  summary: '',
-  content: '',
-  tags: '',
-  image: '',
-  published_at: ''
-})
+const editingBlog = ref<any>(null)
+
+// Delete confirmation state
+const deleteOpen = ref(false)
+const blogToDelete = ref<any>(null)
+
+// Categories (you can fetch these from API or define them statically)
+const categories = ref([
+  'Crypto News',
+  'Market Analysis',
+  'Trading',
+  'DeFi',
+  'NFT',
+  'Technology',
+  'Regulation',
+  'Education'
+])
 
 async function fetchBlogs() {
   loading.value = true
   try {
-    const res = await api.blog.list({ page: page.value })
-    // support different response shapes
-    const data = res && res.data && Array.isArray(res.data)
-      ? res.data
-      : res && res.data && Array.isArray(res.data?.data)
-        ? res.data.data
-        : Array.isArray(res) ? res : []
-
-    blogs.value = data || []
-    total.value = res?.total || res?.data?.total || blogs.value.length
+    const response = await blogApi.list({ page: currentPage.value })
+    const data = response?.data?.data || response?.data || response || []
+    
+    blogs.value = Array.isArray(data) ? data : []
+    totalPages.value = response?.data?.last_page || response?.last_page || 1
+    currentPage.value = response?.data?.current_page || response?.current_page || 1
   } catch (err) {
     console.error('Error loading blogs:', err)
     blogs.value = []
+    totalPages.value = 1
   } finally {
     loading.value = false
   }
 }
 
-function openCreate() {
+function handleCreate() {
   isEdit.value = false
-  editingId.value = null
-  form.value = { title: '', category: '', summary: '', content: '', tags: '', image: '', published_at: '' }
-  dialogOpen.value = true
+  editingBlog.value = null
+  formOpen.value = true
 }
 
-function openEdit(blog: any) {
+function handleEdit(blog: any) {
   isEdit.value = true
-  editingId.value = blog.id || blog.slug
-  form.value = {
-    title: blog.title || '',
-    category: blog.category || '',
-    summary: blog.summary || '',
-    content: blog.content || '',
-    tags: Array.isArray(blog.tags) ? blog.tags.join(', ') : (blog.tags || ''),
-    image: blog.image || '',
-    published_at: blog.published_at ? blog.published_at.split('T')[0] : ''
-  }
-  dialogOpen.value = true
+  editingBlog.value = blog
+  formOpen.value = true
 }
 
-async function submit() {
-  try {
-    const payload: any = {
-      title: form.value.title.trim(),
-      category: form.value.category,
-      summary: form.value.summary.trim(),
-      content: form.value.content,
-      tags: form.value.tags ? form.value.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-      image: form.value.image.trim(),
-      published_at: form.value.published_at || null
-    }
+function handleDelete(blog: any) {
+  blogToDelete.value = blog
+  deleteOpen.value = true
+}
 
-    if (isEdit.value && editingId.value) {
-      await api.blog.update(editingId.value as any, payload)
-      alert('Blog updated')
+async function handleFormSubmit(payload: any) {
+  try {
+    if (isEdit.value && editingBlog.value) {
+      await blogApi.update(editingBlog.value.id, payload)
     } else {
-      await api.blog.create(payload)
-      alert('Blog created')
+      await blogApi.create(payload)
     }
-
-    dialogOpen.value = false
+    
+    formOpen.value = false
     await fetchBlogs()
-  } catch (err: any) {
+  } catch (err) {
     console.error('Save error:', err)
-    alert(err?.message || 'Failed to save blog. Check server logs.')
+    alert('Failed to save blog post. Please try again.')
   }
 }
 
-async function remove(blog: any) {
-  if (!confirm('Delete this blog?')) return
+async function handleDeleteConfirm() {
+  if (!blogToDelete.value) return
+  
   try {
-    await api.blog.delete(blog.id || blog.slug)
+    await blogApi.delete(blogToDelete.value.id)
+    deleteOpen.value = false
     await fetchBlogs()
-    alert('Deleted')
-  } catch (err: any) {
+  } catch (err) {
     console.error('Delete error:', err)
-    alert(err?.message || 'Failed to delete')
+    alert('Failed to delete blog post. Please try again.')
   }
 }
 
-function view(blog: any) {
-  const slug = blog.slug || blog.id
-  router.push(`/blog/${slug}`)
+function handleViewDetails(id: number) {
+  router.push(`/blog/${id}`)
 }
 
-onMounted(fetchBlogs)
+function handleChangePage(page: number) {
+  currentPage.value = page
+  fetchBlogs()
+}
+
+function handleRefresh() {
+  fetchBlogs()
+}
+
+onMounted(() => {
+  fetchBlogs()
+})
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 p-6">
+    <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold">Manage Blogs</h1>
-        <p class="text-sm text-gray-500">Create, edit and remove blog posts.</p>
+        <h1 class="text-3xl font-bold text-gray-900">📚 Blog Management</h1>
+        <p class="text-gray-600 mt-1">Create, edit, and manage your blog posts</p>
       </div>
-      <div class="flex items-center gap-2">
-        <Button @click="fetchBlogs">Refresh</Button>
-        <Button @click="openCreate">New Blog</Button>
-      </div>
+      <Button @click="handleCreate" class="bg-blue-600 hover:bg-blue-700">
+        ✍️ Create New Post
+      </Button>
     </div>
 
-    <Card>
-      <CardContent>
-        <div v-if="loading" class="text-center py-8">Loading...</div>
+    <!-- Blog List -->
+    <BlogList
+      :blogs="blogs"
+      :loading="loading"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      @view-details="handleViewDetails"
+      @edit-blog="handleEdit"
+      @delete-blog="handleDelete"
+      @change-page="handleChangePage"
+      @refresh="handleRefresh"
+    />
 
-        <div v-else>
-          <div v-if="blogs.length === 0" class="text-center py-8 text-gray-500">No blogs found.</div>
+    <!-- Form Dialog -->
+    <BlogForm
+      v-model:open="formOpen"
+      :is-edit="isEdit"
+      :blog="editingBlog"
+      :categories="categories"
+      @submit="handleFormSubmit"
+    />
 
-          <div class="space-y-3">
-            <div v-for="b in blogs" :key="b.id || b.slug" class="p-4 bg-slate-800 rounded-lg flex items-start justify-between">
-              <div>
-                <div class="font-semibold text-lg">{{ b.title }}</div>
-                <div class="text-sm text-gray-400">{{ b.category }} • {{ b.author?.name || 'Unknown' }}</div>
-                <div class="text-sm text-gray-400">Published: {{ b.published_at ? b.published_at.split('T')[0] : '—' }}</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <Button variant="outline" @click="() => view(b)">View</Button>
-                <Button variant="outline" @click="() => openEdit(b)">Edit</Button>
-                <Button class="bg-red-600" @click="() => remove(b)">Delete</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-
-    <Dialog v-model:open="dialogOpen">
-      <div class="p-4 max-w-2xl">
-        <h3 class="text-lg font-semibold mb-3">{{ isEdit ? 'Edit Blog' : 'New Blog' }}</h3>
-        <div class="space-y-3">
-          <Input v-model="form.title" placeholder="Title" />
-          <Input v-model="form.category" placeholder="Category" />
-          <Input v-model="form.published_at" type="date" />
-          <Input v-model="form.image" placeholder="Image URL" />
-          <Input v-model="form.tags" placeholder="tags, comma separated" />
-          <Input v-model="form.summary" placeholder="Summary" />
-          <textarea v-model="form.content" rows="6" class="w-full p-2 rounded bg-slate-900"></textarea>
-        </div>
-
-        <div class="mt-4 flex justify-end gap-2">
-          <Button variant="outline" @click="dialogOpen = false">Cancel</Button>
-          <Button @click="submit">{{ isEdit ? 'Save' : 'Create' }}</Button>
-        </div>
-      </div>
-    </Dialog>
+    <!-- Delete Confirmation Dialog -->
+    <DeleteConfirmationDialog
+      v-model:open="deleteOpen"
+      title="Delete Blog Post"
+      :description="`Are you sure you want to delete '${blogToDelete?.title}'? This action cannot be undone.`"
+      @confirm="handleDeleteConfirm"
+    />
   </div>
 </template>
-
-<style scoped>
-.bg-slate-800 { background-color: #0f1724; }
-</style>

@@ -25,7 +25,7 @@ class TransactionService
         return DB::transaction(function () use ($user, $symbol, $type, $quantity) {
             // CORRECTION: Validations complètes dès le départ
             if ($quantity <= 0) {
-                throw new \Exception('La quantité doit être positive');
+                throw new \Exception('Quantity must be positive');
             }
 
             $crypto = Cryptomoney::where('symbol', $symbol)->firstOrFail();
@@ -41,7 +41,7 @@ class TransactionService
             $currentPrice = (float)$crypto->price_eur;
             // CORRECTION: Validation du prix
             if ($currentPrice <= 0) {
-                throw new \Exception('Le prix de la crypto est invalide');
+                throw new \Exception('Invalid crypto price');
             }
             
             $totalAmount = (float)$quantity * $currentPrice;
@@ -53,7 +53,7 @@ class TransactionService
 
             if ($type === 'ACHAT') {
                 if ((float)$wallet->balance_eur < $totalAmount) {
-                    throw new \Exception('Solde insuffisant pour cette transaction');
+                    throw new \Exception('Insufficient balance for this transaction');
                 }
 
                 $wallet->balance_eur = (float)$wallet->balance_eur - $totalAmount;
@@ -71,13 +71,13 @@ class TransactionService
 
             } elseif ($type === 'VENTE') {
                 if (!$asset->exists || (float)$asset->quantity < (float)$quantity) {
-                    throw new \Exception('Quantité insuffisante pour cette vente');
+                    throw new \Exception('Insufficient quantity for this sale');
                 }
                 
-                // CORRECTION: Validation du solde EUR après la vente (pour éviter solde négatif)
+                // Validate EUR balance after sale (to prevent negative balance)
                 $newBalance = (float)$wallet->balance_eur + $totalAmount;
                 if ($newBalance < 0) {
-                    throw new \Exception('Solde EUR invalide après cette vente');
+                    throw new \Exception('Invalid EUR balance after this sale');
                 }
 
                 $wallet->balance_eur = $newBalance;
@@ -87,12 +87,13 @@ class TransactionService
                 // Conserver l'asset même à 0 pour l'historique des transactions
                 $asset->quantity = max(0, $newQuantity);
                 
-                // CORRECTION: Recalcul du prix moyen d'achat après une vente
-                // Le prix moyen ne change que si la quantité restante est > 0
+                // Recalculate average buy price after a sale
+                // The average price remains unchanged for partial sales, as it represents the cost of remaining assets.
+                // If quantity becomes zero, average buy price is set to zero.
                 if ($newQuantity <= 0) {
                     $asset->average_buy_price = 0;
                 }
-                // Sinon, le prix moyen reste inchangé (on vend au prix moyen courant)
+                // For partial sales, average_buy_price remains the same (cost of remaining assets)
                 
                 $asset->save();
             }
@@ -106,7 +107,7 @@ class TransactionService
                 'total_eur' => $totalAmount,
             ]);
 
-            return 'Transaction réussie.';
+            return 'Transaction successful.';
         });
     }
 
@@ -139,7 +140,7 @@ class TransactionService
             $wallet = $asset ? $asset->wallet : null;
 
             if (!$wallet) {
-                throw new \Exception('Wallet non trouvé pour cette transaction');
+                throw new \Exception('Wallet not found for this transaction');
             }
 
             if ($transaction->type === 'ACHAT') {
@@ -152,8 +153,7 @@ class TransactionService
                     $asset->quantity = max(0, $newQuantity);
                     $asset->save();
                 }
-            } else {
-                // VENTE: retirer l'argent et rendre les cryptos
+            } else { // VENTE: retirer l'argent et rendre les cryptos
                 $wallet->balance_eur = (float)$wallet->balance_eur - (float)$transaction->total_eur;
                 $wallet->save();
 

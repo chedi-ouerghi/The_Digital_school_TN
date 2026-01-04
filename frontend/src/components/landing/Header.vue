@@ -1,45 +1,95 @@
 <script setup lang="ts">
 import { Menu, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import GetStartedDialog from './GetStartedDialog.vue';
+
+// Color palette
+const colors = {
+  primary: '#01FF19',
+  secondary: '#35A7FF',
+  accent: '#FF5964',
+  textPrimary: '#38618C',
+  textSecondary: '#5A6175',
+  background: '#FFFFFF',
+  surface: '#F8FAFF',
+  border: '#E2E8F0',
+  borderAccent: '#FF5964'
+}
 
 const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Blog', href: '/blog', external: true },
+  { label: 'Features', href: '/features' },
+  { label: 'Pricing', href: '/pricing' },
 ]
 
-const isMenuOpen = ref(false)
+const marketData = ref([
+  { symbol: 'BTC', price: '$63,842', change: '+2.4%', isPositive: true },
+  { symbol: 'ETH', price: '$3,456', change: '+1.8%', isPositive: true },
+  { symbol: 'SOL', price: '$142.56', change: '-0.5%', isPositive: false },
+  { symbol: '24h Vol', price: '$68.4B', change: '+5.2%', isPositive: true },
+]);
+
+const isMenuOpen = ref(false);
+const isScrolled = ref(false);
+
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 20;
+};
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
 </script>
 
 <template>
-  <header class="fixed w-full z-50 backdrop-blur-xl" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.06);">
+  <header class="fixed w-full z-50 transition-all duration-300"
+          :style="{ 
+            backgroundColor: isScrolled ? `${colors.background}E6` : colors.background,
+            backdropFilter: isScrolled ? 'blur(10px)' : 'none',
+            borderBottom: `1.5px solid ${isScrolled ? colors.borderAccent : colors.border}`,
+            boxShadow: isScrolled ? `0 4px 20px ${colors.border}20` : 'none'
+          }">
+    
     <!-- Main Header -->
-    <div class="container mx-auto px-4 md:px-6 py-3">
+    <div class="container mx-auto px-4 md:px-6 py-4">
       <div class="flex items-center justify-between">
         
         <!-- Logo -->
-        <div class="flex items-center gap-3 flex-shrink-0">
-          <div class="w-32 h-8 rounded-lg flex items-center justify-center">
-            <img src="/assets/bitchest_logo.png" alt="BitChest" class="h-8 object-contain" />
+        <div class="flex items-center gap-3">
+          <div class="w-32 h-8 flex items-center">
+            <div class="w-8 h-8 rounded-lg mr-3 flex items-center justify-center"
+                 :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`, color: colors.background }">
+              ⚡
+            </div>
+            <span class="text-xl font-black" :style="{ color: colors.textPrimary }">
+              Bit<span :style="{ color: colors.primary }">CHEST</span>
+            </span>
           </div>
         </div>
 
         <!-- Desktop Navigation -->
-        <nav class="hidden md:flex items-center gap-1 nav">
+        <nav class="hidden md:flex items-center gap-1">
           <router-link
             v-for="item in navItems"
             :key="item.label"
             :to="item.href"
-            class="nav-link relative px-3 py-2 text-sm transition-colors group"
+            class="nav-link relative px-4 py-2 text-sm font-semibold transition-all duration-300 group"
+            :style="{ color: colors.textPrimary }"
             :target="item.external ? '_self' : undefined"
           >
             {{ item.label }}
-            <div class="underline"></div>
+            <div class="absolute bottom-0 left-4 right-4 h-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-x-0 group-hover:scale-x-100"
+                 :style="{ backgroundColor: colors.primary }"></div>
           </router-link>
         </nav>
 
         <!-- Right Side -->
-        <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="flex items-center gap-3">
           <!-- Desktop Button -->
           <div class="hidden md:flex items-center gap-3">
             <GetStartedDialog />
@@ -47,7 +97,11 @@ const isMenuOpen = ref(false)
 
           <!-- Mobile Menu Button -->
           <button
-            class="md:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+            class="md:hidden p-2 rounded-lg border transition-all duration-300 hover:scale-110"
+            :style="{ 
+              borderColor: colors.borderAccent,
+              color: colors.textPrimary
+            }"
             @click="isMenuOpen = !isMenuOpen"
           >
             <Menu v-if="!isMenuOpen" class="w-5 h-5" />
@@ -57,22 +111,42 @@ const isMenuOpen = ref(false)
       </div>
     </div>
 
-    <!-- Status Bar -->
-    <div class="status-bar">
-      <div class="container mx-auto px-4 md:px-6 py-2">
-        <div class="flex items-center justify-between text-xs">
-          <div class="flex items-center gap-4 overflow-x-auto">
-            <div class="flex items-center gap-2 whitespace-nowrap">
-              <div class="w-2 h-2 rounded-full live-dot"></div>
-              <span class="live-text">LIVE</span>
+    <!-- Market Data Bar -->
+    <div class="border-t py-2" :style="{ borderColor: colors.border, backgroundColor: colors.surface }">
+      <div class="container mx-auto px-4 md:px-6">
+        <div class="flex items-center justify-between overflow-x-auto scrollbar-hide">
+          <!-- Live Status -->
+          <div class="flex items-center gap-3 flex-shrink-0 pr-4">
+            <div class="flex items-center gap-2 px-3 py-1 rounded-full animate-pulse"
+                 :style="{ backgroundColor: `${colors.primary}15`, color: colors.primary }">
+              <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: colors.primary }"></div>
+              <span class="text-xs font-bold">LIVE</span>
             </div>
-            <div class="stat-text">BTC: <span class="stat-value">$63,842</span></div>
-            <div class="stat-text">ETH: <span class="stat-value">$3,456</span></div>
-            <div class="stat-text">24h Vol: <span class="stat-value">$68.4B</span></div>
+            <div class="text-xs font-semibold" :style="{ color: colors.textSecondary }">
+              Real-time data
+            </div>
           </div>
-          <div class="hidden md:block whitespace-nowrap">
-            <div class="stat-text">Market Cap: <span class="stat-value">$1.87T</span>
-              <span class="market-change">+2.4%</span>
+          
+          <!-- Market Data -->
+          <div class="flex items-center gap-6 md:gap-8 px-4 flex-1 justify-center">
+            <div v-for="data in marketData" :key="data.symbol" 
+                 class="flex items-center gap-2 flex-shrink-0 transition-all duration-300 hover:scale-105">
+              <span class="text-xs font-bold" :style="{ color: colors.textSecondary }">{{ data.symbol }}:</span>
+              <span class="text-xs font-black" :style="{ color: colors.textPrimary }">{{ data.price }}</span>
+              <span class="text-xs font-bold px-2 py-1 rounded"
+                    :style="{ 
+                      backgroundColor: data.isPositive ? `${colors.primary}15` : `${colors.accent}15`,
+                      color: data.isPositive ? colors.primary : colors.accent
+                    }">
+                {{ data.change }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Time -->
+          <div class="hidden md:block flex-shrink-0 pl-4">
+            <div class="text-xs font-semibold" :style="{ color: colors.textSecondary }">
+              <span :style="{ color: colors.primary }">•</span> Updated just now
             </div>
           </div>
         </div>
@@ -80,40 +154,81 @@ const isMenuOpen = ref(false)
     </div>
 
     <!-- Mobile Menu -->
-    <div
-      v-if="isMenuOpen"
-      class="md:hidden absolute top-full left-0 right-0 mobile-menu p-6 rounded-b-2xl"
+    <transition
+      enter-active-class="transition-all duration-300 ease-out"
+      leave-active-class="transition-all duration-200 ease-in"
+      enter-from-class="opacity-0 -translate-y-4"
+      leave-to-class="opacity-0 -translate-y-4"
     >
-      <div class="space-y-3">
-        <router-link
-          v-for="item in navItems"
-          :key="item.label"
-          :to="item.href"
-          class="block py-2 px-4 rounded-lg mobile-link"
-          @click="isMenuOpen = false"
-        >
-          {{ item.label }}
-        </router-link>
-        <div class="pt-3 border-t border-white/10">
+      <div
+        v-if="isMenuOpen"
+        class="md:hidden absolute top-full left-0 right-0 p-6 border-b animate-fadeInUp"
+        :style="{ 
+          backgroundColor: colors.background,
+          borderColor: colors.borderAccent,
+          boxShadow: `0 20px 40px ${colors.border}30`
+        }"
+      >
+        <div class="space-y-1">
+          <router-link
+            v-for="item in navItems"
+            :key="item.label"
+            :to="item.href"
+            class="block py-3 px-4 rounded-lg text-base font-semibold transition-all duration-300 hover:translate-x-2"
+            :style="{ 
+              color: colors.textPrimary,
+              backgroundColor: `${colors.primary}05`
+            }"
+            @click="isMenuOpen = false"
+          >
+            {{ item.label }}
+          </router-link>
+        </div>
+        
+        <div class="mt-6 pt-6 border-t" :style="{ borderColor: colors.border }">
           <GetStartedDialog />
         </div>
+        
+        <!-- Mobile Market Data -->
+        <div class="mt-6 grid grid-cols-2 gap-3">
+          <div v-for="data in marketData.slice(0, 2)" :key="data.symbol"
+               class="p-3 rounded-lg text-center"
+               :style="{ 
+                 backgroundColor: colors.surface,
+                 border: `1.5px solid ${colors.border}`
+               }">
+            <div class="text-xs font-bold mb-1" :style="{ color: colors.textSecondary }">{{ data.symbol }}</div>
+            <div class="text-sm font-black" :style="{ color: colors.textPrimary }">{{ data.price }}</div>
+          </div>
+        </div>
       </div>
-    </div>
+    </transition>
   </header>
 </template>
 
 <style scoped>
-/* Smooth scroll behavior */
-html {
-  scroll-behavior: smooth;
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Mobile menu animation */
-div[class*="bg-black/95"] {
-  animation: slideDown 0.3s ease-out;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-@keyframes slideDown {
+.nav-link:hover {
+  color: v-bind('colors.primary');
+}
+
+.nav-link.router-link-active {
+  color: v-bind('colors.primary');
+}
+
+.nav-link.router-link-active .underline {
+  width: 60%;
+}
+
+@keyframes fadeInUp {
   from {
     opacity: 0;
     transform: translateY(-10px);
@@ -124,31 +239,7 @@ div[class*="bg-black/95"] {
   }
 }
 
-/* Hide scrollbar but allow scrolling */
-.overflow-x-auto {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.animate-fadeInUp {
+  animation: fadeInUp 0.3s ease-out;
 }
-
-.overflow-x-auto::-webkit-scrollbar {
-  display: none;
-}
-
-/* New header styles to match landing palette */
-.nav-link { color: #38618C; font-weight: 600; }
-.nav-link:hover { color: #01FF19; }
-.nav-link.router-link-active { color: #FF5964; }
-.underline { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 0; height: 3px; border-radius: 6px; background: linear-gradient(90deg, #35A7FF, #01FF19); transition: width .28s; }
-.nav-link:hover .underline { width: 60%; }
-
-.status-bar { border-top: 1px solid rgba(255,255,255,0.03); background: transparent; }
-.live-dot { background: #01FF19; box-shadow: 0 0 8px rgba(1,255,25,0.3); }
-.live-text { color: #01FF19; font-weight: 700; }
-.stat-text { color: #38618C; opacity: 0.9 }
-.stat-value { color: #FFFFFF; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; margin-left: 6px }
-.market-change { color: #01FF19; margin-left: 6px }
-
-.mobile-menu { background: #FFFFFF; color: #38618C; border-top: 1px solid rgba(56,97,140,0.06); }
-.mobile-link { color: #38618C; }
-.mobile-link:hover { color: #01FF19; background: rgba(1,255,25,0.03); }
 </style>

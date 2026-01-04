@@ -52,6 +52,7 @@ const fetchPosts = async (reset = true) => {
     }
   } catch (err) {
     console.error('Error fetching posts:', err)
+    items.value = []
   } finally {
     loading.value = false
   }
@@ -71,44 +72,43 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-[#0b0f19] via-[#0f1724] to-[#0a0e17] text-white py-12">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 text-gray-900 py-12">
     
-    <!-- Blobs décoratifs -->
-    <div class="fixed top-10 left-5 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="fixed bottom-20 right-10 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl pointer-events-none"></div>
+    <!-- Decorative Elements -->
+    <div class="fixed top-10 left-5 w-80 h-80 bg-blue-100/30 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed bottom-20 right-10 w-96 h-96 bg-purple-100/20 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="container mx-auto px-4 sm:px-6 relative z-10">
-      <!-- Header simplifié -->
+      <!-- Header -->
       <header class="mb-12 text-center">
-        
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 pb-2 bg-gradient-to-r from-white via-blue-200 to-white bg-clip-text text-transparent">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
           Market Insights
         </h1>
-        <p class="text-gray-300 max-w-2xl mx-auto">
+        <p class="text-gray-600 max-w-2xl mx-auto text-lg">
           Expert analysis and actionable trading insights for cryptocurrency markets.
         </p>
       </header>
 
-      <!-- Contenu principal -->
+      <!-- Main Content -->
       <div class="flex flex-col lg:flex-row gap-8">
         <!-- Articles -->
         <main class="flex-1">
-          <!-- Barre de recherche -->
+          <!-- Search Bar -->
           <div class="flex flex-col md:flex-row gap-4 mb-8">
             <div class="flex-1 relative">
-              <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
               <input 
                 v-model="search" 
                 placeholder="Search articles..." 
-                class="w-full pl-12 pr-4 py-3 rounded-xl bg-[#0f1724]/80 text-white border border-gray-800 focus:border-blue-500 focus:outline-none" 
+                class="w-full pl-12 pr-4 py-3 rounded-xl bg-white/80 backdrop-blur-sm text-gray-900 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" 
                 @input="debouncedFetch"
               />
             </div>
             <select 
               v-model="category" 
-              class="px-4 py-3 rounded-xl bg-[#0f1724]/80 text-white border border-gray-800 focus:border-blue-500 focus:outline-none" 
+              class="px-4 py-3 rounded-xl bg-white/80 backdrop-blur-sm text-gray-900 border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" 
               @change="() => fetchPosts(true)"
             >
               <option value="">📋 All Categories</option>
@@ -116,25 +116,27 @@ onMounted(() => {
             </select>
           </div>
 
-          <!-- Bouton vers le dashboard admin -->
+          <!-- Admin Dashboard Link -->
           <router-link 
             v-if="isAdmin"
             to="/admin/overview"
-            class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-xl mb-8 hover:from-blue-500 hover:to-blue-400 transition-all"
+            class="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl mb-8 hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-xl"
           >
             ✨ Manage Articles (Admin)
           </router-link>
 
-          <!-- État de chargement -->
+          <!-- Loading State -->
           <div v-if="loading" class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-            <p class="text-gray-400">Loading articles...</p>
+            <p class="text-gray-500">Loading articles...</p>
           </div>
 
-          <!-- Grille d'articles -->
+          <!-- Articles Grid -->
           <div v-else>
             <div v-if="items.length === 0" class="text-center py-12">
-              <p class="text-gray-400">No articles found</p>
+              <div class="text-6xl mb-4">📝</div>
+              <p class="text-lg font-semibold text-gray-700 mb-2">No articles found</p>
+              <p class="text-gray-500">{{ search ? 'Try adjusting your search' : 'Check back later for new content' }}</p>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -145,10 +147,10 @@ onMounted(() => {
               />
             </div>
 
-            <!-- Bouton Load More -->
+            <!-- Load More Button -->
             <div v-if="canLoadMore" class="text-center">
               <button 
-                class="px-8 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl border border-gray-700 transition-all" 
+                class="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl border-0 transition-all shadow-lg hover:shadow-xl" 
                 @click="loadMore"
               >
                 Load More
@@ -159,15 +161,15 @@ onMounted(() => {
 
         <!-- Sidebar -->
         <aside class="lg:w-80">
-          <!-- Tags populaires -->
-          <div class="bg-gradient-to-b from-[#0f1724] to-[#0a0e17] border border-gray-800 p-6 rounded-2xl sticky top-24">
-            <h4 class="font-bold text-lg mb-4">🏷️ Popular Tags</h4>
+          <!-- Popular Tags -->
+          <div class="bg-white/80 backdrop-blur-sm border border-gray-200 p-6 rounded-2xl sticky top-24 shadow-lg">
+            <h4 class="font-bold text-lg mb-4 text-gray-900">🏷️ Popular Tags</h4>
             <div class="flex flex-wrap gap-2">
               <button 
                 v-for="tag in ['Bitcoin', 'Ethereum', 'DeFi', 'Trading']" 
                 :key="tag"
-                class="px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm rounded-full hover:bg-blue-500/20 transition-all"
-                @click="category = tag; fetchPosts()"
+                class="px-3 py-1.5 bg-blue-100 text-blue-700 text-sm rounded-full hover:bg-blue-200 transition-all"
+                @click="category = tag; fetchPosts(true)"
               >
                 #{{ tag }}
               </button>
@@ -176,178 +178,5 @@ onMounted(() => {
         </aside>
       </div>
     </div>
-
-    <!-- Modal Admin -->
-    <div
-      v-if="showModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
-    >
-      <!-- Modal container -->
-      <div
-        class="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto
-               bg-gradient-to-br from-[#0f1724] to-[#0a0e17]
-               text-white rounded-2xl p-6
-               border border-blue-500/20 shadow-2xl"
-      >
-        <!-- Header Modal -->
-        <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-800">
-          <h3 class="text-xl font-bold">
-            {{ editing ? '✏️ Edit Article' : '✍️ Create Article' }}
-          </h3>
-          <button
-            class="text-gray-400 hover:text-white text-2xl leading-none"
-            @click="closeModal"
-          >
-            &times;
-          </button>
-        </div>
-
-        <!-- Formulaire -->
-        <form class="space-y-4" @submit.prevent="submitForm">
-          <!-- Title -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-300 mb-2">
-              Title *
-            </label>
-            <input
-              v-model="form.title"
-              required
-              placeholder="Article title"
-              class="w-full p-3 rounded-lg bg-[#1a2332]
-                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-            />
-          </div>
-
-          <!-- Category + Date -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-semibold text-gray-300 mb-2">
-                Category *
-              </label>
-              <select
-                v-model="form.category"
-                required
-                class="w-full p-3 rounded-lg bg-[#1a2332]
-                       border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none cursor-pointer transition-all"
-              >
-                <option value="" disabled>Select category</option>
-                <option v-for="c in categories" :key="c" :value="c">
-                  {{ c }}
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-semibold text-gray-300 mb-2">
-                Published Date
-              </label>
-              <input
-                v-model="form.published_at"
-                type="date"
-                class="w-full p-3 rounded-lg bg-[#1a2332]
-                       border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <!-- Image URL -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-300 mb-2">
-              Featured Image URL
-            </label>
-            <input
-              v-model="form.image"
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              class="w-full p-3 rounded-lg bg-[#1a2332]
-                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-            />
-          </div>
-
-          <!-- Summary -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-300 mb-2">
-              Summary *
-            </label>
-            <textarea
-              v-model="form.summary"
-              required
-              rows="3"
-              placeholder="Brief summary of your article"
-              class="w-full p-3 rounded-lg bg-[#1a2332]
-                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none outline-none transition-all"
-            ></textarea>
-          </div>
-
-          <!-- Tags -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-300 mb-2">
-              Tags
-            </label>
-            <input
-              v-model="form.tags"
-              placeholder="Bitcoin, Ethereum, DeFi, Trading (comma separated)"
-              class="w-full p-3 rounded-lg bg-[#1a2332]
-                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
-            />
-            <p class="text-xs text-gray-400 mt-1">Separate tags with commas</p>
-          </div>
-
-          <!-- Content -->
-          <div>
-            <label class="block text-sm font-semibold text-gray-300 mb-2">
-              Content *
-            </label>
-            <textarea
-              v-model="form.content"
-              required
-              rows="8"
-              placeholder="Article content (HTML allowed)"
-              class="w-full p-3 rounded-lg bg-[#1a2332]
-                     border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y outline-none transition-all font-mono text-sm"
-            ></textarea>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex justify-end gap-3 pt-6 border-t border-gray-800">
-            <button
-              type="button"
-              class="px-6 py-2.5 bg-gray-700/60 hover:bg-gray-700 text-white font-medium rounded-lg transition-all"
-              @click="closeModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500
-                     hover:from-blue-500 hover:to-blue-400 text-white font-medium rounded-lg transition-all"
-            >
-              {{ editing ? '💾 Update' : '🚀 Publish' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
-
-
-<style scoped>
-/* Scrollbar personnalisée */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0f1724;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #3b82f6;
-  border-radius: 3px;
-}
-
-* {
-  transition: all 0.2s ease;
-}
-</style>

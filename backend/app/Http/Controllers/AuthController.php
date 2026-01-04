@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -62,7 +61,7 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Invalid credentials'], 401);
             }
 
-            // Authentifier et générer un token Sanctum
+            // Authentifier et générer la session Sanctum
             Auth::login($user);
 
             // Assurer remember_token et email_verified_at
@@ -79,11 +78,24 @@ class AuthController extends Controller
             if ($needsSave) {
                 $user->save();
             }
-            $token = $user->createToken('api_token')->plainTextToken;
+
+            /**
+             * SÉCURITÉ : NE PAS retourner de token
+             * 
+             * Avant (vulnérable) :
+             *   $token = $user->createToken('api_token')->plainTextToken;
+             *   return response()->json(['user' => $user, 'token' => $token]);
+             * 
+             * Maintenant (sécurisé) :
+             *   - La session est gérée par Sanctum (cookie HttpOnly automatique)
+             *   - Le navigateur envoie automatiquement le cookie avec chaque requête
+             *   - Aucun token ne traverse le réseau en plaintext
+             *   - Pas de risque de XSS ou localStorage compromise
+             */
 
             return response()->json([
                 'user' => $user,
-                'token' => $token,
+                'message' => 'Login successful',
             ]);
         } catch (\Exception $e) {
             \Log::error('Error during login: ' . $e->getMessage());
@@ -106,10 +118,22 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         try {
-            $request->user()->currentAccessToken()->delete();
+            /**
+             * SÉCURITÉ : SPA Mode Logout
+             * 
+             * En mode SPA avec Sanctum, l'authentification est gérée par session cookies.
+             * Nous ne devons PAS appeler Auth::logout() qui est pour le mode API token.
+             * 
+             * À la place, nous invalidons directement la session Laravel.
+             */
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            
+            \Log::info('👋 User logged out successfully', ['user_id' => $request->user()?->id]);
+            
             return response()->json(['message' => 'Logout successful']);
         } catch (\Exception $e) {
-            \Log::error('Error during logout: ' . $e->getMessage());
+            \Log::error('❌ Error during logout: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Logout failed',
                 'error' => $e->getMessage(),

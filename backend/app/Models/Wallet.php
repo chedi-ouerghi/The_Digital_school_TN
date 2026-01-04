@@ -24,7 +24,8 @@ class Wallet extends Model
         'balance_eur' => 'decimal:2',
     ];
 
-    // Relations
+    /* ===================== RELATIONS ===================== */
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -37,22 +38,32 @@ class Wallet extends Model
 
     public function transactions()
     {
-        return $this->hasManyThrough(Transaction::class, CryptoWalletAsset::class, 'wallet_id', 'crypto_wallet_asset_id');
+        return $this->hasManyThrough(
+            Transaction::class,
+            CryptoWalletAsset::class,
+            'wallet_id',
+            'crypto_wallet_asset_id'
+        );
     }
+
+    /* ===================== CALCULS ===================== */
 
     public function getTotalValue(): float
     {
-        return $this->cryptoWalletAssets->sum(function ($asset) {
-            return $asset->getCurrentValue();
-        });
+        return $this->cryptoWalletAssets->sum(
+            fn ($asset) => $asset->getCurrentValue()
+        );
     }
 
     public function getTotalPlusValue(): float
     {
-        return $this->cryptoWalletAssets->sum(function ($asset) {
-            return $asset->getPlusValue();
-        });
+        return $this->cryptoWalletAssets->sum(
+            fn ($asset) => $asset->getCurrentValue() - ($asset->quantity * $asset->average_buy_price)
+        );
     }
+
+
+    /* ===================== BOOT ===================== */
 
     protected static function boot()
     {

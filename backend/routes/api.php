@@ -15,7 +15,33 @@ use App\Http\Controllers\Admin\AdminTransactionController;
 use App\Http\Controllers\Admin\AdminStatsController;
 use App\Http\Controllers\Admin\ClientAdminController;
 
-Route::prefix('v1')->group(function () {
+/**
+ * 🔥 CSRF COOKIE ROUTE (HORS du préfixe v1)
+ * 
+ * Cette route DOIT être accessible sans le préfixe v1
+ * Sanctum l'utilise pour initialiser le token XSRF
+ * 
+ * Frontend : await fetch('http://localhost:8000/sanctum/csrf-cookie', { credentials: 'include' })
+ * 
+ * IMPORTANT: Le middleware 'web' gère automatiquement :
+ * - Les cookies de session
+ * - La génération et l'envoi du token XSRF
+ * - La validation des tokens CSRF
+ */
+Route::middleware('web')->group(function () {
+    Route::get('/sanctum/csrf-cookie', function () {
+        // Le middleware 'web' génère et envoie automatiquement le cookie XSRF-TOKEN
+        // Cette route retourne simplement une confirmation
+        return response()->json([
+            'message' => 'CSRF token initialized',
+            'timestamp' => now()->toIso8601String()
+        ])->header('Content-Type', 'application/json');
+    })->name('csrf-cookie');
+});
+
+Route::prefix('v1')
+    ->middleware('web')  // 🔥 CRITIQUE : Ajouter le middleware 'web' pour les sessions Sanctum SPA
+    ->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -24,6 +50,14 @@ Route::prefix('v1')->group(function () {
     */
     Route::post('login', [AuthController::class, 'login']);
     Route::post('request-account', [AuthController::class, 'requestAccount']);
+    
+    /**
+     * 🔥 CSRF Protection: verify-email endpoint
+     * IMPORTANT: Ces routes POST doivent avoir le middleware CSRF pour la sécurité
+     * Le middleware 'web' (appliqué au préfixe v1) gère automatiquement CSRF
+     * Le frontend DOIT appeler /sanctum/csrf-cookie AVANT ces requêtes
+     * et envoyer le header X-XSRF-TOKEN avec le token du cookie
+     */
     Route::post('verify-email', [AuthController::class, 'verifyEmail']);
 
     /*
@@ -79,6 +113,7 @@ Route::prefix('v1')->group(function () {
         */
         Route::get('wallets', [PortefeuilleController::class, 'index']);
         Route::get('wallets/plus-value', [PortefeuilleController::class, 'plusValue']);
+        Route::get('wallets/transactions/history', [PortefeuilleController::class, 'transactionsHistory']);
         Route::get('wallets/history', [PortefeuilleController::class, 'history']);
         Route::get('wallets/{id}/history', [PortefeuilleController::class, 'history']);
         Route::get('wallets/{id}', [PortefeuilleController::class, 'show']);
@@ -111,12 +146,9 @@ Route::prefix('v1')->group(function () {
 
         /*
         |--------------------------------------------------------------------------
-        | ADMIN – CRYPTOS
+        | ADMIN – CRYPTOS (Synchronisation uniquement, les 10 cryptos sont fixes)
         |--------------------------------------------------------------------------
         */
-        Route::post('cryptos', [CryptoController::class, 'store']);
-        Route::put('cryptos/{id}', [AdminCryptoController::class, 'update']);
-        Route::delete('cryptos/{id}', [AdminCryptoController::class, 'destroy']);
         Route::post('cryptos/sync-history', [AdminCryptoController::class, 'syncHistory']);
 
         /*

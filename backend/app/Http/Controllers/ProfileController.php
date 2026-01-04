@@ -9,6 +9,7 @@ use App\Http\Requests\UploadProfileBannerRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class ProfileController extends Controller
 {
@@ -36,7 +37,13 @@ class ProfileController extends Controller
                 ], 401);
             }
 
-            $data = $this->profileService->getFullProfileOverview($user->id);
+            // Cache Redis pour les stats de profil - 3 minutes TTL
+            $cacheKey = 'profile_overview:user_' . $user->id;
+            $ttl = 60 * 3; // 3 minutes
+            
+            $data = Cache::remember($cacheKey, $ttl, function () use ($user) {
+                return $this->profileService->getFullProfileOverview($user->id);
+            });
 
             return response()->json([
                 'success' => true,
@@ -64,34 +71,48 @@ class ProfileController extends Controller
             $user = Auth::user();
 
             if (!$user) {
+                \Log::warning('Upload attempt without authentication');
                 return response()->json([
                     'success' => false,
                     'error' => 'User not authenticated'
                 ], 401);
             }
 
+            \Log::info('📸 Request received', [
+                'method' => $request->method(),
+                'path' => $request->path(),
+                'user_id' => $user->id,
+                'has_file' => $request->hasFile('profile_picture'),
+                'content_type' => $request->header('Content-Type'),
+            ]);
+
+            // Check if file exists
             if (!$request->hasFile('profile_picture')) {
+                \Log::warning('Upload picture attempt without file', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'error' => 'No file received',
-                    'message' => 'profile_picture field is required'
+                    'message' => 'Une image est requise.'
                 ], 422);
             }
 
             $file = $request->file('profile_picture');
-            if (!$file->isValid()) {
+            
+            // Validate file is actually valid
+            if (!$file || !$file->isValid()) {
+                \Log::warning('Invalid profile picture file', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'error' => 'Invalid file',
+                    'message' => 'Le fichier est invalide ou corrompu.'
                 ], 422);
             }
 
-            \Log::info('Uploading profile picture (controller)', [
+            \Log::info('📸 Uploading profile picture', [
                 'user_id' => $user->id,
                 'client_name' => $file->getClientOriginalName(),
                 'client_size' => $file->getSize(),
                 'client_mime' => $file->getClientMimeType(),
-                'client_ext' => $file->getClientOriginalExtension(),
             ]);
 
             // Use the injected service from constructor
@@ -99,9 +120,15 @@ class ProfileController extends Controller
 
             $url = Storage::disk('public')->url($path);
 
+            \Log::info('✅ Profile picture uploaded successfully', [
+                'user_id' => $user->id,
+                'path' => $path,
+                'url' => $url,
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Profile picture uploaded successfully',
+                'message' => 'Photo de profil téléchargée avec succès',
                 'data' => [
                     'path' => $path,
                     'url' => $url,
@@ -109,11 +136,15 @@ class ProfileController extends Controller
                 ]
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Profile picture upload error: ' . $e->getMessage());
+            \Log::error('❌ Profile picture upload error', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Error uploading profile picture',
+                'error' => 'Erreur lors du téléchargement de la photo',
                 'message' => $e->getMessage()
             ], 500);
         }
@@ -129,6 +160,7 @@ class ProfileController extends Controller
             $user = Auth::user();
 
             if (!$user) {
+                \Log::warning('Upload attempt without authentication');
                 return response()->json([
                     'success' => false,
                     'error' => 'User not authenticated'
@@ -136,83 +168,77 @@ class ProfileController extends Controller
             }
 
             if (!$request->hasFile('profile_banner')) {
+                \Log::warning('Upload banner attempt without file', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'error' => 'No file received',
-                    'message' => 'profile_banner field is required'
+                    'message' => 'Une bannière est requise.'
                 ], 422);
             }
 
             $file = $request->file('profile_banner');
-            if (!$file->isValid()) {
-                \Log::warning('Invalid profile banner file received', [
-                    'user_id' => $user->id,
-                    'client_name' => $file ? $file->getClientOriginalName() : null,
-                ]);
-
+            
+            if (!$file || !$file->isValid()) {
+                \Log::warning('Invalid profile banner file', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'error' => 'Invalid file',
+                    'message' => 'Le fichier est invalide ou corrompu.'
                 ], 422);
             }
 
-            \Log::info('Uploading profile banner (controller)', [
+            \Log::info('🖼️ Uploading profile banner', [
                 'user_id' => $user->id,
                 'client_name' => $file->getClientOriginalName(),
                 'client_size' => $file->getSize(),
                 'client_mime' => $file->getClientMimeType(),
-                'client_ext' => $file->getClientOriginalExtension(),
             ]);
 
             // Delete previous banner if exists
             if ($user->profile_banner) {
                 try {
-                    $deleted = Storage::disk('public')->delete($user->profile_banner);
-                    \Log::info('Deleted previous banner (controller)', [
+                    Storage::disk('public')->delete($user->profile_banner);
+                    \Log::info('Deleted previous banner', [
                         'user_id' => $user->id,
                         'previous_path' => $user->profile_banner,
-                        'deleted' => $deleted,
                     ]);
                 } catch (\Throwable $e) {
-                    \Log::error('Error deleting previous banner (controller)', [
+                    \Log::warning('Error deleting previous banner', [
                         'user_id' => $user->id,
-                        'previous_path' => $user->profile_banner,
                         'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
             }
 
-            // Store new banner in public disk
-            $path = $file->storePublicly('profile_banners', 'public');
+            // Store new banner
+            $path = $this->uploadService->uploadProfileBanner($user, $file);
+            $url = Storage::disk('public')->url($path);
 
-            \Log::info('Profile banner stored (controller)', [
+            \Log::info('✅ Profile banner uploaded successfully', [
                 'user_id' => $user->id,
                 'path' => $path,
+                'url' => $url,
             ]);
-
-            // Update user and refresh
-            $user->profile_banner = $path;
-            $user->save();
-            $user = $user->fresh();
-
-            $url = Storage::disk('public')->url($path);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Profile banner uploaded successfully',
+                'message' => 'Bannière de profil téléchargée avec succès',
                 'data' => [
                     'path' => $path,
                     'url' => $url,
-                    'user' => $user
+                    'user' => $user->fresh()
                 ]
             ], 200);
         } catch (\Exception $e) {
-            \Log::error('Profile banner upload error: ' . $e->getMessage());
+            \Log::error('❌ Profile banner upload error', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Error uploading profile banner',
+                'error' => 'Erreur lors du téléchargement de la bannière',
                 'message' => $e->getMessage()
             ], 500);
         }

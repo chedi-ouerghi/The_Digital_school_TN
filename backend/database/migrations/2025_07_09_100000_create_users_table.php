@@ -15,7 +15,10 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->enum('role', ['ADMIN', 'CLIENT'])->default('CLIENT');
+            $table->timestamp('last_id_change_at')->nullable();
             $table->rememberToken();
+            $table->string('profile_picture')->nullable();
+            $table->string('profile_banner')->nullable();
             $table->timestamps();
         });
     }

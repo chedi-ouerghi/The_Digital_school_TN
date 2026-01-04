@@ -21,7 +21,6 @@ class CryptoHistory extends Model
     protected $fillable = [
         'cryptomoney_id',
         'price',
-        'market_cap',
         'volume',
         'recorded_at',
     ];
@@ -30,10 +29,9 @@ class CryptoHistory extends Model
     protected $casts = [
         'id' => 'string',
         'cryptomoney_id' => 'string',
-        'price' => 'decimal:10',           // ✅ Plus de décimales (0.000001)
-        'market_cap' => 'decimal:2',       // Pour les gros nombres: 1234567890.50
-        'volume' => 'decimal:2',           // Pour les gros nombres: 1234567890.50
-        'recorded_at' => 'immutable_datetime',  // ✅ Plus robuste
+        'price' => 'decimal:10',
+        'volume' => 'decimal:2',
+        'recorded_at' => 'immutable_datetime',
         'created_at' => 'immutable_datetime',
         'updated_at' => 'immutable_datetime',
     ];
@@ -64,7 +62,7 @@ class CryptoHistory extends Model
 
     public function getMarketCapFormatted(): string
     {
-        return number_format($this->market_cap ?? 0, 2, '.', '');
+        return 'N/A'; // market_cap n'existe plus dans CryptoHistory
     }
 
     public function getVolumeFormatted(): string

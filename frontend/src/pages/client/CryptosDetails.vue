@@ -1,37 +1,100 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
+import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, Share2, Download, MoreVertical } from 'lucide-vue-next'
 
-// Import des composants shadcn-vue
+// Composants UI
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CategoryScale, Chart as ChartJS, Filler, Legend, LinearScale, LineElement, PointElement, Title, Tooltip } from 'chart.js'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+// Chart.js
+import { Chart, registerables } from 'chart.js'
 import { Line } from 'vue-chartjs'
+Chart.register(...registerables)
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+// ============================================================================
+// INTERFACES
+// ============================================================================
+interface HistoryEntry {
+  timestamp: number
+  date: string
+  price: number
+  change_24h_pct: number
+}
 
+interface CryptoData {
+  id: string
+  name: string
+  symbol: string
+  image: string
+  image_url: string
+  category: string
+  website: string
+  price_eur: string
+  price: string
+  market_cap: string | null
+  change_24h_pct: string
+  change_24h: string
+}
+
+interface PositionData {
+  id: string
+  symbol: string
+  name: string
+  quantity: number
+  avg_buy_price_eur: number
+  current_price_eur: number
+  invested_eur: number
+  current_value_eur: number
+  plus_value_eur: number
+  plus_value_percent: number
+  transactions: Transaction[]
+}
+
+interface Transaction {
+  id: string
+  type: string
+  quantity: number
+  unit_price_eur: number
+  total_eur: number
+  date: string
+}
+
+interface WalletResponse {
+  totalValue: number
+  totalInvestment: number
+  assets: PositionData[]
+  balance_eur: number
+}
+
+// ============================================================================
+// ÉTATS RÉACTIFS
+// ============================================================================
 const route = useRoute()
 const router = useRouter()
-const crypto = ref<any>(null)
-const loading = ref(false)
+const crypto = ref<CryptoData | null>(null)
+const loading = ref(true)
 const error = ref<string | null>(null)
-const positions = ref<any>(null)
-const loadingPositions = ref(false)
-const history = ref<any[]>([])
-const historyMetadata = ref<any>(null) // Nouvelles données: symbol, name, count, from, to
+const positions = ref<PositionData | null>(null)
+const history = ref<HistoryEntry[]>([])
+const historyLoading = ref(false)
+const userBalance = ref(0)
+const timeRange = ref('30d')
+const chartType = ref('line')
 
-// ============================
-// Fonctions utilitaires
-// ============================
-function makeImageUrl(path: string | undefined | null): string | null {
-  if (!path) return null
+// ============================================================================
+// FONCTIONS UTILITAIRES
+// ============================================================================
+function makeImageUrl(path: string | undefined | null): string {
+  if (!path) return ''
   const p = String(path)
   if (p.startsWith('http://') || p.startsWith('https://')) return p
-
-  // Build complete URL for relative paths
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
   const cleanPath = p.startsWith('/storage/') ? p : `/storage/${p}`
   return `${baseUrl}${cleanPath}`
@@ -39,41 +102,58 @@ function makeImageUrl(path: string | undefined | null): string | null {
 
 function formatCurrency(value: any): string {
   const num = parseFloat(value) || 0
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(num)
+  return new Intl.NumberFormat('en-US', { 
+    style: 'currency', 
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2 
+  }).format(num)
 }
 
 function formatLargeNumber(value: any): string {
   const n = Number(value ?? 0)
-  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B €`
-  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M €`
-  if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K €`
-  return formatCurrency(n)
+  if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+  if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`
+  return n.toFixed(2)
 }
 
 function formatPercentage(value: any): string {
   const num = parseFloat(value) || 0
-  return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`
+  const sign = num >= 0 ? '+' : ''
+  return `${sign}${num.toFixed(2)}%`
 }
 
-// ============================
-// API
-// ============================
+function formatNumber(value: any, decimals = 4): string {
+  const n = Number(value ?? 0)
+  if (!isFinite(n) || isNaN(n)) return '0'
+  return n.toFixed(decimals).replace(/\.?0+$/, '')
+}
+
+function formatDate(date: string): string {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// ============================================================================
+// APPELS API
+// ============================================================================
 async function fetchCryptoDetail() {
   loading.value = true
   error.value = null
   try {
     const id = route.params.id
-    let response
-
-    if (api.crypto?.show) response = await api.crypto.show(id)
-    else if (api.get) response = await api.get(`/cryptos/${id}`)
-    else throw new Error('Méthode API non disponible')
-
-    crypto.value = response.data || response.item || response || null
-    if (!crypto.value) throw new Error('Cryptomonnaie non trouvée')
+    const response = await api.crypto.show(id)
+    crypto.value = response.data || response
+    if (!crypto.value) throw new Error('Cryptocurrency not found')
   } catch (e: any) {
-    error.value = e.message || 'Error loading data'
-    console.error('Erreur détail crypto:', e)
+    error.value = e.message || 'Error loading cryptocurrency data'
+    console.error('Error loading crypto details:', e)
   } finally {
     loading.value = false
   }
@@ -81,88 +161,36 @@ async function fetchCryptoDetail() {
 
 async function fetchPositions() {
   if (!crypto.value) return
-  loadingPositions.value = true
   try {
-    const response = await api.wallet.list()
-    const walletData = response?.wallet || {}
-
-    // wallet may expose assets under crypto_wallet_assets
-    const assets = walletData?.crypto_wallet_assets || []
-
-    // find asset matching current crypto by id (support different keys)
-    const asset = assets.find((p: any) =>
-      p.cryptomoney?.id === crypto.value.id ||
-      p.cryptomoney_id === crypto.value.id ||
-      p.cryptomoney?.coingecko_id === crypto.value.coingecko_id
-    )
-
-    if (asset) {
-      // normalize numeric fields and include related transactions
-      const txs = (walletData.transactions || []).filter((t: any) =>
-        t.crypto_wallet_asset_id === asset.id || t.cryptomoney_id === asset.cryptomoney_id
-      )
-
-      positions.value = {
-        ...asset,
-        // normalize numbers for consistent usage in template/helpers
-        quantity: Number(asset.quantity || asset.pivot?.quantity || 0),
-        average_buy_price: Number(asset.average_buy_price || asset.pivot?.average_buy_price || 0),
-        transactions: Array.isArray(txs) ? txs : []
-      }
-    } else {
-      positions.value = null
-    }
+    const response: WalletResponse = await api.wallet.list()
+    userBalance.value = response.balance_eur || 0
+    const asset = response.assets?.find(a => a.symbol === crypto.value!.symbol)
+    positions.value = asset || null
   } catch (e: any) {
     console.error('Error loading positions:', e)
     positions.value = null
-  } finally {
-    loadingPositions.value = false
   }
 }
 
 async function fetchHistoricalData() {
+  if (!crypto.value?.id) return
+  historyLoading.value = true
   try {
-    if (!crypto.value?.id) return
-    let response
-
-    if (api.crypto?.history) response = await api.crypto.history(crypto.value.id)
-    else if (api.get) response = await api.get(`/cryptos/${crypto.value.id}/history`)
-    else {
-      console.warn('Aucune méthode API disponible pour l’historique')
-      return
-    }
-
-    // Extraire les données de la réponse API
-    if (response.data?.prices) {
-      // La réponse a une structure: { prices: [...], symbol, name, count, from, to }
-      history.value = response.data.prices || []
-      historyMetadata.value = {
-        symbol: response.data.symbol,
-        name: response.data.name,
-        count: response.data.count,
-        from: response.data.from,
-        to: response.data.to
-      }
-    } else if (response.prices) {
-      // Alternative: réponse directe avec prices
-      history.value = response.prices || []
-      historyMetadata.value = {
-        symbol: response.symbol,
-        name: response.name,
-        count: response.count,
-        from: response.from,
-        to: response.to
-      }
-    } else if (Array.isArray(response.data)) {
-      // Fallback: array direct
-      history.value = response.data
+    const response = await api.crypto.history(crypto.value.id)
+    if (response.history && Array.isArray(response.history)) {
+      history.value = response.history
     } else if (Array.isArray(response)) {
       history.value = response
+    } else if (response.data?.history) {
+      history.value = response.data.history
+    } else if (response.data && Array.isArray(response.data)) {
+      history.value = response.data
     }
   } catch (e: any) {
-    console.warn('Historique non disponible:', e.message)
+    console.warn('Historical data not available:', e.message)
     history.value = []
-    historyMetadata.value = null
+  } finally {
+    historyLoading.value = false
   }
 }
 
@@ -173,40 +201,80 @@ async function loadAllData() {
   }
 }
 
+// ============================================================================
+// LIFECYCLE & WATCHERS
+// ============================================================================
 onMounted(loadAllData)
+watch(() => route.params.id, loadAllData)
 
-// ============================
-// Calculs et graphiques
-// ============================
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
+const currentPrice = computed(() => parseFloat(crypto.value?.price_eur || '0'))
+const marketCap = computed(() => parseFloat(crypto.value?.market_cap || '0'))
+const dailyChange = computed(() => parseFloat(crypto.value?.change_24h_pct || '0'))
+
 const get7DayChange = computed(() => {
   if (history.value.length < 7) return 0
-  const now = history.value.at(-1)?.[1] || 0
-  const before = history.value.at(-7)?.[1] || now
+  const now = history.value[history.value.length - 1]?.price || 0
+  const before = history.value[Math.max(0, history.value.length - 7)]?.price || now
   return before !== 0 ? ((now - before) / before) * 100 : 0
 })
 
-const get30DayChange = computed(() => {
-  if (history.value.length < 2) return 0
-  const now = history.value.at(-1)?.[1] || 0
-  const before = history.value[0]?.[1] || now
-  return before !== 0 ? ((now - before) / before) * 100 : 0
+const positionValue = computed(() => positions.value?.current_value_eur || 0)
+const investedValue = computed(() => positions.value?.invested_eur || 0)
+const profitLoss = computed(() => positionValue.value - investedValue.value)
+const profitLossPercentage = computed(() => {
+  if (investedValue.value === 0) return 0
+  return (profitLoss.value / investedValue.value) * 100
+})
+
+// ============================================================================
+// CONFIGURATION DU GRAPHIQUE
+// ============================================================================
+const filteredHistory = computed(() => {
+  if (!history.value.length) return []
+  const now = new Date().getTime()
+  let cutoff = now
+  switch (timeRange.value) {
+    case '1d': cutoff -= 24 * 60 * 60 * 1000; break
+    case '7d': cutoff -= 7 * 24 * 60 * 60 * 1000; break
+    case '30d': cutoff -= 30 * 24 * 60 * 60 * 1000; break
+    case '90d': cutoff -= 90 * 24 * 60 * 60 * 1000; break
+    default: return history.value
+  }
+  return history.value.filter(entry => entry.timestamp >= cutoff)
 })
 
 const chartData = computed(() => {
-  if (!history.value?.length) return null
-  const labels = history.value.map(p =>
-    new Date(p[0]).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  )
+  if (!filteredHistory.value.length) return null
+  
+  const isPositive = dailyChange.value >= 0
+  const lineColor = isPositive ? '#22c55e' : '#ef4444'
+  const fillColor = isPositive ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)'
+  
+  const labels = filteredHistory.value.map(entry => {
+    const date = new Date(entry.timestamp)
+    switch (timeRange.value) {
+      case '1d': return date.toLocaleTimeString('en-US', { hour: 'numeric' })
+      case '7d': return date.toLocaleDateString('en-US', { weekday: 'short' })
+      default: return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+  })
+  
   return {
     labels,
     datasets: [{
-      label: 'Prix (EUR)',
-      data: history.value.map(p => p[1]),
-      borderColor: '#35A7FF',
-      backgroundColor: 'rgba(53, 167, 255, 0.1)',
+      label: 'Price',
+      data: filteredHistory.value.map(entry => entry.price),
+      borderColor: lineColor,
+      backgroundColor: fillColor,
       borderWidth: 2,
       fill: true,
-      tension: 0.4
+      tension: 0.4,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointBackgroundColor: lineColor,
     }]
   }
 })
@@ -215,490 +283,460 @@ const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
-  scales: { x: { ticks: { color: '#38618C' } }, y: { ticks: { color: '#38618C' } } }
+  scales: {
+    x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
+    y: {
+      position: 'right',
+      grid: { color: 'rgba(107, 114, 128, 0.1)' },
+      ticks: { color: '#6b7280', font: { size: 11 } }
+    }
+  },
+  interaction: { intersect: false, mode: 'index' }
 }
 
-// ============================
-// Fonctions valeur / plus-value
-// ============================
-function getPositionValue(position: any): number {
-  if (!position || !crypto.value) return 0
-  const qty = Number(position.pivot?.quantity || position.quantity || 0)
-  const price = Number(crypto.value.price_eur || crypto.value.price || 0)
-  return qty * price
-}
-
-function getInvestedValue(position: any): number {
-  if (!position) return 0
-  const qty = Number(position.pivot?.quantity || position.quantity || 0)
-  const avgPrice = Number(position.pivot?.average_buy_price || position.average_buy_price || 0)
-  return qty * avgPrice
-}
-
-function getProfitLoss(position: any): number {
-  return getPositionValue(position) - getInvestedValue(position)
-}
-
+// ============================================================================
+// ACTIONS UTILISATEUR
+// ============================================================================
 function goBack() {
   router.push('/dashboard/cryptos')
 }
 
-function buyCrypto() {
-  if (crypto.value) router.push(`/dashboard/cryptos?buy=${crypto.value.id}`)
+function goToBuy() {
+  if (crypto.value) {
+    router.push(`/dashboard/cryptos?buy=${crypto.value.id}`)
+  }
+}
+
+function refreshData() {
+  loadAllData()
+}
+
+function shareCrypto() {
+  if (navigator.share && crypto.value) {
+    navigator.share({
+      title: `${crypto.value.name} (${crypto.value.symbol})`,
+      text: `Current price: ${formatCurrency(crypto.value.price_eur)}`,
+      url: window.location.href
+    })
+  }
+}
+
+function exportData() {
+  // Implementation for data export
+  console.log('Export data')
 }
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <Card class="border-[#38618C]">
-      <CardHeader>
+  <div class="min-h-screen bg-white dark:bg-gray-900">
+    <!-- Header Navigation -->
+    <div class="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="flex items-center justify-between">
-          <CardTitle class="text-2xl font-bold text-[#38618C]">
-            Cryptocurrency details
-          </CardTitle>
-          <Button 
-            variant="outline" 
-            class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-            @click="goBack"
-          >
-            ← back
-          </Button>
-        </div>
-      </CardHeader>
-    </Card>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="space-y-4">
-      <Card>
-        <CardContent class="p-6">
           <div class="flex items-center gap-4">
-            <Skeleton class="h-12 w-12 rounded-full" />
-            <div class="space-y-2">
-              <Skeleton class="h-6 w-32" />
-              <Skeleton class="h-4 w-24" />
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <Skeleton v-for="i in 4" :key="i" class="h-20 rounded-lg" />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-
-    <!-- Error State -->
-    <Card v-else-if="error" class="border-[#FF5964]">
-      <CardContent class="p-6 text-center">
-        <div class="text-4xl mb-4">❌</div>
-        <div class="text-[#FF5964] text-lg font-semibold mb-2">Erreur</div>
-        <div class="text-gray-600 mb-4">{{ error }}</div>
-        <Button 
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
-          @click="loadAllData"
-        >
-          Réessayer
-        </Button>
-      </CardContent>
-    </Card>
-
-    <!-- Not Found State -->
-    <Card v-else-if="!crypto" class="border-[#FF5964]">
-      <CardContent class="p-6 text-center">
-        <div class="text-4xl mb-4">🔍</div>
-        <div class="text-[#FF5964] text-lg font-semibold mb-2">Cryptomonnaie non trouvée</div>
-        <div class="text-gray-600 mb-4">La cryptomonnaie demandée n'existe pas ou n'est plus disponible.</div>
-        <Button 
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
-          @click="goBack"
-        >
-          Retour à la liste
-        </Button>
-      </CardContent>
-    </Card>
-
-    <!-- Crypto Details -->
-    <div v-else class="space-y-6">
-      <!-- Header avec image et infos -->
-      <Card class="border-[#35A7FF]">
-        <CardContent class="p-6">
-          <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <!-- Header image -->
-            <div class="h-24 w-24 rounded-full border-4 border-[#35A7FF] bg-gray-100 flex items-center justify-center flex-shrink-0 relative">
-              <img
-                v-if="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
-                :src="makeImageUrl(crypto.image || crypto.image_url || crypto.image_url_full)"
-                :alt="crypto.name || crypto.nom || 'crypto'"
-                class="h-24 w-24 rounded-full object-cover"
-                @error="(e) => { const t = e.target as HTMLImageElement; t.style.display = 'none' }"
-              />
-              <div v-else class="text-4xl">💎</div>
-
-              <!-- Owned badge top-left when user holds this crypto -->
-              <Badge
-                v-if="positions && Number(positions.quantity || 0) > 0"
-                class="absolute -top-2 -left-2 text-xs px-2 py-0.5 rounded bg-[#01FF19] text-[#38618C] font-semibold shadow-sm"
-              >
-                Owned
-              </Badge>
-            </div>
-            
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-2">
-                <h2 class="text-2xl font-bold text-[#38618C]">{{ crypto.nom }}</h2>
-                <Badge class="bg-[#38618C] text-white text-lg px-3 py-1">
-                  {{ String(crypto.symbole || crypto.symbol || '').toUpperCase() }}
-                </Badge>
-                <Badge 
-                  :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                  class="text-white text-lg px-3 py-1"
-                >
-                  {{ formatPercentage(crypto.change_24h_pct) }}% (24h)
-                </Badge>
-              </div>
-              <div class="text-4xl font-bold text-[#35A7FF]">
-                {{ formatCurrency(crypto.price_eur) }}
-              </div>
-              <div class="text-sm text-gray-500 mt-1">Prix actuel</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <!-- Statistiques -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Prix actuel</div>
-            <div class="text-xl font-bold text-[#35A7FF]">
-              {{ formatCurrency(crypto.price_eur) }}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Market Cap</div>
-            <div class="text-xl font-bold text-[#38618C]">
-              {{ formatLargeNumber(crypto.market_cap) }}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Volume 24h</div>
-            <div class="text-xl font-bold text-[#38618C]">
-              {{ formatLargeNumber(crypto.volume_24h) }}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          class="border-gray-200 transition-colors"
-          :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'hover:border-[#01FF19]' : 'hover:border-[#FF5964]'"
-        >
-          <CardContent class="p-4">
-            <div class="text-xs text-gray-500 mb-1">Variation 24h</div>
-            <div 
-              class="text-xl font-bold"
-              :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+            <Button 
+              variant="ghost" 
+              size="sm"
+              class="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              @click="goBack"
             >
-              {{ formatPercentage(crypto.change_24h_pct) }}%
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <!-- Graphique d'évolution -->
-      <Card>
-        <CardHeader>
-          <div class="flex items-center justify-between">
-            <div>
-              <CardTitle class="text-lg font-semibold text-[#38618C]">
-                📈 Evolution Price (30 days)
-              </CardTitle>
-              <!-- Afficher les métadonnées d'historique -->
-              <div v-if="historyMetadata" class="text-xs text-gray-500 mt-2 space-y-1">
-                <div>📊 {{ historyMetadata.count }} points de données | Du {{ historyMetadata.from }} au {{ historyMetadata.to }}</div>
+              <ArrowLeft class="w-4 h-4 mr-1" />
+              Back
+            </Button>
+            <div v-if="crypto" class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full overflow-hidden">
+                <img 
+                  :src="makeImageUrl(crypto.image || crypto.image_url)"
+                  :alt="crypto.name"
+                  class="w-full h-full object-cover"
+                  @error="(e) => e.target.style.display = 'none'"
+                />
               </div>
-            </div>
-            <div class="flex gap-2">
-              <Badge class="bg-[#35A7FF] text-white">30J</Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div v-if="!chartData" class="h-[400px] flex items-center justify-center">
-            <div class="text-center text-gray-500">
-              <div class="text-6xl mb-4">📊</div>
-              <div>Aucune donnée historique disponible</div>
-              <Button 
-                class="mt-4 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white" 
-                @click="fetchHistoricalData"
-              >
-                Charger l'historique
-              </Button>
-            </div>
-          </div>
-          <div v-else class="h-[400px]">
-            <Line :data="chartData" :options="chartOptions" />
-          </div>
-          
-          <!-- Résumé des variations -->
-          <div v-if="history.length" class="grid grid-cols-3 gap-4 mt-6">
-            <Card class="border-gray-200">
-              <CardContent class="p-4 text-center">
-                <div class="text-sm text-gray-500 mb-1">24h</div>
-                <div 
-                  class="text-lg font-bold"
-                  :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                >
-                  {{ formatPercentage(crypto.change_24h_pct) }}%
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card class="border-gray-200">
-              <CardContent class="p-4 text-center">
-                <div class="text-sm text-gray-500 mb-1">7 jours</div>
-                <div 
-                  class="text-lg font-bold"
-                  :class="get7DayChange >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                >
-                  {{ formatPercentage(get7DayChange) }}%
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card class="border-gray-200">
-              <CardContent class="p-4 text-center">
-                <div class="text-sm text-gray-500 mb-1">30 jours</div>
-                <div 
-                  class="text-lg font-bold"
-                  :class="get30DayChange >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                >
-                  {{ formatPercentage(get30DayChange) }}%
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
-
-      <!-- Informations détaillées -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Informations générales -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              ℹ️ Informations
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Nom complet</span>
-              <span class="font-semibold text-[#38618C]">{{ crypto.name }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Symbole</span>
-              <Badge class="bg-[#35A7FF] text-white font-mono">
-                {{ String(crypto.symbole || crypto.symbol || '').toUpperCase() }}
-              </Badge>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Catégorie</span>
-              <span class="font-semibold text-[#38618C]">{{ crypto.category || 'N/A' }}</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-500">Site web</span>
-              <a 
-                v-if="crypto.website"
-                :href="crypto.website" 
-                target="_blank"
-                class="text-[#35A7FF] hover:underline"
-              >
-                Visiter →
-              </a>
-              <span v-else class="text-gray-400">N/A</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <!-- Données de marché -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
-              📊 Données de Marché
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <div class="flex justify-between">
-              <span class="text-gray-500">Prix actuel</span>
-              <span class="font-bold text-[#35A7FF]">{{ formatCurrency(crypto.price_eur) }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Market Cap</span>
-              <span class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.market_cap) }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Volume 24h</span>
-              <span class="font-semibold text-[#38618C]">{{ formatLargeNumber(crypto.volume_24h) }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-500">Variation 24h</span>
-              <Badge 
-                :class="Number(crypto.change_24h_pct || 0) >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                class="text-white"
-              >
-                {{ formatPercentage(crypto.change_24h_pct) }}%
-              </Badge>
-            </div>
-     
-          </CardContent>
-        </Card>
-      </div>
-
-      <!-- Mes positions -->
-      <Card>
-        <CardHeader>
-          <CardTitle class="text-[#38618C]">My Positions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <!-- Loading state -->
-          <div v-if="loadingPositions" class="h-32 flex items-center justify-center">
-            <div class="animate-pulse text-gray-500">
-              Loading positions...
-            </div>
-          </div>
-          
-          <!-- No position state -->
-          <div 
-            v-else-if="!positions || Number(positions.quantity || 0) <= 0" 
-            class="h-32 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200"
-          >
-            <div class="text-center text-gray-500">
-              <div class="text-3xl mb-2">💡</div>
-              <div>You don't own this crypto yet</div>
-              <Button 
-                class="mt-4 bg-[#01FF19] hover:bg-[#01FF19]/90 text-white" 
-                @click="buyCrypto"
-              >
-                Buy now
-              </Button>
-            </div>
-          </div>
-          
-          <!-- Position details -->
-          <div v-else class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card class="border-gray-200">
-                <CardContent class="p-4">
-                  <div class="text-sm text-gray-500">Quantity Held</div>
-                  <div class="text-xl font-bold text-[#38618C] mt-1">
-                    {{ Number(positions.quantity).toFixed(8) }}
-                    <span class="text-sm font-normal">
-                      {{ crypto.symbol || crypto.symbole || '' }}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card class="border-gray-200">
-                <CardContent class="p-4">
-                  <div class="text-sm text-gray-500">Current Value</div>
-                  <div class="text-xl font-bold text-[#38618C] mt-1">
-                    {{ formatCurrency(getPositionValue(positions)) }}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card class="border-gray-200">
-                <CardContent class="p-4">
-                  <div class="text-sm text-gray-500">Profit / Loss</div>
-                  <div
-                    class="text-xl font-bold mt-1"
-                    :class="getProfitLoss(positions) >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
-                  >
-                    {{ formatCurrency(getProfitLoss(positions)) }}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <!-- Transactions history -->
-            <div v-if="positions.transactions && positions.transactions.length" class="mt-6">
-              <div class="text-sm font-medium text-gray-500 mb-3">Transaction History</div>
-              <div class="space-y-2">
-                <div 
-                  v-for="(transaction, index) in positions.transactions" 
-                  :key="transaction.id || index"
-                  class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div class="flex items-center gap-3">
-                    <Badge 
-                      :class="(transaction.type || '').toUpperCase() === 'ACHAT' || (transaction.type || '').toUpperCase() === 'BUY' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
-                      class="text-white"
-                    >
-                      {{ (transaction.type || '').toUpperCase() === 'ACHAT' || (transaction.type || '').toUpperCase() === 'BUY' ? 'BUY' : 'SELL' }}
-                    </Badge>
-                    <span class="font-mono">
-                      {{ Number(transaction.quantity || transaction.qty || 0).toFixed(8) }}
-                      {{ crypto.symbol || crypto.symbole || '' }}
-                    </span>
-                  </div>
-                  <div class="text-right">
-                    <div class="font-medium text-[#38618C]">
-                      {{ formatCurrency(Number(transaction.price || transaction.unit_price || 0)) }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ new Date(transaction.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
-                    </div>
-                  </div>
-                </div>
+              <div>
+                <div class="font-semibold text-gray-900 dark:text-white">{{ crypto.name }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ crypto.symbol.toUpperCase() }}</div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          
+          <div class="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              class="text-gray-600 dark:text-gray-300"
+              @click="refreshData"
+              :disabled="loading"
+            >
+              <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              class="text-gray-600 dark:text-gray-300"
+              @click="shareCrypto"
+              v-if="crypto"
+            >
+              <Share2 class="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              class="text-gray-600 dark:text-gray-300"
+              @click="exportData"
+            >
+              <Download class="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <!-- Loading State -->
+      <div v-if="loading" class="space-y-6">
+        <div class="h-20 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
+        <div class="h-[400px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="h-48 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
+          <div class="h-48 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <Alert v-else-if="error" variant="destructive" class="mb-6">
+        <AlertDescription class="flex items-center justify-between">
+          <span>{{ error }}</span>
+          <Button size="sm" @click="loadAllData">Retry</Button>
+        </AlertDescription>
+      </Alert>
+
+      <!-- Main Content -->
+      <div v-else-if="crypto" class="space-y-6">
+        <!-- Price Header -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Price & Change -->
+            <div>
+              <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(currentPrice) }}</div>
+              <div class="flex items-center gap-2 mt-2">
+                <TrendingUp v-if="dailyChange >= 0" class="w-4 h-4 text-green-500" />
+                <TrendingDown v-else class="w-4 h-4 text-red-500" />
+                <span :class="dailyChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                  {{ formatPercentage(dailyChange) }}
+                </span>
+                <span class="text-gray-500 dark:text-gray-400 text-sm">(24h)</span>
+              </div>
+            </div>
+
+            <!-- Market Stats -->
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">Market Cap</span>
+                <span class="font-medium text-gray-900 dark:text-white">€{{ formatLargeNumber(marketCap) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-500 dark:text-gray-400">7D Change</span>
+                <span :class="get7DayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                  {{ formatPercentage(get7DayChange) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+              <Button 
+                class="flex-1 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
+                @click="goToBuy"
+              >
+                Buy
+              </Button>
+              <Button 
+                variant="outline"
+                class="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                :disabled="!positions || positions.quantity <= 0"
+              >
+                Sell
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart Section -->
+        <Card class="border-gray-200 dark:border-gray-700">
+          <CardContent class="p-6">
+            <!-- Chart Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Price Chart</h3>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ crypto.symbol.toUpperCase() }}/EUR
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <Button
+                  v-for="range in ['1d', '7d', '30d', '90d']"
+                  :key="range"
+                  size="sm"
+                  :variant="timeRange === range ? 'default' : 'outline'"
+                  @click="timeRange = range"
+                  class="text-xs"
+                >
+                  {{ range }}
+                </Button>
+              </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="h-[350px]">
+              <div v-if="historyLoading" class="h-full flex items-center justify-center">
+                <div class="text-center">
+                  <div class="w-12 h-12 border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-gray-300 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p class="text-gray-500 dark:text-gray-400">Loading chart...</p>
+                </div>
+              </div>
+              <div v-else-if="!chartData" class="h-full flex items-center justify-center">
+                <div class="text-center text-gray-500 dark:text-gray-400">
+                  <div class="text-4xl mb-4">📊</div>
+                  <p>No historical data available</p>
+                </div>
+              </div>
+              <Line v-else :data="chartData" :options="chartOptions" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Portfolio & Info Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Portfolio Section -->
+          <Card class="border-gray-200 dark:border-gray-700">
+            <CardContent class="p-6">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Your Holdings</h3>
+              
+              <div v-if="!positions || positions.quantity <= 0" class="text-center py-12">
+                <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+                  <span class="text-2xl">📈</span>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">You don't own {{ crypto.name }} yet</p>
+                <Button 
+                  class="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
+                  @click="goToBuy"
+                >
+                  Buy {{ crypto.symbol.toUpperCase() }}
+                </Button>
+              </div>
+
+              <div v-else class="space-y-6">
+                <!-- Holdings Summary -->
+                <div class="space-y-4">
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-500 dark:text-gray-400">Quantity</span>
+                    <span class="font-medium text-gray-900 dark:text-white">
+                      {{ formatNumber(positions.quantity, 8) }} {{ crypto.symbol.toUpperCase() }}
+                    </span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-500 dark:text-gray-400">Current Value</span>
+                    <span class="font-medium text-gray-900 dark:text-white">
+                      {{ formatCurrency(positionValue) }}
+                    </span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-500 dark:text-gray-400">Avg. Buy Price</span>
+                    <span class="font-medium text-gray-900 dark:text-white">
+                      {{ formatCurrency(positions.avg_buy_price_eur) }}
+                    </span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-gray-500 dark:text-gray-400">Profit/Loss</span>
+                    <span :class="profitLoss >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                      {{ formatCurrency(profitLoss) }} ({{ formatPercentage(profitLossPercentage) }})
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Transaction History -->
+                <div>
+                  <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-medium text-gray-900 dark:text-white">Recent Transactions</h4>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ positions.transactions.length }} total</span>
+                  </div>
+                  
+                  <div class="space-y-3">
+                    <div 
+                      v-for="(tx, index) in positions.transactions.slice(0, 3)"
+                      :key="tx.id || index"
+                      class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800 last:border-0"
+                    >
+                      <div class="flex items-center gap-3">
+                        <div 
+                          class="w-8 h-8 rounded-full flex items-center justify-center"
+                          :class="tx.type === 'ACHAT' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'"
+                        >
+                          <span class="text-xs font-medium" :class="tx.type === 'ACHAT' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                            {{ tx.type === 'ACHAT' ? 'B' : 'S' }}
+                          </span>
+                        </div>
+                        <div>
+                          <div class="font-medium text-gray-900 dark:text-white">
+                            {{ tx.type === 'ACHAT' ? 'Buy' : 'Sell' }} {{ crypto.symbol.toUpperCase() }}
+                          </div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ formatDate(tx.date) }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="font-medium text-gray-900 dark:text-white">
+                          {{ formatCurrency(tx.total_eur) }}
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                          @ {{ formatCurrency(tx.unit_price_eur) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Market Info Section -->
+          <Card class="border-gray-200 dark:border-gray-700">
+            <CardContent class="p-6">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Market Information</h3>
+              
+              <div class="space-y-4">
+                <div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-500 dark:text-gray-400">Symbol</span>
+                  <code class="font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                    {{ crypto.symbol.toUpperCase() }}
+                  </code>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-500 dark:text-gray-400">Category</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{{ crypto.category || 'Crypto' }}</span>
+                </div>
+                <!-- Safe website display -->
+                <div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-500 dark:text-gray-400">Website</span>
+                  <a 
+                    v-if="crypto.website && crypto.website.startsWith('http')"
+                    :href="crypto.website"
+                    target="_blank"
+                    class="text-blue-600 dark:text-blue-400 hover:underline font-medium text-sm"
+                  >
+                    Visit
+                  </a>
+                  <span v-else class="text-gray-400 dark:text-gray-500 text-sm">N/A</span>
+                </div>
+                <div class="flex justify-between items-center py-3">
+                  <span class="text-gray-500 dark:text-gray-400">24h Volume</span>
+                  <span class="font-medium text-gray-900 dark:text-white">€{{ formatLargeNumber(marketCap * 0.1) }}</span>
+                </div>
+              </div>
+
+              <!-- Performance Stats -->
+              <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+                <h4 class="font-medium text-gray-900 dark:text-white mb-4">Performance</h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                      {{ formatPercentage(dailyChange) }}
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">24h</div>
+                  </div>
+                  <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                      {{ formatPercentage(get7DayChange) }}
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">7D</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Additional Market Data -->
+        <Card class="border-gray-200 dark:border-gray-700">
+          <CardContent class="p-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Advanced Statistics</h3>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Market Dominance</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">0.5%</div>
+              </div>
+              <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Circulating Supply</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">19.5M</div>
+              </div>
+              <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Volume/Market Cap</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">0.08</div>
+              </div>
+              <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">All Time High</div>
+                <div class="text-xl font-bold text-green-600 dark:text-green-400">
+                  {{ formatCurrency(Math.max(...(history.map(h => h.price) || [currentPrice]))) }}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
-/* Styles personnalisés pour la charte graphique */
-:deep(.border-\[#38618C\]) {
-  border-color: #38618C;
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-:deep(.text-\[#38618C\]) {
-  color: #38618C;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
-:deep(.bg-\[#01FF19\]) {
-  background-color: #01FF19;
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
-:deep(.bg-\[#35A7FF\]) {
-  background-color: #35A7FF;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-:deep(.bg-\[#FF5964\]) {
-  background-color: #FF5964;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
 }
 
-:deep(.hover\:bg-\[#01FF19\]\/90:hover) {
-  background-color: rgba(1, 255, 25, 0.9);
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
 }
 
-:deep(.hover\:bg-\[#38618C\]:hover) {
-  background-color: #38618C;
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
-:deep(.hover\:bg-\[#35A7FF\]:hover) {
-  background-color: #35A7FF;
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
 }
 
-:deep(.hover\:text-\[#35A7FF\]\/80:hover) {
-  color: rgba(53, 167, 255, 0.8);
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 </style>

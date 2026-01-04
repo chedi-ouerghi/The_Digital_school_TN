@@ -64,6 +64,11 @@ class User extends Authenticatable
         return $this->hasOne(AccountRequest::class, 'user_id');
     }
 
+    public function isAdmin(): bool
+    {
+        return strtoupper($this->role ?? '') === 'ADMIN';
+    }
+
     /**
      * Génération automatique d'ID et remember_token
      */

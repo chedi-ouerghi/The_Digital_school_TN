@@ -17,15 +17,12 @@ class Cryptomoney extends Model
     protected $fillable = [
         'name',
         'symbol',
-        'coingecko_id',
         'image',
         'category',
         'website',
         'price_eur',
         'market_cap',
-        'volume_24h',
         'change_24h_pct',
-        'updated_at_api',
     ];
 
     protected $hidden = [];
@@ -33,11 +30,9 @@ class Cryptomoney extends Model
     protected $appends = ['image_url', 'price', 'change_24h'];
 
     protected $casts = [
-        'price_eur' => 'decimal:8',
-        'market_cap' => 'decimal:8',
-        'volume_24h' => 'decimal:8',
-        'change_24h_pct' => 'decimal:8',
-        'updated_at_api' => 'datetime',
+        'price_eur' => 'decimal:18',
+        'market_cap' => 'decimal:18',
+        'change_24h_pct' => 'decimal:18',
     ];
 
     public function getPriceAttribute()
@@ -87,8 +82,8 @@ class Cryptomoney extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = Str::uuid();
             }
         });
     }
