@@ -1,335 +1,723 @@
 <script setup lang="ts">
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Clock,
+  Download,
+  Edit,
+  Eye,
+  FileText,
+  Filter,
+  Plus,
+  Search,
+  Tag,
+  Trash2,
+  User,
+  XCircle
+} from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import api from '../../../services/api'
+
+// Types
+interface Author {
+  id: string
+  name: string
+  email: string
+  email_verified_at: string | null
+  role: string
+  last_id_change_at: string | null
+  profile_picture: string | null
+  profile_banner: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface Blog {
+  id: string
+  user_id: string
+  title: string
+  slug: string
+  category: string
+  summary: string
+  content: string
+  tags: string[]
+  image: string
+  published_at: string | null
+  created_at: string
+  updated_at: string
+  author: Author
+}
 
 interface Props {
-  blogs: any[]
+  blogs: Blog[]
   loading: boolean
   currentPage: number
   totalPages: number
+  totalItems: number
 }
 
-interface Emits {
-  (e: 'viewDetails', id: number): void
-  (e: 'editBlog', blog: any): void
-  (e: 'deleteBlog', id: number): void
-  (e: 'changePage', page: number): void
-  (e: 'refresh'): void
+const props = withDefaults(defineProps<Props>(), {
+  blogs: () => [],
+  loading: false,
+  currentPage: 1,
+  totalPages: 1,
+  totalItems: 0
+})
+
+const emit = defineEmits<{
+  'edit-blog': [blog: Blog]
+  'view-details': [blog: Blog]
+  'change-page': [page: number]
+  'refresh': []
+  'create-blog': []
+  'view-public': [blog: Blog]
+  'confirm-delete': [blog: Blog]
+}>()
+
+// Fonction pour tronquer l'email
+function formatEmail(email: string): string {
+  if (!email) return ''
+  const [username, domain] = email.split('@')
+  if (username && username.length > 8) {
+    return username.substring(0, 8) + '...@' + domain
+  }
+  return email
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-// États locaux
-const query = ref('')
-const sortBy = ref<'title'|'category'|'date'>('date')
-const viewMode = ref<'grid'|'list'>('list')
-const deleteLoading = ref<number | null>(null)
-
-// Fonctions utilitaires
-function formatDate(dateString: string): string {
-  if (!dateString) return '—'
-  try {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  } catch {
-    return '—'
+// Fonction pour formater la date de manière concise
+function formatShortDate(date: string | null): string {
+  if (!date) return 'Not published'
+  const d = new Date(date)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - d.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) {
+    const hours = Math.floor(diffTime / (1000 * 60 * 60))
+    if (hours === 0) {
+      const minutes = Math.floor(diffTime / (1000 * 60))
+      return minutes <= 1 ? 'Just now' : `${minutes}m ago`
+    }
+    return `${hours}h ago`
+  } else if (diffDays === 1) {
+    return 'Yesterday'
+  } else if (diffDays < 7) {
+    return `${diffDays}d ago`
+  } else if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7)
+    return `${weeks}w ago`
+  } else {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 }
 
-function truncateText(text: string, maxLength: number = 100): string {
+// Fonction excerpt avec longueur réduite par défaut
+function excerpt(text: string, length = 40): string {
   if (!text) return ''
-  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+  return text.length > length ? text.substring(0, length) + '...' : text
 }
 
-function getStatusVariant(published: boolean): string {
-  return published ? 'default' : 'secondary'
-}
-
-function getStatusText(published: boolean): string {
-  return published ? 'Published' : 'Draft'
-}
-
-// Computed
-const filteredBlogs = computed(() => {
-  let filtered = props.blogs
-
-  // Filter by search query
-  if (query.value) {
-    const q = query.value.toLowerCase()
-    filtered = filtered.filter(blog => 
-      blog.title?.toLowerCase().includes(q) ||
-      blog.category?.toLowerCase().includes(q) ||
-      blog.summary?.toLowerCase().includes(q)
-    )
+// Compute stats from blogs prop
+const stats = computed(() => {
+  const published = props.blogs.filter((b: Blog) => b.published_at).length
+  const drafts = props.blogs.filter((b: Blog) => !b.published_at).length
+  return {
+    total: props.blogs.length,
+    published,
+    drafts,
   }
+})
 
-  // Sort
-  filtered.sort((a, b) => {
-    switch (sortBy.value) {
-      case 'title':
-        return (a.title || '').localeCompare(b.title || '')
-      case 'category':
-        return (a.category || '').localeCompare(b.category || '')
-      case 'date':
-      default:
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+// Filters and pagination (local, for display only)
+const searchQuery = ref('')
+const statusFilter = ref<'all' | 'published' | 'draft'>('all')
+const categoryFilter = ref('all')
+const sortBy = ref<'date_desc' | 'date_asc' | 'title_asc' | 'title_desc'>('date_desc')
+const itemsPerPage = 10
+
+// Get unique categories from blogs
+const categories = computed(() => {
+  const uniqueCategories = new Set<string>()
+  props.blogs.forEach(blog => {
+    if (blog.category) {
+      uniqueCategories.add(blog.category)
     }
   })
+  return Array.from(uniqueCategories).sort()
+})
 
-  return filtered
+const filteredBlogs = computed(() => {
+  let result = Array.isArray(props.blogs) ? [...props.blogs] : []
+  
+  // Search filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(blog =>
+      blog.title?.toLowerCase().includes(query) ||
+      blog.summary?.toLowerCase().includes(query) ||
+      blog.content?.toLowerCase().includes(query) ||
+      blog.author?.name?.toLowerCase().includes(query) ||
+      blog.category?.toLowerCase().includes(query)
+    )
+  }
+  
+  // Status filter
+  if (statusFilter.value !== 'all') {
+    result = result.filter(blog =>
+      statusFilter.value === 'published' ? blog.published_at : !blog.published_at
+    )
+  }
+  
+  // Category filter
+  if (categoryFilter.value !== 'all') {
+    result = result.filter(blog => blog.category === categoryFilter.value)
+  }
+  
+  // Sort
+  result.sort((a: Blog, b: Blog) => {
+    const dateA = a.published_at || a.created_at
+    const dateB = b.published_at || b.created_at
+    
+    switch (sortBy.value) {
+      case 'date_desc':
+        return new Date(dateB).getTime() - new Date(dateA).getTime()
+      case 'date_asc':
+        return new Date(dateA).getTime() - new Date(dateB).getTime()
+      case 'title_asc':
+        return (a.title || '').localeCompare(b.title || '')
+      case 'title_desc':
+        return (b.title || '').localeCompare(a.title || '')
+      default:
+        return 0
+    }
+  })
+  
+  return result
 })
 
 const paginatedBlogs = computed(() => {
-  const start = (props.currentPage - 1) * 10
-  const end = start + 10
-  return filteredBlogs.value.slice(start, end)
+  const start = (props.currentPage - 1) * itemsPerPage
+  return filteredBlogs.value.slice(start, start + itemsPerPage)
 })
 
-const totalFilteredPages = computed(() => {
-  return Math.ceil(filteredBlogs.value.length / 10)
-})
-
-// Méthodes
-function handleView(id: number) {
-  emit('viewDetails', id)
+// Event handlers
+const createBlog = () => {
+  emit('create-blog')
 }
 
-function handleEdit(blog: any) {
-  emit('editBlog', blog)
+const editBlog = (blog: Blog) => {
+  emit('edit-blog', blog)
 }
 
-async function handleDelete(id: number) {
-  deleteLoading.value = id
-  try {
-    await api.blog.delete(id)
-    emit('deleteBlog', id)
-  } catch (error) {
-    console.error('Error deleting blog:', error)
-  } finally {
-    deleteLoading.value = null
-  }
+const viewDetails = (blog: Blog) => {
+  emit('view-details', blog)
 }
 
-function changePage(page: number) {
-  emit('changePage', page)
+const viewPublic = (blog: Blog) => {
+  emit('view-public', blog)
 }
 
-function refresh() {
-  emit('refresh')
+const confirmDelete = (blog: Blog) => {
+  emit('confirm-delete', blog)
+}
+
+const changePage = (page: number) => {
+  emit('change-page', page)
+}
+
+const resetFilters = () => {
+  searchQuery.value = ''
+  statusFilter.value = 'all'
+  categoryFilter.value = 'all'
+  sortBy.value = 'date_desc'
 }
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Barre de recherche et filtres -->
-    <div class="flex flex-col sm:flex-row gap-4">
-      <div class="flex-1">
-        <Input
-          v-model="query"
-          placeholder="Search blogs by title, category, or content..."
-          class="w-full"
-        />
-      </div>
-      <div class="flex gap-2">
-        <Select v-model="sortBy">
-          <SelectTrigger class="w-[140px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date">Date</SelectItem>
-            <SelectItem value="title">Title</SelectItem>
-            <SelectItem value="category">Category</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" @click="refresh">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </Button>
-      </div>
-    </div>
-
-    <!-- Liste des blogs -->
+  <!-- Statistiques -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     <Card>
-      <CardContent class="p-0">
-        <div v-if="loading" class="p-8 text-center">
-          <div class="animate-spin h-8 w-8 border-b-2 border-blue-500 rounded-full mx-auto mb-4"></div>
-          <p class="text-gray-500">Loading blogs...</p>
-        </div>
-
-        <div v-else-if="filteredBlogs.length === 0" class="p-8 text-center">
-          <div class="text-6xl mb-4">📝</div>
-          <p class="text-lg font-semibold text-gray-700 mb-2">No blogs found</p>
-          <p class="text-gray-500">{{ query ? 'Try adjusting your search' : 'Create your first blog post' }}</p>
-        </div>
-
-        <div v-else class="divide-y divide-gray-100">
-          <div
-            v-for="blog in paginatedBlogs"
-            :key="blog.id"
-            class="p-4 hover:bg-gray-50 transition-colors"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-2">
-                  <h3 class="font-semibold text-lg text-gray-900 truncate">
-                    {{ blog.title }}
-                  </h3>
-                  <Badge :variant="getStatusVariant(!!blog.published_at)">
-                    {{ getStatusText(!!blog.published_at) }}
-                  </Badge>
-                </div>
-
-                <div class="flex items-center gap-4 text-sm text-gray-500 mb-2">
-                  <span class="flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 8V5a2 2 0 012-2z" />
-                    </svg>
-                    {{ blog.category || 'Uncategorized' }}
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {{ formatDate(blog.created_at) }}
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    {{ blog.author?.name || 'Unknown' }}
-                  </span>
-                </div>
-
-                <p class="text-gray-600 text-sm line-clamp-2">
-                  {{ truncateText(blog.summary) }}
-                </p>
-
-                <div v-if="blog.tags && blog.tags.length > 0" class="flex flex-wrap gap-1 mt-2">
-                  <Badge
-                    v-for="tag in (Array.isArray(blog.tags) ? blog.tags : []).slice(0, 3)"
-                    :key="tag"
-                    variant="outline"
-                    class="text-xs"
-                  >
-                    {{ tag }}
-                  </Badge>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  @click="handleView(blog.id)"
-                >
-                  View
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  @click="handleEdit(blog)"
-                >
-                  Edit
-                </Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger as-child>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="text-red-600 hover:text-red-700"
-                      :disabled="deleteLoading === blog.id"
-                    >
-                      <svg v-if="deleteLoading === blog.id" class="animate-spin h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Blog Post</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{{ blog.title }}"? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        @click="handleDelete(blog.id)"
-                        class="bg-red-600 hover:bg-red-700"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
+      <CardContent class="p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Total Articles</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
           </div>
-        </div>
-
-        <!-- Pagination -->
-        <div v-if="totalFilteredPages > 1" class="p-4 border-t border-gray-100">
-          <div class="flex items-center justify-between">
-            <Button
-              variant="outline"
-              :disabled="currentPage === 1"
-              @click="changePage(currentPage - 1)"
-            >
-              Previous
-            </Button>
-            <span class="text-sm text-gray-600">
-              Page {{ currentPage }} of {{ totalFilteredPages }}
-            </span>
-            <Button
-              variant="outline"
-              :disabled="currentPage >= totalFilteredPages"
-              @click="changePage(currentPage + 1)"
-            >
-              Next
-            </Button>
+          <div class="p-3 rounded-full bg-blue-50">
+            <FileText class="h-6 w-6 text-blue-600" />
           </div>
         </div>
       </CardContent>
     </Card>
+    
+    <Card>
+      <CardContent class="p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Published</p>
+            <p class="text-2xl font-bold text-green-600">{{ stats.published }}</p>
+          </div>
+          <div class="p-3 rounded-full bg-green-50">
+            <CheckCircle class="h-6 w-6 text-green-600" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+    
+    <Card>
+      <CardContent class="p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-gray-600">Drafts</p>
+            <p class="text-2xl font-bold text-amber-600">{{ stats.drafts }}</p>
+          </div>
+          <div class="p-3 rounded-full bg-amber-50">
+            <Clock class="h-6 w-6 text-amber-600" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+   
   </div>
+
+  <!-- Filtres et Recherche -->
+  <Card>
+    <CardHeader>
+      <CardTitle>Filters</CardTitle>
+      <CardDescription>Refine your article search</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div class="flex flex-col lg:flex-row gap-4">
+        <!-- Recherche -->
+        <div class="flex-1">
+          <div class="relative">
+            <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              v-model="searchQuery"
+              placeholder="Search articles by title, content, author..."
+              class="pl-10"
+            />
+          </div>
+        </div>
+        
+        <!-- Filtres -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Select v-model="statusFilter">
+            <SelectTrigger>
+              <div class="flex items-center gap-2">
+                <CheckCircle class="h-4 w-4" />
+                <SelectValue placeholder="Status" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="published" class="text-green-600">
+                <div class="flex items-center gap-2">
+                  <CheckCircle class="h-4 w-4" />
+                  Published
+                </div>
+              </SelectItem>
+              <SelectItem value="draft" class="text-amber-600">
+                <div class="flex items-center gap-2">
+                  <Clock class="h-4 w-4" />
+                  Draft
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select v-model="categoryFilter">
+            <SelectTrigger>
+              <div class="flex items-center gap-2">
+                <Tag class="h-4 w-4" />
+                <SelectValue placeholder="Category" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem 
+                v-for="category in categories" 
+                :key="category" 
+                :value="category"
+              >
+                {{ category }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select v-model="sortBy">
+            <SelectTrigger>
+              <div class="flex items-center gap-2">
+                <Filter class="h-4 w-4" />
+                <SelectValue placeholder="Sort by" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date_desc">Newest First</SelectItem>
+              <SelectItem value="date_asc">Oldest First</SelectItem>
+              <SelectItem value="title_asc">Title A-Z</SelectItem>
+              <SelectItem value="title_desc">Title Z-A</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      <!-- Filtres actifs -->
+      <div v-if="searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'" class="mt-4 flex flex-wrap gap-2">
+        <Badge 
+          v-if="searchQuery"
+          variant="secondary"
+          class="gap-2"
+        >
+          Search: "{{ searchQuery }}"
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            class="h-4 w-4 p-0 hover:bg-transparent"
+            @click="searchQuery = ''"
+          >
+            <XCircle class="h-3 w-3" />
+          </Button>
+        </Badge>
+        <Badge 
+          v-if="statusFilter !== 'all'"
+          variant="secondary"
+          class="gap-2"
+        >
+          Status: {{ statusFilter === 'published' ? 'Published' : 'Draft' }}
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            class="h-4 w-4 p-0 hover:bg-transparent"
+            @click="statusFilter = 'all'"
+          >
+            <XCircle class="h-3 w-3" />
+          </Button>
+        </Badge>
+        <Badge 
+          v-if="categoryFilter !== 'all'"
+          variant="secondary"
+          class="gap-2"
+        >
+          Category: {{ categoryFilter }}
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            class="h-4 w-4 p-0 hover:bg-transparent"
+            @click="categoryFilter = 'all'"
+          >
+            <XCircle class="h-3 w-3" />
+          </Button>
+        </Badge>
+        <Button 
+          v-if="searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'"
+          size="sm"
+          variant="outline"
+          class="h-6"
+          @click="resetFilters"
+        >
+          Clear All
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+
+<!-- Vue Tableau -->
+<Card class="overflow-hidden">
+  <CardHeader class="border-b">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <CardTitle>Articles</CardTitle>
+        <CardDescription>
+          Showing {{ paginatedBlogs.length }} of {{ filteredBlogs.length }} articles
+        </CardDescription>
+      </div>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" class="gap-2">
+          <Download class="h-4 w-4" />
+          Export
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+  
+  <CardContent class="p-0">
+    <!-- État de chargement -->
+    <div v-if="loading" class="space-y-3 p-6">
+      <div v-for="i in 5" :key="i" class="animate-pulse">
+        <div class="h-16 bg-gray-100 rounded"></div>
+      </div>
+    </div>
+
+    <!-- État vide -->
+    <div v-else-if="filteredBlogs.length === 0" class="p-12 text-center">
+      <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <FileText class="h-8 w-8 text-gray-400" />
+      </div>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">No articles found</h3>
+      <p class="text-gray-600 mb-6 max-w-md mx-auto">
+        {{ searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' 
+          ? 'No articles match your current filters. Try adjusting your search criteria.' 
+          : 'There are no articles yet. Create your first article!' 
+        }}
+      </p>
+      <Button v-if="!searchQuery && statusFilter === 'all' && categoryFilter === 'all'" @click="createBlog">
+        <Plus class="h-4 w-4 mr-2" />
+        Create First Article
+      </Button>
+    </div>
+
+    <!-- Tableau (sans scroll horizontal) -->
+    <div v-else>
+      <div class="w-full">
+        <!-- En-têtes - Alignement parfait avec les cellules -->
+        <div class="bg-gray-50 border-b">
+          <div class="grid grid-cols-12 py-3 px-4">
+            <!-- Title -->
+            <div class="col-span-3 text-xs font-medium text-gray-700 flex items-center pl-2">
+              <span class="truncate">Title</span>
+            </div>
+            
+            <!-- Author -->
+            <div class="col-span-2 text-xs font-medium text-gray-700 flex items-center pl-1">
+              <span class="truncate">Author</span>
+            </div>
+            
+            <!-- Category -->
+            <div class="col-span-1 text-xs font-medium text-gray-700 flex items-center pl-1">
+              <span class="truncate">Category</span>
+            </div>
+            
+            <!-- Tags -->
+            <div class="col-span-2 text-xs font-medium text-gray-700 flex items-center pl-1">
+              <span class="truncate">Tags</span>
+            </div>
+            
+            <!-- Published -->
+            <div class="col-span-2 text-xs font-medium text-gray-700 flex items-center pl-1">
+              <span class="truncate">Published</span>
+            </div>
+            
+            <!-- Actions -->
+            <div class="col-span-2 text-xs font-medium text-gray-700 flex items-center justify-end pr-2">
+              <span class="truncate">Actions</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Lignes - Alignement vertical centré -->
+        <div class="divide-y divide-gray-100">
+          <div 
+            v-for="blog in paginatedBlogs" 
+            :key="blog.id"
+            class="hover:bg-gray-50 transition-colors"
+          >
+            <div class="grid grid-cols-12 py-3 px-4 items-center min-h-[64px]">
+              <!-- Title - Alignement start -->
+              <div class="col-span-3 h-full">
+                <div class="flex items-center gap-2 h-full">
+                  <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                    <FileText class="h-4 w-4 text-gray-400" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <h4 class="font-medium text-gray-900 text-sm truncate leading-tight">{{ blog.title }}</h4>
+                    <p class="text-xs text-gray-500 mt-0.5 truncate leading-tight">
+                      {{ excerpt(blog.summary || blog.content, 45) }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Author - Alignement center -->
+              <div class="col-span-2 h-full flex items-center">
+                <div class="flex items-center gap-1.5 w-full">
+                  <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    <User class="h-3 w-3 text-gray-600" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <span class="text-xs text-gray-900 truncate block leading-tight">{{ blog.author?.name || 'Admin' }}</span>
+                    <span class="text-xs text-gray-500 truncate block leading-tight">{{ formatEmail(blog.author?.email) }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Category - Alignement center -->
+              <div class="col-span-1 h-full flex items-center justify-center px-1">
+                <Badge variant="outline" class="text-xs px-2 py-0.5 truncate max-w-full">
+                  <span class="truncate">{{ blog.category || 'General' }}</span>
+                </Badge>
+              </div>
+              
+              <!-- Tags - Alignement center -->
+              <div class="col-span-2 h-full flex items-center px-1">
+                <div class="flex flex-wrap gap-1 w-full justify-center">
+                  <Badge 
+                    v-for="(tag, index) in blog.tags?.slice(0, 2)" 
+                    :key="index"
+                    variant="secondary"
+                    class="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200 truncate max-w-[60px]"
+                  >
+                    <span class="truncate">{{ tag }}</span>
+                  </Badge>
+                  <span v-if="blog.tags && blog.tags.length > 2" class="text-xs text-gray-500 flex-shrink-0">
+                    +{{ blog.tags.length - 2 }}
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Published Date & Status - Alignement center -->
+              <div class="col-span-2 h-full flex flex-col items-center justify-center px-1">
+                <div class="text-xs text-gray-500 truncate w-full text-center">
+                  {{ formatShortDate(blog.published_at) }}
+                </div>
+                <Badge 
+                  :class="[
+                    'text-xs font-medium px-2 py-0.5 mt-1 truncate max-w-full',
+                    blog.published_at 
+                      ? 'bg-green-50 text-green-700 border-green-200' 
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  ]"
+                >
+                  <div class="flex items-center gap-1">
+                    <component 
+                      :is="blog.published_at ? CheckCircle : Clock" 
+                      class="h-2.5 w-2.5 flex-shrink-0" 
+                    />
+                    <span class="truncate">{{ blog.published_at ? 'Live' : 'Draft' }}</span>
+                  </div>
+                </Badge>
+              </div>
+              
+              <!-- Actions - Alignement end -->
+              <div class="col-span-2 h-full flex items-center justify-end pr-2">
+                <div class="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    class="h-7 w-7 p-0"
+                    title="View Details"
+                    @click="viewDetails(blog)"
+                  >
+                    <Eye class="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    class="h-7 w-7 p-0"
+                    title="Edit"
+                    @click="editBlog(blog)"
+                  >
+                    <Edit class="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    class="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    title="Delete"
+                    @click="confirmDelete(blog)"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="filteredBlogs.length > 0 && !loading" class="border-t px-4 py-3">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-xs text-gray-600">
+          Showing {{ ((props.currentPage - 1) * itemsPerPage) + 1 }} to 
+          {{ Math.min(props.currentPage * itemsPerPage, filteredBlogs.length) }} of 
+          {{ filteredBlogs.length }} articles
+        </div>
+        <div class="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-7 w-7 p-0"
+            :disabled="props.currentPage === 1"
+            @click="changePage(1)"
+          >
+            <ChevronsLeft class="h-3 w-3" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-7 w-7 p-0"
+            :disabled="props.currentPage === 1"
+            @click="changePage(props.currentPage - 1)"
+          >
+            <ChevronLeft class="h-3 w-3" />
+          </Button>
+          
+          <div class="flex items-center gap-1">
+            <Button
+              v-for="p in Math.min(5, props.totalPages)"
+              :key="p"
+              :variant="props.currentPage === p ? 'default' : 'outline'"
+              size="sm"
+              class="h-7 w-7 p-0 text-xs"
+              @click="changePage(p)"
+            >
+              {{ p }}
+            </Button>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-7 w-7 p-0"
+            :disabled="props.currentPage === props.totalPages"
+            @click="changePage(props.currentPage + 1)"
+          >
+            <ChevronRight class="h-3 w-3" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-7 w-7 p-0"
+            :disabled="props.currentPage === props.totalPages"
+            @click="changePage(props.totalPages)"
+          >
+            <ChevronsRight class="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 </template>
 
 <style scoped>
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
 }
 </style>

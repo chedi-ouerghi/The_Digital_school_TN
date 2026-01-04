@@ -2,19 +2,21 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
-import { 
-  TrendingUp, TrendingDown, DollarSign, 
-  Wallet, Coins, BarChart3, ShoppingCart,
-  ArrowUpRight, Activity, ChevronRight,
-  PieChart, RefreshCw
+import {
+  TrendingUp, TrendingDown, DollarSign,
+  Wallet, Coins, BarChart3, ShoppingCart, PieChart, RefreshCw, Users, Eye, Clock,
+  Percent, Target, Shield, Zap, ArrowRight,
+  FileText, CreditCard
 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Chart, registerables } from 'chart.js'
 import { Line, Bar } from 'vue-chartjs'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Setup Chart.js
 Chart.register(...registerables)
@@ -28,21 +30,46 @@ const chartPeriod = ref('30d')
 const selectedMetric = ref('value')
 const chartLoading = ref(false)
 const refreshLoading = ref(false)
+const activeTab = ref('overview')
 
 // Chart periods
 const periods = [
-  { value: '7d', label: '7D' },
-  { value: '30d', label: '30D' },
-  { value: '90d', label: '90D' },
-  { value: '1y', label: '1Y' }
+  { value: '7d', label: '7D', color: '#35A7FF' },
+  { value: '30d', label: '30D', color: '#01FF19' },
+  { value: '90d', label: '90D', color: '#FF5964' },
+  { value: '1y', label: '1Y', color: '#38618C' }
 ]
 
 // Metrics for chart
 const metrics = [
-  { value: 'value', label: 'Portfolio Value' },
-  { value: 'pnl', label: 'Profit/Loss' },
-  { value: 'performance', label: 'Performance' }
+  { value: 'value', label: 'Portfolio Value', icon: DollarSign, color: '#35A7FF' },
+  { value: 'pnl', label: 'Profit/Loss', icon: TrendingUp, color: '#01FF19' },
+  { value: 'performance', label: 'Performance', icon: Percent, color: '#FF5964' }
 ]
+
+// Quick stats
+const quickStats = ref([
+  { label: 'Total Users', value: '1,284', change: '+12.5%', icon: Users, color: '#35A7FF' },
+  { label: 'Page Views', value: '42.5K', change: '+8.2%', icon: Eye, color: '#01FF19' },
+  { label: 'Avg. Session', value: '4m 32s', change: '+2.1%', icon: Clock, color: '#FF5964' },
+  { label: 'Conversion', value: '3.42%', change: '+0.8%', icon: Target, color: '#38618C' }
+])
+
+// Recent activities
+const recentActivities = ref([
+  { user: 'Alex Morgan', action: 'Purchased BTC', amount: '€2,500', time: '2 min ago', type: 'buy', icon: ShoppingCart },
+  { user: 'Sarah Chen', action: 'Sold ETH', amount: '€1,850', time: '15 min ago', type: 'sell', icon: TrendingDown },
+  { user: 'Marcus Lee', action: 'Withdrawal', amount: '€5,000', time: '1 hour ago', type: 'withdraw', icon: CreditCard },
+  { user: 'Emma Wilson', action: 'Deposit', amount: '€10,000', time: '3 hours ago', type: 'deposit', icon: Wallet }
+])
+
+// Performance goals
+const performanceGoals = ref([
+  { label: 'Monthly Target', value: 75, target: 100, color: '#35A7FF' },
+  { label: 'Risk Level', value: 30, target: 100, color: '#01FF19' },
+  { label: 'Diversification', value: 85, target: 100, color: '#FF5964' },
+  { label: 'Liquidity', value: 60, target: 100, color: '#38618C' }
+])
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -51,23 +78,24 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
   }).format(value)
 }
 
 function formatCompactNumber(value: number): string {
-  if (value >= 1e9) return `€${(value / 1e9).toFixed(2)}B`
-  if (value >= 1e6) return `€${(value / 1e6).toFixed(2)}M`
+  if (value >= 1e9) return `€${(value / 1e9).toFixed(1)}B`
+  if (value >= 1e6) return `€${(value / 1e6).toFixed(1)}M`
   if (value >= 1e3) return `€${(value / 1e3).toFixed(1)}K`
-  return `€${value.toFixed(2)}`
+  return `€${value.toFixed(0)}`
 }
 
 function formatPercentage(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+  const sign = value >= 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
 }
 
-function formatNumber(value: number, decimals = 4): string {
+function formatNumber(value: number, decimals = 2): string {
   return value.toFixed(decimals).replace(/\.?0+$/, '')
 }
 
@@ -77,6 +105,14 @@ function getCryptoIcon(symbol: string): string {
     'SOL': '◎', 'DOT': '●', 'DOGE': 'Ð', 'AVAX': 'A', 'MATIC': 'M'
   }
   return icons[symbol] || symbol.charAt(0)
+}
+
+function getColorClass(color: string, type: 'bg' | 'text' | 'border' = 'bg'): string {
+  const base = `${type}-[${color}]`
+  if (type === 'bg') {
+    return `${base} hover:${type}-[${color}]/90`
+  }
+  return base
 }
 
 // ============================================================================
@@ -112,7 +148,7 @@ const portfolioStats = computed(() => {
   const assets = walletData.value.assets || []
   const profit = totalValue - totalInvestment
   const profitPercent = totalInvestment > 0 ? (profit / totalInvestment) * 100 : 0
-  const todayChange = profitPercent // Simplified for demo
+  const todayChange = profitPercent
 
   // Calculate asset distribution
   const assetDistribution = assets.map(asset => ({
@@ -143,39 +179,43 @@ const portfolioStats = computed(() => {
   }
 })
 
-// Stat cards
-const statCards = computed(() => [
+// Main stat cards
+const mainStatCards = computed(() => [
   {
-    title: 'Total Portfolio',
-    value: portfolioStats.value ? formatCurrency(portfolioStats.value.totalValue) : '€0.00',
-    change: portfolioStats.value ? formatPercentage(portfolioStats.value.todayChange) : '+0.00%',
+    title: 'Portfolio Value',
+    value: portfolioStats.value ? formatCompactNumber(portfolioStats.value.totalValue) : '€0',
+    change: portfolioStats.value ? formatPercentage(portfolioStats.value.todayChange) : '+0.0%',
     positive: portfolioStats.value?.todayChange >= 0,
     icon: DollarSign,
-    color: 'text-gray-900 dark:text-white'
+    color: '#35A7FF',
+    gradient: 'from-[#35A7FF] to-[#38618C]'
   },
   {
-    title: 'Available',
-    value: portfolioStats.value ? formatCurrency(portfolioStats.value.balance) : '€0.00',
-    change: 'Ready to trade',
+    title: 'Available Balance',
+    value: portfolioStats.value ? formatCurrency(portfolioStats.value.balance) : '€0',
+    change: 'Ready to invest',
     positive: true,
     icon: Wallet,
-    color: 'text-blue-600 dark:text-blue-400'
+    color: '#01FF19',
+    gradient: 'from-[#01FF19] to-[#35A7FF]'
   },
   {
-    title: 'Total Invested',
-    value: portfolioStats.value ? formatCurrency(portfolioStats.value.totalInvestment) : '€0.00',
-    change: portfolioStats.value ? formatPercentage(portfolioStats.value.profitPercent) : '+0.00%',
+    title: 'Total Profit',
+    value: portfolioStats.value ? formatCurrency(portfolioStats.value.profit) : '€0',
+    change: portfolioStats.value ? formatPercentage(portfolioStats.value.profitPercent) : '+0.0%',
     positive: portfolioStats.value?.profitPercent >= 0,
     icon: TrendingUp,
-    color: 'text-green-600 dark:text-green-400'
+    color: '#FF5964',
+    gradient: 'from-[#FF5964] to-[#38618C]'
   },
   {
-    title: 'Assets',
+    title: 'Active Assets',
     value: portfolioStats.value ? portfolioStats.value.assets.toString() : '0',
     change: `${portfolioStats.value?.topAssets.length || 0} holdings`,
     positive: true,
     icon: Coins,
-    color: 'text-purple-600 dark:text-purple-400'
+    color: '#38618C',
+    gradient: 'from-[#38618C] to-[#35A7FF]'
   }
 ])
 
@@ -192,14 +232,16 @@ const chartData = computed(() => {
       label: selectedMetric.value === 'value' ? 'Portfolio Value' : 
              selectedMetric.value === 'pnl' ? 'Profit/Loss' : 'Performance',
       data: values,
-      borderColor: selectedMetric.value === 'pnl' && values[values.length - 1] < 0 ? '#ef4444' : '#10b981',
-      backgroundColor: selectedMetric.value === 'pnl' && values[values.length - 1] < 0 ? 
-        'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+      borderColor: '#35A7FF',
+      backgroundColor: 'rgba(53, 167, 255, 0.1)',
       fill: true,
       tension: 0.4,
-      borderWidth: 2,
+      borderWidth: 3,
       pointRadius: 0,
-      pointHoverRadius: 4
+      pointHoverRadius: 6,
+      pointBackgroundColor: '#FF5964',
+      pointBorderColor: '#FFFFFF',
+      pointBorderWidth: 2
     }]
   }
 })
@@ -225,12 +267,12 @@ function generateChartValues(): number[] {
                chartPeriod.value === '90d' ? 90 : 365
 
   const baseValue = portfolioStats.value?.totalValue || 10000
-  const volatility = chartPeriod.value === '7d' ? 0.03 : 
-                     chartPeriod.value === '30d' ? 0.05 : 0.08
+  const volatility = chartPeriod.value === '7d' ? 0.02 : 
+                     chartPeriod.value === '30d' ? 0.04 : 0.06
 
   return Array.from({ length: days }, (_, i) => {
     const progress = i / days
-    const trend = selectedMetric.value === 'pnl' ? 0 : 0.15
+    const trend = selectedMetric.value === 'pnl' ? 0 : 0.12
     const noise = (Math.random() - 0.5) * volatility * 2
     const value = baseValue * (1 + trend * progress + noise)
     
@@ -252,34 +294,43 @@ const chartOptions = computed(() => ({
     tooltip: {
       mode: 'index',
       intersect: false,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      titleColor: '#fff',
-      bodyColor: '#fff',
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleColor: '#FFFFFF',
+      bodyColor: '#E2E8F0',
+      borderColor: '#35A7FF',
       borderWidth: 1,
       padding: 12,
+      cornerRadius: 8,
       callbacks: {
         label: (context: any) => {
           const value = context.parsed.y
           if (selectedMetric.value === 'performance') {
-            return `${value.toFixed(2)}%`
+            return ` ${value.toFixed(1)}%`
           }
-          return formatCurrency(value)
+          return ` ${formatCurrency(value)}`
         }
       }
     }
   },
   scales: {
     x: {
-      grid: { display: false },
-      ticks: { color: '#6b7280', font: { size: 11 } }
+      grid: { 
+        display: true,
+        color: 'rgba(226, 232, 240, 0.1)'
+      },
+      ticks: { 
+        color: '#64748B',
+        font: { size: 11, family: "'Inter', sans-serif" }
+      }
     },
     y: {
       position: 'right',
-      grid: { color: 'rgba(107, 114, 128, 0.1)' },
+      grid: { 
+        color: 'rgba(226, 232, 240, 0.1)'
+      },
       ticks: { 
-        color: '#6b7280',
-        font: { size: 11 },
+        color: '#64748B',
+        font: { size: 11, family: "'Inter', sans-serif" },
         callback: (value: number) => {
           if (selectedMetric.value === 'performance') {
             return `${value.toFixed(0)}%`
@@ -292,23 +343,22 @@ const chartOptions = computed(() => ({
   interaction: { intersect: false, mode: 'index' }
 }))
 
-// Asset distribution chart
+// Distribution chart data
 const distributionChartData = computed(() => {
   if (!portfolioStats.value) return null
 
   const topAssets = portfolioStats.value.topAssets.slice(0, 6)
-  const colors = [
-    '#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'
-  ]
+  const colors = ['#35A7FF', '#01FF19', '#FF5964', '#38618C', '#8B5CF6', '#F59E0B']
 
   return {
     labels: topAssets.map(a => a.symbol),
     datasets: [{
       data: topAssets.map(a => a.weight),
       backgroundColor: colors,
-      borderColor: '#fff',
+      borderColor: '#FFFFFF',
       borderWidth: 2,
-      borderRadius: 6
+      borderRadius: 8,
+      spacing: 2
     }]
   }
 })
@@ -316,19 +366,31 @@ const distributionChartData = computed(() => {
 const distributionChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  cutout: '65%',
   plugins: {
     legend: {
-      position: 'right',
+      position: 'right' as const,
       labels: {
-        color: '#6b7280',
-        font: { size: 11 },
-        padding: 15,
-        usePointStyle: true
+        color: '#64748B',
+        font: { 
+          size: 12,
+          family: "'Inter', sans-serif"
+        },
+        padding: 16,
+        usePointStyle: true,
+        pointStyle: 'circle'
       }
     },
     tooltip: {
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleColor: '#FFFFFF',
+      bodyColor: '#E2E8F0',
+      borderColor: '#35A7FF',
+      borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
       callbacks: {
-        label: (context: any) => `${context.label}: ${context.parsed.toFixed(1)}%`
+        label: (context: any) => ` ${context.label}: ${context.parsed.toFixed(1)}%`
       }
     }
   }
@@ -360,58 +422,75 @@ watch([chartPeriod, selectedMetric], () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  <div class="space-y-8 p-6 bg-gradient-to-b from-slate-50 to-white min-h-screen">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-2">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Portfolio Overview</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Track your investments and market performance</p>
+        <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">
+          Dashboard Overview
+        </h1>
+        <p class="text-[#64748B] mt-2 max-w-2xl">
+          Welcome back! Track your portfolio performance, market insights, and trading activities in real-time.
+        </p>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        class="gap-2"
-        @click="refreshData"
-        :disabled="refreshLoading"
-      >
-        <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': refreshLoading }" />
-        {{ refreshLoading ? 'Refreshing...' : 'Refresh' }}
-      </Button>
+      <div class="flex items-center gap-3">
+        <Button
+          variant="outline"
+          class="gap-2 border-[#E2E8F0] text-[#64748B] hover:bg-[#35A7FF]/5 hover:text-[#35A7FF]"
+          @click="refreshData"
+          :disabled="refreshLoading"
+        >
+          <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': refreshLoading }" />
+          {{ refreshLoading ? 'Syncing...' : 'Refresh Data' }}
+        </Button>
+        <Button class="gap-2 bg-[#FF5964] hover:bg-[#FF5964]/90 text-white">
+          <Zap class="w-4 h-4" />
+          Quick Trade
+        </Button>
+      </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Main Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <template v-if="loading">
-        <Card v-for="i in 4" :key="i">
+        <Card v-for="i in 4" :key="i" class="border-[#E2E8F0]">
           <CardContent class="p-6">
-            <Skeleton class="h-8 w-32 mb-2" />
+            <Skeleton class="h-8 w-32 mb-3" />
             <Skeleton class="h-4 w-24" />
           </CardContent>
         </Card>
       </template>
       <template v-else>
         <Card
-          v-for="(stat, index) in statCards"
+          v-for="(stat, index) in mainStatCards"
           :key="index"
-          class="group hover:shadow-lg transition-shadow"
+          class="group relative overflow-hidden border-[#E2E8F0] hover:border-[#35A7FF]/30 hover:shadow-lg transition-all duration-300"
         >
-          <CardContent class="p-6">
+          <div class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" 
+               :class="stat.gradient"></div>
+          <CardContent class="p-6 relative">
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-3">
-                <div class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-                  <component :is="stat.icon" :class="[stat.color, 'w-5 h-5']" />
+                <div class="p-2.5 rounded-xl bg-white border border-[#E2E8F0] shadow-sm">
+                  <component :is="stat.icon" :style="{ color: stat.color }" class="w-5 h-5" />
                 </div>
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ stat.title }}</span>
+                <span class="text-sm font-medium text-[#64748B]">{{ stat.title }}</span>
               </div>
               <Badge
-                v-if="stat.title !== 'Available'"
-                :class="stat.positive ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'"
+                v-if="stat.title !== 'Available Balance'"
+                class="text-xs font-medium px-2 py-0.5 border"
+                :style="{
+                  backgroundColor: `${stat.color}15`,
+                  color: stat.color,
+                  borderColor: `${stat.color}30`
+                }"
               >
                 {{ stat.change }}
               </Badge>
             </div>
-            <div class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ stat.value }}</div>
-            <div v-if="stat.title === 'Available'" class="text-xs text-gray-500 dark:text-gray-400">
+            <div class="text-2xl font-bold text-[#0F172A] mb-1">{{ stat.value }}</div>
+            <div v-if="stat.title === 'Available Balance'" class="text-sm text-[#64748B]">
               {{ stat.change }}
             </div>
           </CardContent>
@@ -419,399 +498,414 @@ watch([chartPeriod, selectedMetric], () => {
       </template>
     </div>
 
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left Column - Charts -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Performance Chart -->
-        <Card class="border border-gray-200 dark:border-gray-800">
-          <CardHeader class="pb-3">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle class="text-lg font-semibold text-gray-900 dark:text-white">
-                  Portfolio Performance
-                </CardTitle>
-              </div>
-              <div class="flex items-center gap-2">
-                <Select v-model="selectedMetric">
-                  <SelectTrigger class="w-[140px] h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem 
-                      v-for="metric in metrics" 
-                      :key="metric.value"
-                      :value="metric.value"
-                    >
-                      {{ metric.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <div class="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-                  <Button
-                    v-for="period in periods"
-                    :key="period.value"
-                    :variant="chartPeriod === period.value ? 'default' : 'ghost'"
-                    size="sm"
-                    class="h-7 px-3 text-xs"
-                    @click="chartPeriod = period.value"
-                  >
-                    {{ period.label }}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div class="h-[320px]">
-              <template v-if="chartLoading || loading">
-                <div class="h-full flex items-center justify-center">
-                  <div class="text-center">
-                    <div class="w-12 h-12 border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-gray-300 rounded-full animate-spin mx-auto mb-4"></div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Loading chart...</p>
-                  </div>
-                </div>
-              </template>
-              <template v-else-if="chartData">
-                <Line :data="chartData" :options="chartOptions" />
-              </template>
-              <template v-else>
-                <div class="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  <div class="text-center">
-                    <BarChart3 class="w-12 h-12 mx-auto mb-3" />
-                    <p>No chart data available</p>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </CardContent>
-        </Card>
+    <!-- Tabs Navigation -->
+    <Tabs v-model="activeTab" class="space-y-6">
+      <TabsList class="bg-white border border-[#E2E8F0] p-1 rounded-xl">
+        <TabsTrigger 
+          value="overview" 
+          class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#35A7FF] data-[state=active]:to-[#38618C] data-[state=active]:text-white rounded-lg px-6"
+        >
+          Overview
+        </TabsTrigger>
+        <TabsTrigger 
+          value="portfolio" 
+          class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#35A7FF] data-[state=active]:to-[#38618C] data-[state=active]:text-white rounded-lg px-6"
+        >
+          Portfolio
+        </TabsTrigger>
+        <TabsTrigger 
+          value="analytics" 
+          class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#35A7FF] data-[state=active]:to-[#38618C] data-[state=active]:text-white rounded-lg px-6"
+        >
+          Analytics
+        </TabsTrigger>
+        <TabsTrigger 
+          value="insights" 
+          class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#35A7FF] data-[state=active]:to-[#38618C] data-[state=active]:text-white rounded-lg px-6"
+        >
+          Insights
+        </TabsTrigger>
+      </TabsList>
 
-        <!-- Top Holdings -->
-        <Card>
-          <CardHeader>
-            <div class="flex items-center justify-between">
-              <CardTitle class="text-lg font-semibold text-gray-900 dark:text-white">
-                Top Holdings
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="gap-1 text-gray-600 dark:text-gray-400"
-                @click="navigateTo('/dashboard/portfolio')"
-              >
-                View all
-                <ChevronRight class="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <template v-if="loading">
-              <div class="space-y-3">
-                <div v-for="i in 3" :key="i" class="flex items-center gap-3 p-3">
-                  <Skeleton class="w-10 h-10 rounded-xl" />
-                  <div class="space-y-2 flex-1">
-                    <Skeleton class="h-4 w-24" />
-                    <Skeleton class="h-3 w-32" />
-                  </div>
-                  <Skeleton class="h-8 w-16" />
+      <TabsContent value="overview" class="space-y-6">
+        <!-- Performance Chart & Quick Stats -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Performance Chart -->
+          <Card class="lg:col-span-2 border-[#E2E8F0]">
+            <CardHeader class="pb-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle class="text-xl font-semibold text-[#0F172A]">
+                    Performance Analytics
+                  </CardTitle>
+                  <CardDescription class="text-[#64748B] mt-1">
+                    Track your portfolio growth over time
+                  </CardDescription>
+                </div>
+                <div class="flex items-center gap-3">
+                  <Select v-model="selectedMetric">
+                    <SelectTrigger class="w-[160px] h-10 border-[#E2E8F0] focus:border-[#35A7FF]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem 
+                        v-for="metric in metrics" 
+                        :key="metric.value"
+                        :value="metric.value"
+                        class="flex items-center gap-2"
+                      >
+                        <component :is="metric.icon" :style="{ color: metric.color }" class="w-4 h-4" />
+                        {{ metric.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </template>
-            <template v-else-if="portfolioStats?.topAssets.length === 0">
-              <div class="text-center py-8">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  <Coins class="w-8 h-8 text-gray-400" />
-                </div>
-                <p class="text-gray-500 dark:text-gray-400 mb-4">No holdings yet</p>
-                <Button 
-                  class="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
-                  @click="navigateTo('/dashboard/cryptos')"
+            </CardHeader>
+            <CardContent>
+              <!-- Period Selector -->
+              <div class="flex gap-2 mb-6">
+                <Button
+                  v-for="period in periods"
+                  :key="period.value"
+                  :variant="chartPeriod === period.value ? 'default' : 'outline'"
+                  size="sm"
+                  class="h-8 px-4 text-sm font-medium transition-all"
+                  :style="chartPeriod === period.value ? {
+                    backgroundColor: period.color,
+                    borderColor: period.color
+                  } : {}"
+                  @click="chartPeriod = period.value"
                 >
-                  Start Trading
+                  {{ period.label }}
                 </Button>
               </div>
-            </template>
-            <template v-else>
-              <div class="space-y-3">
-                <div
-                  v-for="asset in portfolioStats.topAssets"
-                  :key="asset.symbol"
-                  class="group flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer"
-                  @click="navigateToCrypto(asset.symbol)"
-                >
-                  <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                      <span class="text-xl font-bold">{{ getCryptoIcon(asset.symbol) }}</span>
-                    </div>
-                    <div>
-                      <div class="font-semibold text-gray-900 dark:text-white">{{ asset.symbol }}</div>
-                      <div class="text-sm text-gray-500 dark:text-gray-400">{{ asset.name }}</div>
+
+              <!-- Chart -->
+              <div class="h-[320px] relative">
+                <template v-if="chartLoading || loading">
+                  <div class="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-lg">
+                    <div class="text-center">
+                      <div class="w-10 h-10 border-3 border-[#35A7FF]/20 border-t-[#35A7FF] rounded-full animate-spin mx-auto mb-3"></div>
+                      <p class="text-sm text-[#64748B]">Loading chart data...</p>
                     </div>
                   </div>
-                  <div class="text-right">
-                    <div class="font-semibold text-gray-900 dark:text-white">
-                      {{ formatCurrency(asset.value) }}
-                    </div>
-                    <div :class="asset.pnlPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                      {{ formatPercentage(asset.pnlPercent) }}
+                </template>
+                <template v-else-if="chartData">
+                  <Line :data="chartData" :options="chartOptions" />
+                </template>
+                <template v-else>
+                  <div class="h-full flex items-center justify-center text-[#64748B]">
+                    <div class="text-center">
+                      <BarChart3 class="w-12 h-12 mx-auto mb-3 text-[#35A7FF]" />
+                      <p>No chart data available</p>
                     </div>
                   </div>
-                </div>
+                </template>
               </div>
-            </template>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
 
-      <!-- Right Column - Stats & Actions -->
-      <div class="space-y-6">
-        <!-- Quick Actions -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-gray-900 dark:text-white">
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Button
-              class="w-full justify-start h-12"
-              @click="navigateTo('/dashboard/cryptos')"
-            >
-              <ShoppingCart class="w-5 h-5 mr-3" />
-              Buy Crypto
-            </Button>
-            <Button
-              variant="outline"
-              class="w-full justify-start h-12"
-              @click="navigateTo('/dashboard/transactions')"
-            >
-              <Activity class="w-5 h-5 mr-3" />
-              View Transactions
-            </Button>
-            <Button
-              variant="outline"
-              class="w-full justify-start h-12"
-              @click="navigateTo('/dashboard/portfolio')"
-            >
-              <Wallet class="w-5 h-5 mr-3" />
-              Portfolio Details
-            </Button>
-          </CardContent>
-        </Card>
-
-        <!-- Asset Distribution -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-gray-900 dark:text-white">
-              Asset Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <template v-if="loading">
-              <div class="h-[200px] flex items-center justify-center">
-                <Skeleton class="w-full h-full rounded-lg" />
-              </div>
-            </template>
-            <template v-else-if="!distributionChartData">
-              <div class="h-[200px] flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <div class="text-center">
-                  <PieChart class="w-12 h-12 mx-auto mb-3" />
-                  <p>No data available</p>
-                </div>
-              </div>
-            </template>
-            <template v-else>
-              <div class="h-[200px]">
-                <Bar :data="distributionChartData" :options="distributionChartOptions" />
-              </div>
-            </template>
-          </CardContent>
-        </Card>
-
-        <!-- Top Performers -->
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-lg font-semibold text-gray-900 dark:text-white">
-              Top Performers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <template v-if="loading">
-              <div class="space-y-3">
-                <div v-for="i in 3" :key="i" class="flex items-center gap-3">
-                  <Skeleton class="w-8 h-8 rounded-full" />
-                  <Skeleton class="h-4 flex-1" />
-                  <Skeleton class="w-12 h-6" />
-                </div>
-              </div>
-            </template>
-            <template v-else-if="portfolioStats?.topPerformers.length === 0">
-              <p class="text-center text-gray-500 dark:text-gray-400 py-4">No performance data</p>
-            </template>
-            <template v-else>
-              <div class="space-y-4">
+          <!-- Quick Stats & Goals -->
+          <div class="space-y-6">
+            <!-- Quick Stats -->
+            <Card class="border-[#E2E8F0]">
+              <CardHeader>
+                <CardTitle class="text-lg font-semibold text-[#0F172A]">
+                  Quick Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="space-y-4">
                 <div
-                  v-for="asset in portfolioStats.topPerformers"
-                  :key="asset.symbol"
-                  class="flex items-center justify-between"
+                  v-for="stat in quickStats"
+                  :key="stat.label"
+                  class="flex items-center justify-between p-3 rounded-lg hover:bg-[#F8FAFC] transition-colors"
                 >
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                      <span class="text-sm font-bold">{{ getCryptoIcon(asset.symbol) }}</span>
+                    <div class="p-2 rounded-lg" :style="{ backgroundColor: `${stat.color}15` }">
+                      <component :is="stat.icon" :style="{ color: stat.color }" class="w-4 h-4" />
                     </div>
                     <div>
-                      <div class="font-medium text-gray-900 dark:text-white">{{ asset.symbol }}</div>
-                      <div class="text-xs text-gray-500 dark:text-gray-400">{{ asset.name }}</div>
+                      <div class="text-sm font-medium text-[#64748B]">{{ stat.label }}</div>
+                      <div class="text-xl font-bold text-[#0F172A]">{{ stat.value }}</div>
                     </div>
                   </div>
                   <Badge
-                    :class="asset.pnlPercent >= 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'"
+                    class="text-xs font-medium px-2 py-0.5"
+                    :style="{
+                      backgroundColor: `${stat.color}15`,
+                      color: stat.color
+                    }"
                   >
-                    {{ formatPercentage(asset.pnlPercent) }}
+                    {{ stat.change }}
                   </Badge>
                 </div>
-              </div>
-            </template>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              </CardContent>
+            </Card>
 
-    <!-- Recent Activity -->
-    <Card>
-      <CardHeader>
-        <div class="flex items-center justify-between">
-          <CardTitle class="text-lg font-semibold text-gray-900 dark:text-white">
-            Recent Activity
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="gap-1 text-gray-600 dark:text-gray-400"
-            @click="navigateTo('/dashboard/transactions')"
-          >
-            View all
-            <ChevronRight class="w-4 h-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <template v-if="loading">
-          <div class="space-y-3">
-            <div v-for="i in 3" :key="i" class="flex items-center justify-between p-3">
-              <div class="flex items-center gap-3">
-                <Skeleton class="w-10 h-10 rounded-lg" />
-                <div class="space-y-2">
-                  <Skeleton class="h-4 w-32" />
-                  <Skeleton class="h-3 w-24" />
-                </div>
-              </div>
-              <Skeleton class="h-8 w-20" />
-            </div>
-          </div>
-        </template>
-        <template v-else-if="!walletData?.assets?.length">
-          <div class="text-center py-8">
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Activity class="w-8 h-8 text-gray-400" />
-            </div>
-            <p class="text-gray-500 dark:text-gray-400 mb-4">No recent activity</p>
-            <Button 
-              class="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
-              @click="navigateTo('/dashboard/cryptos')"
-            >
-              Make Your First Trade
-            </Button>
-          </div>
-        </template>
-        <template v-else>
-          <div class="space-y-3">
-            <div
-              v-for="asset in walletData.assets.slice(0, 3)"
-              :key="asset.id"
-              class="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div class="flex items-center gap-3">
-                <div 
-                  :class="[
-                    'w-10 h-10 rounded-lg flex items-center justify-center',
-                    asset.plus_value_percent >= 0 ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'
-                  ]"
+            <!-- Performance Goals -->
+            <Card class="border-[#E2E8F0]">
+              <CardHeader>
+                <CardTitle class="text-lg font-semibold text-[#0F172A]">
+                  Performance Goals
+                </CardTitle>
+              </CardHeader>
+              <CardContent class="space-y-4">
+                <div
+                  v-for="goal in performanceGoals"
+                  :key="goal.label"
+                  class="space-y-2"
                 >
-                  <ArrowUpRight 
-                    class="w-5 h-5"
-                    :class="asset.plus_value_percent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                  <div class="flex justify-between text-sm">
+                    <span class="text-[#64748B]">{{ goal.label }}</span>
+                    <span class="font-medium text-[#0F172A]">{{ goal.value }}%</span>
+                  </div>
+                  <Progress 
+                    :model-value="goal.value" 
+                    class="h-2"
+                    :style="{
+                      '--progress-background': goal.color
+                    }"
                   />
                 </div>
-                <div>
-                  <div class="font-medium text-gray-900 dark:text-white">{{ asset.name }}</div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ formatNumber(asset.quantity) }} {{ asset.symbol }}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <!-- Top Holdings & Asset Distribution -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Top Holdings -->
+          <Card class="border-[#E2E8F0]">
+            <CardHeader>
+              <div class="flex items-center justify-between">
+                <CardTitle class="text-lg font-semibold text-[#0F172A]">
+                  Top Holdings
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="gap-1 text-[#35A7FF] hover:text-[#38618C] hover:bg-[#35A7FF]/10"
+                  @click="navigateTo('/dashboard/portfolio')"
+                >
+                  View All
+                  <ArrowRight class="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <template v-if="loading">
+                <div class="space-y-4">
+                  <div v-for="i in 3" :key="i" class="flex items-center gap-3 p-3">
+                    <Skeleton class="w-10 h-10 rounded-xl" />
+                    <div class="space-y-2 flex-1">
+                      <Skeleton class="h-4 w-24" />
+                      <Skeleton class="h-3 w-32" />
+                    </div>
+                    <Skeleton class="h-8 w-16" />
                   </div>
                 </div>
-              </div>
-              <div class="text-right">
-                <div class="font-semibold text-gray-900 dark:text-white">
-                  {{ formatCurrency(asset.current_value_eur) }}
+              </template>
+              <template v-else-if="portfolioStats?.topAssets.length === 0">
+                <div class="text-center py-8">
+                  <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-[#35A7FF]/10 to-[#38618C]/10 flex items-center justify-center">
+                    <Coins class="w-8 h-8 text-[#35A7FF]" />
+                  </div>
+                  <p class="text-[#64748B] mb-4">No holdings yet</p>
+                  <Button 
+                    class="bg-gradient-to-r from-[#35A7FF] to-[#38618C] text-white hover:opacity-90"
+                    @click="navigateTo('/dashboard/cryptos')"
+                  >
+                    Start Investing
+                  </Button>
                 </div>
-                <div :class="asset.plus_value_percent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                  {{ formatPercentage(asset.plus_value_percent) }}
+              </template>
+              <template v-else>
+                <div class="space-y-3">
+                  <div
+                    v-for="(asset, index) in portfolioStats.topAssets"
+                    :key="asset.symbol"
+                    class="group flex items-center justify-between p-4 rounded-xl border border-[#E2E8F0] hover:border-[#35A7FF]/30 hover:shadow-sm transition-all duration-200 cursor-pointer"
+                    @click="navigateToCrypto(asset.symbol)"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div class="relative">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-[#35A7FF]/10 to-[#38618C]/10 flex items-center justify-center">
+                          <span class="text-xl font-bold text-[#0F172A]">{{ getCryptoIcon(asset.symbol) }}</span>
+                        </div>
+                        <div class="absolute -top-1 -right-1 w-5 h-5 bg-white border border-[#E2E8F0] rounded-full flex items-center justify-center text-xs font-bold text-[#35A7FF]">
+                          {{ index + 1 }}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-[#0F172A]">{{ asset.symbol }}</div>
+                        <div class="text-sm text-[#64748B]">{{ asset.name }}</div>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="font-semibold text-[#0F172A]">
+                        {{ formatCompactNumber(asset.value) }}
+                      </div>
+                      <div :class="asset.pnlPercent >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'" class="text-sm font-medium">
+                        {{ formatPercentage(asset.pnlPercent) }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </CardContent>
-    </Card>
+              </template>
+            </CardContent>
+          </Card>
+
+          <!-- Asset Distribution -->
+          <Card class="border-[#E2E8F0]">
+            <CardHeader>
+              <CardTitle class="text-lg font-semibold text-[#0F172A]">
+                Asset Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <template v-if="loading">
+                <div class="h-[300px] flex items-center justify-center">
+                  <Skeleton class="w-full h-full rounded-lg" />
+                </div>
+              </template>
+              <template v-else-if="!distributionChartData">
+                <div class="h-[300px] flex items-center justify-center text-[#64748B]">
+                  <div class="text-center">
+                    <PieChart class="w-12 h-12 mx-auto mb-3 text-[#35A7FF]" />
+                    <p>No distribution data</p>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="h-[300px]">
+                  <Bar :data="distributionChartData" :options="distributionChartOptions" />
+                </div>
+              </template>
+            </CardContent>
+          </Card>
+        </div>
+
+      
+      </TabsContent>
+
+      <!-- Other tabs content would go here -->
+      <TabsContent value="portfolio">
+        <div class="text-center py-12 text-[#64748B]">
+          <FileText class="w-12 h-12 mx-auto mb-4 text-[#35A7FF]" />
+          <p>Portfolio analysis coming soon...</p>
+        </div>
+      </TabsContent>
+      <TabsContent value="analytics">
+        <div class="text-center py-12 text-[#64748B]">
+          <BarChart3 class="w-12 h-12 mx-auto mb-4 text-[#01FF19]" />
+          <p>Advanced analytics coming soon...</p>
+        </div>
+      </TabsContent>
+      <TabsContent value="insights">
+        <div class="text-center py-12 text-[#64748B]">
+          <Shield class="w-12 h-12 mx-auto mb-4 text-[#FF5964]" />
+          <p>Market insights coming soon...</p>
+        </div>
+      </TabsContent>
+    </Tabs>
+
+    <!-- Footer Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-[#E2E8F0]">
+      <div class="text-center">
+        <div class="text-2xl font-bold text-[#35A7FF]">24/7</div>
+        <div class="text-sm text-[#64748B]">Live Support</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-[#01FF19]">99.9%</div>
+        <div class="text-sm text-[#64748B]">Uptime</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-[#FF5964]">256-bit</div>
+        <div class="text-sm text-[#64748B]">Security</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-[#38618C]">10</div>
+        <div class="text-sm text-[#64748B]">Assets</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+  background: #F1F5F9;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 3px;
+  background: #CBD5E1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: #374151;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #6b7280;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #94A3B8;
 }
 
 /* Smooth transitions */
-.transition-shadow {
-  transition: box-shadow 0.2s ease-in-out;
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #35A7FF, #38618C);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Custom progress bar */
+:deep(.progress) {
+  --progress-background: #35A7FF;
+}
+
+:deep(.progress-bar) {
+  background-color: var(--progress-background) !important;
+}
+
+/* Chart tooltip customizations */
+:deep(.chartjs-tooltip) {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Smooth hover effects */
+.hover-lift {
+  transition: transform 0.2s ease;
 }
 
 .hover-lift:hover {
   transform: translateY(-2px);
-  transition: transform 0.2s ease-in-out;
 }
 
-/* Gradient border effect */
-.border-gradient {
-  border-image: linear-gradient(45deg, #3b82f6, #10b981, #8b5cf6) 1;
+/* Glass effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Animation for stats */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 </style>

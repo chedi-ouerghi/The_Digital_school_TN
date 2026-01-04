@@ -1,152 +1,123 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
 import { blogApi } from '../../services/api'
 
-// Components
-import BlogList from './_componentsBlogs/BlogList.vue'
-import BlogForm from './_componentsBlogs/BlogForm.vue'
-import DeleteConfirmationDialog from './_componentsBlogs/DeleteConfirmationDialog.vue'
 import { Button } from '@/components/ui/button'
+import BlogDetailsDialog from './_componentsBlogs/BlogDetailsDialog.vue'
+import BlogForm from './_componentsBlogs/BlogForm.vue'
+import BlogList from './_componentsBlogs/BlogList.vue'
 
-const router = useRouter()
 
-// Data
-const blogs = ref<any[]>([])
+const blogs = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
+const totalItems = ref(0)
 
-// Form dialog state
 const formOpen = ref(false)
 const isEdit = ref(false)
-const editingBlog = ref<any>(null)
+const editingBlog = ref(null)
 
-// Delete confirmation state
-const deleteOpen = ref(false)
-const blogToDelete = ref<any>(null)
-
-// Categories (you can fetch these from API or define them statically)
-const categories = ref([
-  'Crypto News',
-  'Market Analysis',
-  'Trading',
-  'DeFi',
-  'NFT',
-  'Technology',
-  'Regulation',
-  'Education'
-])
+const detailsDialogOpen = ref(false)
+const selectedBlogForDetails = ref(null)
 
 async function fetchBlogs() {
   loading.value = true
+  const res = await blogApi.list({ page: currentPage.value })
+  blogs.value = res.data.data
+  totalPages.value = res.data.last_page
+  totalItems.value = res.data.total || res.data.meta?.total || blogs.value.length
+  loading.value = false
+}
+
+// Handle create or update from BlogForm
+async function handleFormSubmit(payload: any) {
   try {
-    const response = await blogApi.list({ page: currentPage.value })
-    const data = response?.data?.data || response?.data || response || []
-    
-    blogs.value = Array.isArray(data) ? data : []
-    totalPages.value = response?.data?.last_page || response?.last_page || 1
-    currentPage.value = response?.data?.current_page || response?.current_page || 1
+    if (isEdit.value && editingBlog.value && (editingBlog.value.id || payload.id)) {
+      const id = payload.id || editingBlog.value.id
+      await blogApi.update(id, payload)
+    } else {
+      await blogApi.create(payload)
+    }
+
+    // Close form and reset edit state
+    formOpen.value = false
+    isEdit.value = false
+    editingBlog.value = null
+
+    // Refresh list
+    await fetchBlogs()
   } catch (err) {
-    console.error('Error loading blogs:', err)
-    blogs.value = []
-    totalPages.value = 1
-  } finally {
-    loading.value = false
+    console.error('Error saving blog:', err)
+    // Optionally show user-facing error here
   }
 }
 
-function handleCreate() {
+function createBlog() {
   isEdit.value = false
   editingBlog.value = null
   formOpen.value = true
 }
 
-function handleEdit(blog: any) {
+function editBlog(blog: any) {
   isEdit.value = true
   editingBlog.value = blog
   formOpen.value = true
 }
 
-function handleDelete(blog: any) {
-  blogToDelete.value = blog
-  deleteOpen.value = true
+function viewBlogDetails(blog: any) {
+  selectedBlogForDetails.value = blog
+  detailsDialogOpen.value = true
 }
 
-async function handleFormSubmit(payload: any) {
-  try {
-    if (isEdit.value && editingBlog.value) {
-      await blogApi.update(editingBlog.value.id, payload)
-    } else {
-      await blogApi.create(payload)
-    }
-    
-    formOpen.value = false
-    await fetchBlogs()
-  } catch (err) {
-    console.error('Save error:', err)
-    alert('Failed to save blog post. Please try again.')
-  }
+function handleDetailsEdit(blog: any) {
+  editBlog(blog)
 }
 
-async function handleDeleteConfirm() {
-  if (!blogToDelete.value) return
-  
-  try {
-    await blogApi.delete(blogToDelete.value.id)
-    deleteOpen.value = false
-    await fetchBlogs()
-  } catch (err) {
-    console.error('Delete error:', err)
-    alert('Failed to delete blog post. Please try again.')
-  }
-}
+onMounted(fetchBlogs)
 
-function handleViewDetails(id: number) {
-  router.push(`/blog/${id}`)
-}
-
-function handleChangePage(page: number) {
-  currentPage.value = page
-  fetchBlogs()
-}
-
-function handleRefresh() {
-  fetchBlogs()
-}
-
-onMounted(() => {
-  fetchBlogs()
+const categories = computed(() => {
+  const set = new Set<string>()
+  blogs.value.forEach((b: any) => { if (b.category) set.add(typeof b.category === 'string' ? b.category : (b.category.name || b.category)); })
+  return Array.from(set)
 })
 </script>
 
 <template>
-  <div class="space-y-6 p-6">
+  <div class="min-h-screen bg-white p-8 font-celias space-y-8">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">📚 Blog Management</h1>
-        <p class="text-gray-600 mt-1">Create, edit, and manage your blog posts</p>
+        <h1 class="text-3xl font-bold text-[#0F172A]">
+          Blog Management
+        </h1>
+        <p class="text-[#38618C] mt-1">
+          Create, edit and publish articles
+        </p>
       </div>
-      <Button @click="handleCreate" class="bg-blue-600 hover:bg-blue-700">
-        ✍️ Create New Post
+
+      <Button
+        class="bg-[#FF5964] text-white hover:opacity-90"
+        @click="createBlog"
+      >
+        + New Blog
       </Button>
     </div>
 
-    <!-- Blog List -->
+    <!-- List -->
     <BlogList
       :blogs="blogs"
       :loading="loading"
       :current-page="currentPage"
       :total-pages="totalPages"
-      @view-details="handleViewDetails"
-      @edit-blog="handleEdit"
-      @delete-blog="handleDelete"
-      @change-page="handleChangePage"
-      @refresh="handleRefresh"
+      :total-items="totalItems"
+      @view-details="viewBlogDetails"
+      @edit-blog="editBlog"
+      @change-page="p => { currentPage = p; fetchBlogs() }"
+      @refresh="fetchBlogs"
     />
 
-    <!-- Form Dialog -->
+    <!-- Form -->
     <BlogForm
       v-model:open="formOpen"
       :is-edit="isEdit"
@@ -155,12 +126,17 @@ onMounted(() => {
       @submit="handleFormSubmit"
     />
 
-    <!-- Delete Confirmation Dialog -->
-    <DeleteConfirmationDialog
-      v-model:open="deleteOpen"
-      title="Delete Blog Post"
-      :description="`Are you sure you want to delete '${blogToDelete?.title}'? This action cannot be undone.`"
-      @confirm="handleDeleteConfirm"
+    <!-- Details Dialog -->
+    <BlogDetailsDialog
+      v-model:open="detailsDialogOpen"
+      :blog="selectedBlogForDetails"
+      @edit="handleDetailsEdit"
     />
   </div>
 </template>
+
+<style scoped>
+.font-celias {
+  font-family: 'Celias', system-ui, sans-serif;
+}
+</style>

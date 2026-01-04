@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import {
+  Coins, RefreshCw
+} from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
@@ -41,22 +44,45 @@ function changePage(page: number) {
   currentPage.value = page
   fetchCryptos()
 }
+
+function refreshData() {
+  fetchCryptos()
+}
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-[#38618C] mb-1">Cryptocurrency Management</h1>
-        <p class="text-gray-500">View cryptocurrencies available on the platform</p>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6 space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div class="space-y-2">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+            <Coins class="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Cryptocurrency Management</h1>
+            <p class="text-sm md:text-base text-gray-600">Monitor and manage digital assets on the platform</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <Button 
+          variant="outline"
+          class="border-gray-300 hover:bg-gray-100 gap-2"
+          :disabled="loading"
+          @click="refreshData"
+        >
+          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+          Refresh
+        </Button>
       </div>
     </div>
 
-    <!-- Statistiques -->
+    <!-- Stats Cards -->
     <CryptoStats :cryptos="cryptos" />
 
-    <!-- Liste des cryptos -->
+    <!-- Crypto List -->
     <CryptoList
       :cryptos="cryptos"
       :loading="loading"
@@ -68,33 +94,3 @@ function changePage(page: number) {
     />
   </div>
 </template>
-
-<style scoped>
-:deep(.border-\[#38618C\]) {
-  border-color: #38618C;
-}
-
-:deep(.text-\[#38618C\]) {
-  color: #38618C;
-}
-
-:deep(.bg-\[#01FF19\]) {
-  background-color: #01FF19;
-}
-
-:deep(.hover\:bg-\[#01FF19\]\/90:hover) {
-  background-color: rgba(1, 255, 25, 0.9);
-}
-
-:deep(.bg-\[#FF5964\]) {
-  background-color: #FF5964;
-}
-
-:deep(.hover\:bg-\[#FF5964\]\/90:hover) {
-  background-color: rgba(255, 89, 100, 0.9);
-}
-
-:deep(.border-\[#FF5964\]) {
-  border-color: #FF5964;
-}
-</style>

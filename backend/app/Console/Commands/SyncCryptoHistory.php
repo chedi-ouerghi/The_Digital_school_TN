@@ -1,7 +1,7 @@
 <?php
 // ============================================================================
 // FILE: app/Console/Commands/SyncCryptoHistory.php
-// RESPONSABILITÉ: Générer quotidiennement les nouveaux prix
+// RESPONSABILITÉ: Synchroniser UNE SEULE FOIS par jour
 // ============================================================================
 
 namespace App\Console\Commands;
@@ -10,112 +10,122 @@ use Illuminate\Console\Command;
 use App\Models\Cryptomoney;
 use App\Models\CryptoHistory;
 use App\Services\CotationService;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class SyncCryptoHistory extends Command
 {
     protected $signature = 'crypto:sync-history';
-    protected $description = 'Synchroniser les prix quotidiens des cryptomonnaies (LOCAL ONLY)';
+    protected $description = 'Synchroniser les prix quotidiens des cryptomonnaies (ONE DAY ONLY)';
 
-    public function handle()
-    {
-        $this->info('🔄 Starting daily crypto price sync...');
+public function handle()
+{
+    $today = now()->startOfDay();
 
-        $cryptos = Cryptomoney::all();
+    $this->info("🔄 Daily crypto sync with auto backfill for {$today->toDateString()}");
 
-        if ($cryptos->isEmpty()) {
-            $this->warn('⚠️  No cryptos found. Run: php artisan db:seed --class=CryptoSeeder');
-            return;
-        }
+    $cryptos = Cryptomoney::all();
 
-        $bar = $this->output->createProgressBar(count($cryptos));
-        $cotationService = new CotationService();
+    if ($cryptos->isEmpty()) {
+        $this->error('❌ No cryptomoney found');
+        return Command::FAILURE;
+    }
 
+    $cotationService = new CotationService();
+
+    try {
         foreach ($cryptos as $crypto) {
-            try {
-                // ✅ ÉTAPE 1: Récupérer le dernier prix (hier)
-                $lastHistory = CryptoHistory::where('cryptomoney_id', $crypto->id)
-                    ->orderBy('recorded_at', 'desc')
-                    ->first();
 
-                if (!$lastHistory) {
-                    $this->line("\n  ⚠️  {$crypto->symbol}: No history found, skipping...");
-                    $bar->advance();
+            $this->info("📈 Processing {$crypto->symbol}");
+
+            /**
+             * Dernier historique connu
+             */
+            $lastHistory = CryptoHistory::where('cryptomoney_id', $crypto->id)
+                ->orderByDesc('recorded_at')
+                ->first();
+
+            // Date de départ
+            $startDate = $lastHistory
+                ? $lastHistory->recorded_at->copy()->startOfDay()->addDay()
+                : $today->copy()->subDay();
+
+            // Prix de départ
+            $basePrice = $lastHistory
+                ? (float) $lastHistory->price
+                : $cotationService->getInitialPrice($crypto->symbol);
+
+            /**
+             * Boucle sur TOUS les jours manquants
+             */
+            for ($date = $startDate; $date->lte($today); $date->addDay()) {
+
+                // Sécurité anti-duplication
+                $alreadyExists = CryptoHistory::where('cryptomoney_id', $crypto->id)
+                    ->whereDate('recorded_at', $date)
+                    ->exists();
+
+                if ($alreadyExists) {
                     continue;
                 }
 
-                $lastPrice = (float) $lastHistory->price;
+                $variation = $cotationService->getDailyVariation(
+                    $crypto->symbol,
+                    $basePrice
+                );
 
-                // ✅ ÉTAPE 2: Générer variation avec cotation_generator
-                $variation = $cotationService->getDailyVariation($crypto->symbol, $lastPrice);
-                $newPrice = $variation['newPrice'];
-                $volume = $variation['volume'];
-
-                // ✅ ÉTAPE 3: Sauvegarder en BD avec date d'aujourd'hui
                 CryptoHistory::create([
                     'cryptomoney_id' => $crypto->id,
-                    'price' => round($newPrice, 10),
-                    'volume' => $volume,
-                    'recorded_at' => now(),
+                    'price' => round($variation['newPrice'], 10),
+                    'volume' => $variation['volume'],
+                    'recorded_at' => $date->copy(),
                 ]);
 
-                // ✅ ÉTAPE 4: Mettre à jour le prix ACTUEL et le change_24h_pct
-                $changePercent = $variation['changePercent'];
-                $crypto->update([
-                    'price_eur' => $newPrice,  // ✅ CORRECTION CRITIQUE: Mettre à jour le prix actuel
-                    'change_24h_pct' => $changePercent
-                ]);
+                // Le prix du jour devient la base du lendemain
+                $basePrice = $variation['newPrice'];
 
-                $this->line("\n  ✅ {$crypto->symbol}: €{$lastPrice} → €{$newPrice} ({$changePercent}%)");
-                Log::info("Synced {$crypto->symbol}", [
-                    'lastPrice' => $lastPrice,
-                    'newPrice' => $newPrice,
-                    'change24h' => $changePercent,
-                ]);
-
-                $bar->advance();
-
-            } catch (\Exception $e) {
-                $this->error("\n  ❌ Error syncing {$crypto->symbol}: {$e->getMessage()}");
-                Log::error("Sync error for {$crypto->symbol}", [
-                    'error' => $e->getMessage(),
-                ]);
-                $bar->advance();
+                $this->info("  ➕ {$crypto->symbol} synced for {$date->toDateString()}");
             }
+
+            /**
+             * Mise à jour du prix courant (dernier jour uniquement)
+             */
+            $crypto->update([
+                'price_eur' => $basePrice,
+                'change_24h_pct' => $variation['changePercent'] ?? 0,
+            ]);
         }
 
-        $bar->finish();
-
-        // ✅ ÉTAPE 5: Nettoyer les données > 30 jours
-        $this->line("\n\n🧹 Cleaning old data (> 30 days)...");
         $this->cleanOldHistory();
 
-        $this->info('');
-        $this->info('✅ Daily sync completed!');
+        $this->info('✅ Crypto sync with backfill completed successfully');
+        return Command::SUCCESS;
+
+    } catch (\Throwable $e) {
+
+        $this->error('💥 Crypto sync FAILED');
+        Log::critical('Crypto sync failed', [
+            'error' => $e->getMessage(),
+        ]);
+
+        return Command::FAILURE;
     }
+}
+
 
     /**
-     * Supprimer les entrées d'historique > 30 jours
+     * Supprimer les entrées > 365 jours
      */
     private function cleanOldHistory(): void
     {
         try {
-            $cutoffDate = now()->subDays(30);
+            $cutoffDate = now()->subDays(365);
 
-            $deleted = CryptoHistory::where('recorded_at', '<', $cutoffDate)
-                ->delete();
+            CryptoHistory::where('recorded_at', '<', $cutoffDate)->delete();
 
-            if ($deleted > 0) {
-                $this->line("  ✅ Deleted {$deleted} old history entries");
-                Log::info("Cleaned old history", ['deleted' => $deleted]);
-            } else {
-                $this->line("  ✓ No old entries to delete");
-            }
-
-        } catch (\Exception $e) {
-            $this->warn("  ⚠️  Could not clean old history: {$e->getMessage()}");
-            Log::warning("Error cleaning old history", ['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            Log::warning('Error cleaning crypto history', [
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

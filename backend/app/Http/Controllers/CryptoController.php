@@ -172,7 +172,7 @@ public function index(): JsonResponse
             return $this->cryptoService->getCryptoById($id);
         });
 
-        $days = (int) request()->get('days', 30);
+        $days = (int) request()->get('days', 90);
         if ($days < 1 || $days > 365) {
             return response()->json([
                 'error' => 'The number of days must be between 1 and 365',
@@ -201,8 +201,8 @@ public function index(): JsonResponse
                 'timestamp' => $row[0],
                 'date' => Carbon::createFromTimestampMs($row[0])->toDateString(),
                 'price' => $row[1],
-                'change_24h_pct' => $row[2] ?? 0.00,
                 'volume' => $row[2] ?? 0.00,
+                'change_24h_pct' => $row[3] ?? 0.00,
             ];
         });
 

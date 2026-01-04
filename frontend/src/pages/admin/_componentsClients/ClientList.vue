@@ -1,23 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../../../services/api'
-
-// Import des composants shadcn-vue
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -25,25 +21,71 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { computed, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../../../services/api'
+import {
+  Search,
+  Filter,
+  Grid3x3,
+  List,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ExternalLink,
+  Users,
+  Wallet,
+  CheckCircle,
+  Clock,
+  UserPlus,
+  Mail,
+  Calendar,
+  CreditCard,
+  AlertCircle,
+  User,
+  Edit,
+  Trash2
+} from 'lucide-vue-next'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 const router = useRouter()
 
-// State
+// États
 const clients = ref<any[]>([])
 const loading = ref(false)
-const search = ref('')
+const query = ref('')
+const sortBy = ref<'name'|'email'|'balance'|'date'>('date')
 const viewMode = ref<'grid'|'list'>('grid')
-
-// Form dialogs
+const formLoading = ref(false)
 const formDialog = ref(false)
 const deleteDialog = ref(false)
 const editClient = ref<any>(null)
 const clientToDelete = ref<any>(null)
-const formLoading = ref(false)
 const formError = ref('')
 const formSuccess = ref('')
 
+// Pagination
+const currentPage = ref(1)
+const totalPages = ref(1)
+const totalClients = ref(0)
+const perPage = ref(20)
+
+// Form data
 const formData = ref({
   name: '',
   email: '',
@@ -51,11 +93,16 @@ const formData = ref({
   balance_eur: 500
 })
 
-// Utility functions
+// Fonctions utilitaires
 function formatCurrency(value: any): string {
   const n = Number(value ?? 0)
   if (!isFinite(n) || isNaN(n)) return '€0.00'
-  return n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  return new Intl.NumberFormat('fr-FR', { 
+    style: 'currency', 
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(n)
 }
 
 function formatDate(dateString: string): string {
@@ -66,7 +113,12 @@ function formatDate(dateString: string): string {
   })
 }
 
-// Image URL helpers (comme dans le dashboard layout)
+function formatPercentage(value: any): string {
+  const n = Number(value ?? 0)
+  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`
+}
+
+// Image URL helpers
 const getProfilePictureUrl = (profilePicture: string | null | undefined) => {
   if (!profilePicture) return null
   if (profilePicture.startsWith('http')) return profilePicture
@@ -81,12 +133,6 @@ const getProfileBannerUrl = (profileBanner: string | null | undefined) => {
   return `${baseUrl}/storage/${profileBanner}`
 }
 
-// small image error handler
-function handleImgError(e: Event) {
-  const t = e.target as HTMLImageElement | null
-  if (t) t.style.display = 'none'
-}
-
 // Initiales pour l'avatar fallback
 const getClientInitials = (name: string | undefined) => {
   if (!name) return 'U'
@@ -98,15 +144,26 @@ const getClientInitials = (name: string | undefined) => {
     .slice(0, 2)
 }
 
+// Gestion des erreurs d'image
+function handleImgError(e: Event) {
+  const target = e.target as HTMLImageElement
+  if (target) {
+    target.style.display = 'none'
+  }
+}
+
 // Data fetching
-async function fetchClients() {
+async function fetchClients(page: number = 1) {
   loading.value = true
   try {
-    const listFn = (api.admin as any).clients?.list
-    if (!listFn) throw new Error('Client list method not found')
+    const res = await api.admin.clients.list(page)
     
-    const res = await listFn(1)
-    clients.value = res.data || res.items || res || []
+    // Gestion de la réponse paginée
+    clients.value = res.data || []
+    totalClients.value = res.total || 0
+    totalPages.value = res.last_page || 1
+    currentPage.value = res.current_page || page
+    perPage.value = res.per_page || 20
   } catch (err: any) {
     console.error('Error loading clients:', err)
     clients.value = []
@@ -117,24 +174,57 @@ async function fetchClients() {
 
 // Computed
 const stats = computed(() => ({
-  totalClients: clients.value.length,
+  totalClients: totalClients.value,
   totalBalance: clients.value.reduce((sum, c) => sum + Number(c.balance_eur || 0), 0),
   verifiedClients: clients.value.filter(c => c.email_verified_at !== null).length,
+  pendingClients: clients.value.filter(c => c.email_verified_at === null).length,
+  averageBalance: totalClients.value > 0 
+    ? clients.value.reduce((sum, c) => sum + Number(c.balance_eur || 0), 0) / totalClients.value 
+    : 0
 }))
 
 const filteredClients = computed(() => {
-  if (!search.value) return clients.value
-  const searchLower = search.value.toLowerCase()
-  return clients.value.filter(c => 
-    c.name?.toLowerCase().includes(searchLower) ||
-    c.email?.toLowerCase().includes(searchLower)
-  )
+  let list = clients.value.slice()
+  
+  // Filtrage par recherche
+  if (query.value) {
+    const q = query.value.toLowerCase()
+    list = list.filter(c => 
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.email || '').toLowerCase().includes(q)
+    )
+  }
+  
+  // Tri
+  list.sort((a, b) => {
+    switch (sortBy.value) {
+      case 'name':
+        return (a.name || '').localeCompare(b.name || '')
+      case 'email':
+        return (a.email || '').localeCompare(b.email || '')
+      case 'balance':
+        return Number(b.balance_eur || 0) - Number(a.balance_eur || 0)
+      case 'date':
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      default:
+        return 0
+    }
+  })
+  
+  return list
 })
 
 // Lifecycle
 onMounted(() => {
-  fetchClients()
+  fetchClients(1)
 })
+
+// Pagination functions
+function changePage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    fetchClients(page)
+  }
+}
 
 // Actions
 function openCreateDialog() {
@@ -179,7 +269,7 @@ async function handleFormSubmit() {
     
     setTimeout(() => {
       formDialog.value = false
-      fetchClients()
+      fetchClients(currentPage.value)
     }, 1500)
   } catch (err: any) {
     formError.value = err.message || 'An error occurred'
@@ -200,340 +290,529 @@ async function handleDelete() {
     await api.admin.clients.delete(clientToDelete.value.id)
     deleteDialog.value = false
     clientToDelete.value = null
-    await fetchClients()
+    await fetchClients(currentPage.value)
   } catch (err: any) {
-    alert(err.message || 'Error deleting client')
+    formError.value = err.message || 'Error deleting client'
   }
 }
 
-function viewClientDetails(id: number) {
+function viewClientDetails(id: string) {
   router.push(`/dashboard/admin/clients/${id}`)
 }
 </script>
 
 <template>
-  <div>
-    <!-- Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors bg-gradient-to-br from-[#35A7FF]/10 to-transparent">
-        <CardContent class="p-6 text-center">
-          <div class="text-4xl mb-2">👥</div>
-          <div class="text-sm text-gray-500 mb-1">Total Clients</div>
-          <div class="text-3xl font-bold text-[#35A7FF]">
-            {{ stats.totalClients }}
+  <div class="space-y-6">
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- Total Clients -->
+      <Card class="border border-gray-200 hover:border-blue-300 transition-colors">
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Clients</p>
+              <p class="text-3xl font-bold text-gray-900 mt-2">{{ stats.totalClients }}</p>
+              <p class="text-xs text-gray-500 mt-1">All registered users</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <Users class="h-6 w-6 text-blue-600" />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card class="border-gray-200 hover:border-[#01FF19] transition-colors bg-gradient-to-br from-[#01FF19]/10 to-transparent">
-        <CardContent class="p-6 text-center">
-          <div class="text-4xl mb-2">💰</div>
-          <div class="text-sm text-gray-500 mb-1">Total Balance</div>
-          <div class="text-2xl font-bold text-[#01FF19]">
-            {{ formatCurrency(stats.totalBalance) }}
+      <!-- Total Balance -->
+      <Card class="border border-gray-200 hover:border-emerald-300 transition-colors">
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Balance</p>
+              <p class="text-3xl font-bold text-gray-900 mt-2">{{ formatCurrency(stats.totalBalance) }}</p>
+              <p class="text-xs text-gray-500 mt-1">Combined client funds</p>
+            </div>
+            <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+              <Wallet class="h-6 w-6 text-emerald-600" />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card
-        :class="stats.verifiedClients > 0 
-          ? 'border-gray-200 hover:border-[#38618C] transition-colors bg-gradient-to-br from-[#38618C]/10 to-transparent'
-          : 'border-gray-200 hover:border-red-500 transition-colors bg-gradient-to-br from-red-200/20 to-transparent'"
-      >
-        <CardContent class="p-6 text-center">
-          <div class="text-4xl mb-2">
-            {{ stats.verifiedClients > 0 ? '✅' : '⏳' }}
+      <!-- Verified Clients -->
+      <Card class="border border-gray-200 hover:border-green-300 transition-colors">
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Verified Clients</p>
+              <p class="text-3xl font-bold text-gray-900 mt-2">{{ stats.verifiedClients }}</p>
+              <p class="text-xs text-gray-500 mt-1">Email verified accounts</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle class="h-6 w-6 text-green-600" />
+            </div>
           </div>
-          <div class="text-sm text-gray-500 mb-1">
-            {{ stats.verifiedClients > 0 ? 'Verified' : 'Pending' }}
-          </div>
-          <div
-class="text-3xl font-bold"
-              :class="stats.verifiedClients > 0 ? 'text-[#38618C]' : 'text-red-500'">
-            {{ stats.verifiedClients }}
+        </CardContent>
+      </Card>
+
+      <!-- Pending Clients -->
+      <Card class="border border-gray-200 hover:border-amber-300 transition-colors">
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Pending Clients</p>
+              <p class="text-3xl font-bold text-gray-900 mt-2">{{ stats.pendingClients }}</p>
+              <p class="text-xs text-gray-500 mt-1">Awaiting verification</p>
+            </div>
+            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <Clock class="h-6 w-6 text-amber-600" />
+            </div>
           </div>
         </CardContent>
       </Card>
     </div>
 
-    <!-- Search and filters -->
-    <Card class="mb-6">
-      <CardContent class="p-4">
-        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div class="relative flex-1 max-w-md">
-            <Input
-              v-model="search"
-              placeholder="🔍 Search by name or email..."
-              class="pl-3 border-[#38618C] focus:border-[#35A7FF]"
-            />
+    <!-- Filters and Search -->
+    <Card class="border border-gray-200">
+      <CardHeader class="pb-4">
+        <CardTitle class="text-lg font-semibold text-gray-900">Filters & Search</CardTitle>
+        <p class="text-sm text-gray-500">Refine client results</p>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-col lg:flex-row gap-4">
+          <!-- Search -->
+          <div class="flex-1">
+            <div class="relative">
+              <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                v-model="query"
+                placeholder="Search by name or email..."
+                class="pl-10"
+              />
+            </div>
           </div>
-
-          <div class="flex gap-3">
-            <Button 
-              class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
-              @click="openCreateDialog"
-            >
-              + New Client
-            </Button>
-
-            <div class="flex border border-[#38618C] rounded-md overflow-hidden">
+          
+          <!-- Filters -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Select v-model="sortBy">
+              <SelectTrigger>
+                <div class="flex items-center gap-2">
+                  <Filter class="h-4 w-4" />
+                  <SelectValue placeholder="Sort by" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Newest First</SelectItem>
+                <SelectItem value="name">Name A-Z</SelectItem>
+                <SelectItem value="balance">Balance (High to Low)</SelectItem>
+                <SelectItem value="email">Email A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <!-- View Toggle -->
+            <div class="flex border rounded-lg overflow-hidden bg-gray-50">
               <Button
                 variant="ghost"
                 size="sm"
-                :class="viewMode === 'grid' ? 'bg-[#35A7FF] text-white' : 'text-[#38618C]'"
+                :class="[
+                  'rounded-none px-4',
+                  viewMode === 'grid' 
+                    ? 'bg-white text-gray-900 shadow-sm border' 
+                    : 'text-gray-600 hover:text-gray-900'
+                ]"
                 @click="viewMode = 'grid'"
               >
-                ⊞ Grid
+                <Grid3x3 class="h-4 w-4 mr-2" />
+                Grid
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                :class="viewMode === 'list' ? 'bg-[#35A7FF] text-white' : 'text-[#38618C]'"
+                :class="[
+                  'rounded-none px-4',
+                  viewMode === 'list' 
+                    ? 'bg-white text-gray-900 shadow-sm border' 
+                    : 'text-gray-600 hover:text-gray-900'
+                ]"
                 @click="viewMode = 'list'"
               >
-                ☰ List
+                <List class="h-4 w-4 mr-2" />
+                List
               </Button>
             </div>
-
-            <Button 
-              :disabled="loading"
-              class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
-              @click="fetchClients"
-            >
-              🔄 Refresh
-            </Button>
+            
+            <!-- Actions -->
+            <div class="flex gap-2">
+              <Button 
+                variant="outline"
+                size="sm"
+                class="gap-2"
+                @click="fetchClients(currentPage)"
+                :disabled="loading"
+              >
+                <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+                Refresh
+              </Button>
+              <Button 
+                class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white gap-2"
+                @click="openCreateDialog"
+              >
+                <UserPlus class="h-4 w-4" />
+                New Client
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
 
     <!-- Loading State -->
-    <Card v-if="loading">
-      <CardContent class="p-12 text-center">
-        <div class="animate-pulse text-gray-600">
-          <div class="text-4xl mb-4">⏳</div>
-          <div>Loading clients...</div>
+    <Card v-if="loading" class="border border-gray-200">
+      <CardContent class="p-12">
+        <div class="text-center space-y-4">
+          <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto"></div>
+          <div class="space-y-2">
+            <p class="text-lg font-medium text-gray-900">Loading Clients</p>
+            <p class="text-sm text-gray-500">Fetching client data...</p>
+          </div>
         </div>
       </CardContent>
     </Card>
 
-    <!-- Clients Content -->
-    <div v-else>
-      <!-- Empty State -->
-      <Card v-if="filteredClients.length === 0">
-        <CardContent class="p-12 text-center">
-          <div class="text-6xl mb-4">👥</div>
-          <h3 class="text-xl font-semibold text-[#38618C] mb-2">No clients found</h3>
-          <p class="text-gray-500 mb-6">
-            {{ search ? 'Try adjusting your search' : 'Create your first client to get started' }}
-          </p>
+    <!-- Empty State -->
+    <Card v-else-if="filteredClients.length === 0" class="border border-gray-200">
+      <CardContent class="p-12 text-center">
+        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <Search class="h-8 w-8 text-gray-400" />
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No clients found</h3>
+        <p class="text-gray-600 mb-6 max-w-md mx-auto">
+          {{ query ? 'No clients match your search criteria. Try adjusting your search.' : 'No clients available on the platform yet.' }}
+        </p>
+        <div class="flex gap-3 justify-center">
           <Button 
-            v-if="!search"
-            class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+            v-if="query"
+            variant="outline"
+            @click="query = ''"
+          >
+            Clear Search
+          </Button>
+          <Button 
+            class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white gap-2"
             @click="openCreateDialog"
           >
-            + Create First Client
+            <UserPlus class="h-4 w-4" />
+            Add First Client
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
 
-      <!-- Grid View -->
-      <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card 
-          v-for="client in filteredClients" 
-          :key="client.id"
-          class="border border-gray-200 rounded-lg hover:border-[#35A7FF] transition-all hover:shadow-xl cursor-pointer group bg-white overflow-hidden"
-          @click="viewClientDetails(client.id)"
-        >
-          <CardContent class="p-0">
-            <!-- Banner (grid only) -->
-            <div v-if="getProfileBannerUrl(client.profile_banner)" class="relative w-full h-32 bg-gradient-to-br from-[#35A7FF] to-[#38618C] overflow-hidden">
-              <img
-                :src="getProfileBannerUrl(client.profile_banner)"
-                alt="banner"
-                class="w-full h-full object-cover"
-                @error="handleImgError"
-              />
-            </div>
-            <div v-else class="w-full h-32 bg-gradient-to-br from-[#35A7FF] to-[#38618C']"></div>
-
-            <!-- Content avec padding -->
-            <div class="p-6">
-              <!-- Header avec avatar + nom + vérification -->
-              <div class="flex items-start justify-between mb-5 -mt-10">
-                <div class="flex items-center gap-3">
-                  <!-- Avatar avec bordure blanche -->
-                  <Avatar class="h-16 w-16 border-4 border-white shadow-lg">
+    <!-- Grid View -->
+    <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <Card 
+        v-for="client in filteredClients" 
+        :key="client.id"
+        class="group border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all duration-300 cursor-pointer"
+        @click="viewClientDetails(client.id)"
+      >
+        <CardContent class="p-6">
+          <!-- Header -->
+          <div class="flex items-start justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="relative">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 group-hover:border-blue-300 transition-colors flex items-center justify-center">
+                  <Avatar class="h-10 w-10">
                     <template v-if="getProfilePictureUrl(client.profile_picture)">
                       <AvatarImage 
                         :src="getProfilePictureUrl(client.profile_picture)"
-                        :alt="client.name || 'User'"
+                        :alt="client.name"
                         class="object-cover"
                         @error="handleImgError"
                       />
                     </template>
-                     <AvatarFallback class="bg-gradient-to-br from-[#35A7FF] to-[#38618C] text-white font-bold text-xl">
-                       {{ getClientInitials(client.name) }}
-                     </AvatarFallback>
+                    <AvatarFallback class="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold">
+                      {{ getClientInitials(client.name) }}
+                    </AvatarFallback>
                   </Avatar>
-                  
-                  <div class="mt-10">
-                    <h3 class="font-bold text-[#38618C] text-lg">{{ client.name || 'Unknown' }}</h3>
-                    <p class="text-sm text-gray-500 truncate">{{ client.email }}</p>
-                  </div>
-                </div>
-                
-                <Badge
-                  :class="client.email_verified_at === null ? 'bg-[#FF5964]' : 'bg-[#01FF19]'"
-                  class="text-white text-xs mt-12"
-                >
-                  {{ client.email_verified_at === null ? '⏳' : '✓' }}
-                </Badge>
-              </div>
-
-              <!-- Informations principales -->
-              <div class="space-y-4 mb-5">
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-500">Balance</span>
-                  <span class="font-bold text-lg text-[#01FF19]">{{ formatCurrency(client.balance_eur) }}</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-500">Role</span>
-                  <Badge class="bg-[#38618C] text-white">{{ client.role || 'CLIENT' }}</Badge>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-500">Due Date</span>
-                  <span class="text-sm text-[#38618C] font-medium">{{ formatDate(client.due_date) }}</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-sm text-gray-500">Joined</span>
-                  <span class="text-sm text-[#38618C]">{{ formatDate(client.created_at) }}</span>
                 </div>
               </div>
-
-              <!-- Actions -->
-              <div class="flex gap-2 pt-3 border-t border-gray-100">
-                <Button 
-                  size="sm"
-                  class="flex-1 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white text-sm"
-                  @click.stop="viewClientDetails(client.id)"
-                >
-                  📊 Details
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-                  @click.stop="openEditDialog(client)"
-                >
-                  ✏️
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
-                  @click.stop="confirmDelete(client)"
-                >
-                  🗑️
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <!-- List View -->
-      <div v-else class="space-y-3">
-        <Card 
-          v-for="client in filteredClients" 
-          :key="client.id"
-          class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-lg cursor-pointer"
-          @click="viewClientDetails(client.id)"
-        >
-          <CardContent class="p-4">
-            <div class="flex items-center justify-between gap-4">
-              <div class="flex items-center gap-4 flex-1">
-                <!-- Avatar uniquement en mode liste -->
-                <Avatar class="h-12 w-12 border-2 border-gray-200">
-                  <template v-if="getProfilePictureUrl(client.profile_picture)">
-                    <AvatarImage 
-                      :src="getProfilePictureUrl(client.profile_picture)"
-                      :alt="client.name || 'User'"
-                      class="object-cover"
-                      @error="handleImgError"
-                    />
-                  </template>
-                  <AvatarFallback class="bg-gradient-to-br from-[#35A7FF] to-[#38618C] text-white font-bold">
-                    {{ getClientInitials(client.name) }}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div class="flex-1 min-w-0">
-                  <h3 class="font-bold text-[#38618C] truncate">{{ client.name || 'Unknown' }}</h3>
-                  <p class="text-sm text-gray-500 truncate">{{ client.email }}</p>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <div class="text-xs text-gray-500">Balance</div>
-                  <div class="font-bold text-[#01FF19]">{{ formatCurrency(client.balance_eur) }}</div>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-500">Role</div>
-                  <Badge class="bg-[#38618C] text-white">{{ client.role || 'CLIENT' }}</Badge>
-                </div>
-                <div class="hidden sm:block">
-                  <div class="text-xs text-gray-500">Status</div>
-                  <Badge
-                    :class="client.email_verified_at === null ? 'bg-[#FF5964]' : 'bg-[#01FF19]'"
-                    class="text-white"
+              <div>
+                <h3 class="font-bold text-gray-900 text-lg">{{ client.name || 'Unknown User' }}</h3>
+                <div class="flex items-center gap-2 mt-1">
+                  <Badge 
+                    :class="[
+                      'text-xs',
+                      client.role === 'ADMIN' 
+                        ? 'bg-purple-100 text-purple-700 border-purple-200' 
+                        : 'bg-blue-100 text-blue-700 border-blue-200'
+                    ]"
                   >
-                    {{ client.email_verified_at === null ? 'Pending' : 'Verified' }}
+                    {{ client.role || 'CLIENT' }}
+                  </Badge>
+                  <Badge 
+                    :class="[
+                      'text-xs',
+                      client.email_verified_at 
+                        ? 'bg-green-100 text-green-700 border-green-200' 
+                        : 'bg-amber-100 text-amber-700 border-amber-200'
+                    ]"
+                  >
+                    {{ client.email_verified_at ? 'Verified' : 'Pending' }}
                   </Badge>
                 </div>
-                <div class="hidden sm:block">
-                  <div class="text-xs text-gray-500">Joined</div>
-                  <div class="text-sm text-[#38618C]">{{ formatDate(client.created_at) }}</div>
-                </div>
-              </div>
-
-              <div class="flex gap-2">
-                <Button 
-                  size="sm"
-                  class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
-                  @click.stop="viewClientDetails(client.id)"
-                >
-                  📊
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
-                  @click.stop="openEditDialog(client)"
-                >
-                  ✏️
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  class="border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964] hover:text-white"
-                  @click.stop="confirmDelete(client)"
-                >
-                  🗑️
-                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <Button
+              size="sm"
+              variant="ghost"
+              class="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              @click.stop="openEditDialog(client)"
+              title="Edit Client"
+            >
+              <Edit class="h-4 w-4" />
+            </Button>
+          </div>
+
+          <!-- Client Info -->
+          <div class="space-y-4 mb-6">
+            <div class="flex items-center gap-2 text-gray-600">
+              <Mail class="h-4 w-4" />
+              <span class="text-sm truncate">{{ client.email }}</span>
+            </div>
+            
+            <div>
+              <div class="text-sm text-gray-500 mb-1">Account Balance</div>
+              <div class="text-2xl font-bold text-emerald-600">
+                {{ formatCurrency(client.balance_eur) }}
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Member Since</div>
+                <div class="text-sm font-semibold text-gray-900">
+                  {{ formatDate(client.created_at) }}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Status</div>
+                <div class="text-sm font-semibold text-gray-900 flex items-center gap-1">
+                  <CheckCircle v-if="client.email_verified_at" class="h-3 w-3 text-green-500" />
+                  <Clock v-else class="h-3 w-3 text-amber-500" />
+                  {{ client.email_verified_at ? 'Active' : 'Pending' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2">
+            <Button 
+              class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white gap-2"
+              @click.stop="viewClientDetails(client.id)"
+            >
+              <BarChart3 class="h-4 w-4" />
+              View Details
+            </Button>
+            <Button 
+              size="sm"
+              variant="outline"
+              class="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              @click.stop="confirmDelete(client)"
+              title="Delete Client"
+            >
+              <Trash2 class="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- List View -->
+    <div v-else class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Client</th>
+              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Email</th>
+              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Balance</th>
+              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Status</th>
+              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Joined</th>
+              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr 
+              v-for="client in filteredClients" 
+              :key="client.id"
+              class="hover:bg-gray-50 transition-colors group cursor-pointer"
+              @click="viewClientDetails(client.id)"
+            >
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-300 flex items-center justify-center">
+                    <Avatar class="h-8 w-8">
+                      <template v-if="getProfilePictureUrl(client.profile_picture)">
+                        <AvatarImage 
+                          :src="getProfilePictureUrl(client.profile_picture)"
+                          :alt="client.name"
+                          class="object-cover"
+                          @error="handleImgError"
+                        />
+                      </template>
+                      <AvatarFallback class="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-xs">
+                        {{ getClientInitials(client.name) }}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">{{ client.name || 'Unknown User' }}</div>
+                    <Badge 
+                      :class="[
+                        'text-xs mt-1',
+                        client.role === 'ADMIN' 
+                          ? 'bg-purple-100 text-purple-700 border-purple-200' 
+                          : 'bg-blue-100 text-blue-700 border-blue-200'
+                      ]"
+                    >
+                      {{ client.role || 'CLIENT' }}
+                    </Badge>
+                  </div>
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-2 text-gray-700">
+                  <Mail class="h-4 w-4 text-gray-400" />
+                  <span class="text-sm">{{ client.email }}</span>
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <div class="font-bold text-emerald-600">
+                  {{ formatCurrency(client.balance_eur) }}
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <Badge 
+                  :class="[
+                    'font-medium',
+                    client.email_verified_at 
+                      ? 'bg-green-50 text-green-700 border-green-200' 
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  ]"
+                >
+                  <component 
+                    :is="client.email_verified_at ? CheckCircle : Clock" 
+                    class="h-3 w-3 mr-1.5" 
+                  />
+                  {{ client.email_verified_at ? 'Verified' : 'Pending' }}
+                </Badge>
+              </td>
+              <td class="py-4 px-6">
+                <div class="text-sm text-gray-900">
+                  {{ formatDate(client.created_at) }}
+                </div>
+              </td>
+              <td class="py-4 px-6">
+                <div class="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    class="h-8 w-8 p-0"
+                    @click.stop="viewClientDetails(client.id)"
+                    title="View Details"
+                  >
+                    <ExternalLink class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    class="h-8 w-8 p-0"
+                    @click.stop="openEditDialog(client)"
+                    title="Edit Client"
+                  >
+                    <Edit class="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    class="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    @click.stop="confirmDelete(client)"
+                    title="Delete Client"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Form Dialog -->
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
+      <div class="text-sm text-gray-600">
+        Page {{ currentPage }} of {{ totalPages }} • {{ totalClients }} total clients
+      </div>
+      <div class="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 w-8 p-0"
+          :disabled="currentPage === 1"
+          @click="changePage(1)"
+        >
+          <ChevronsLeft class="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 w-8 p-0"
+          :disabled="currentPage === 1"
+          @click="changePage(currentPage - 1)"
+        >
+          <ChevronLeft class="h-4 w-4" />
+        </Button>
+        
+        <div class="flex items-center gap-1">
+          <Button
+            v-for="page in Math.min(5, totalPages)"
+            :key="page"
+            :variant="currentPage === page ? 'default' : 'outline'"
+            size="sm"
+            class="h-8 w-8 p-0"
+            @click="changePage(page)"
+          >
+            {{ page }}
+          </Button>
+        </div>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 w-8 p-0"
+          :disabled="currentPage === totalPages"
+          @click="changePage(currentPage + 1)"
+        >
+          <ChevronRight class="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 w-8 p-0"
+          :disabled="currentPage === totalPages"
+          @click="changePage(totalPages)"
+        >
+          <ChevronsRight class="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+
+    <!-- Create/Edit Client Dialog -->
     <Dialog :open="formDialog" @update:open="formDialog = false">
-      <DialogContent class="sm:max-w-md border-[#35A7FF]">
+      <DialogContent class="sm:max-w-md border border-gray-200">
         <DialogHeader>
-          <DialogTitle class="text-[#38618C] text-xl">
+          <DialogTitle class="text-lg font-semibold text-gray-900">
             {{ editClient ? 'Edit Client' : 'New Client' }}
           </DialogTitle>
           <DialogDescription class="text-gray-600">
@@ -542,39 +821,45 @@ class="text-3xl font-bold"
         </DialogHeader>
 
         <div class="space-y-4 py-4">
-          <Alert v-if="formError" class="border-[#FF5964] bg-[#FF5964]/10">
-            <AlertDescription class="text-[#FF5964]">❌ {{ formError }}</AlertDescription>
+          <Alert v-if="formError" class="border-red-200 bg-red-50">
+            <AlertDescription class="text-red-700 flex items-center gap-2">
+              <AlertCircle class="h-4 w-4" />
+              {{ formError }}
+            </AlertDescription>
           </Alert>
           
-          <Alert v-if="formSuccess" class="border-[#01FF19] bg-[#01FF19]/10">
-            <AlertDescription class="text-[#01FF19]">✅ {{ formSuccess }}</AlertDescription>
+          <Alert v-if="formSuccess" class="border-emerald-200 bg-emerald-50">
+            <AlertDescription class="text-emerald-700 flex items-center gap-2">
+              <CheckCircle class="h-4 w-4" />
+              {{ formSuccess }}
+            </AlertDescription>
           </Alert>
 
           <div class="space-y-2">
-            <Label class="text-[#38618C] font-semibold">Full Name</Label>
+            <Label class="text-sm font-medium text-gray-700">Full Name</Label>
             <Input
               v-model="formData.name"
               placeholder="John Doe"
-              class="border-[#38618C] focus:border-[#35A7FF]"
+              class="border-gray-300 focus:border-blue-500"
               :disabled="formLoading"
             />
           </div>
 
           <div class="space-y-2">
-            <Label class="text-[#38618C] font-semibold">Email Address</Label>
+            <Label class="text-sm font-medium text-gray-700">Email Address</Label>
             <Input
               v-model="formData.email"
               type="email"
               placeholder="john@example.com"
-              class="border-[#38618C] focus:border-[#35A7FF]"
+              class="border-gray-300 focus:border-blue-500"
               :disabled="formLoading"
             />
           </div>
 
           <div class="space-y-2">
-            <Label class="text-[#38618C] font-semibold">Role</Label>
+            <Label class="text-sm font-medium text-gray-700">Role</Label>
             <Select v-model="formData.role" :disabled="formLoading">
-              <SelectTrigger class="border-[#38618C] focus:border-[#35A7FF]">
+              <SelectTrigger class="border-gray-300 focus:border-blue-500">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
@@ -585,108 +870,78 @@ class="text-3xl font-bold"
           </div>
 
           <div class="space-y-2">
-            <Label class="text-[#38618C] font-semibold">Initial Balance (€)</Label>
+            <Label class="text-sm font-medium text-gray-700">Initial Balance (€)</Label>
             <Input
               v-model.number="formData.balance_eur"
               type="number"
               min="0"
               step="0.01"
-              class="border-[#38618C] focus:border-[#35A7FF]"
+              placeholder="500.00"
+              class="border-gray-300 focus:border-blue-500"
               :disabled="formLoading"
             />
           </div>
         </div>
 
-        <DialogFooter class="flex gap-2 sm:gap-0">
+        <DialogFooter class="flex gap-2">
           <Button 
             variant="outline" 
-            class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 sm:flex-none"
+            class="border-gray-300 text-gray-700 hover:bg-gray-50"
             :disabled="formLoading"
             @click="formDialog = false"
           >
-            ✕ Cancel
+            Cancel
           </Button>
           <Button 
-            class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold flex-1 sm:flex-none"
+            class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"
             :disabled="formLoading"
             @click="handleFormSubmit"
           >
-            {{ formLoading ? '⏳ Saving...' : (editClient ? '✓ Update' : '✓ Create') }}
+            {{ formLoading ? 'Saving...' : (editClient ? 'Update Client' : 'Create Client') }}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
 
     <!-- Delete Dialog -->
-    <Dialog :open="deleteDialog" @update:open="deleteDialog = false">
-      <DialogContent class="sm:max-w-md border-[#FF5964]">
-        <DialogHeader>
-          <DialogTitle class="text-[#FF5964] text-xl">⚠️ Confirm Deletion</DialogTitle>
-          <DialogDescription class="text-gray-600">
-            Are you sure you want to delete <strong>{{ clientToDelete?.name }}</strong>?
-          </DialogDescription>
-        </DialogHeader>
-
-        <Alert class="border-[#FF5964] bg-[#FF5964]/10">
-          <AlertDescription class="text-[#FF5964]">
-            ⚠️ This action is irreversible and will delete all associated data.
-          </AlertDescription>
-        </Alert>
-
-        <DialogFooter class="flex gap-2 sm:gap-0">
-          <Button 
-            variant="outline" 
-            class="border-gray-300 text-gray-600 hover:bg-gray-50 flex-1 sm:flex-none"
-            @click="deleteDialog = false"
-          >
-            ✕ Cancel
-          </Button>
-          <Button 
-            class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white font-semibold flex-1 sm:flex-none"
+    <AlertDialog :open="deleteDialog" @update:open="deleteDialog = false">
+      <AlertDialogContent class="border border-red-200">
+        <AlertDialogHeader>
+          <div class="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle class="h-6 w-6 text-red-600" />
+          </div>
+          <AlertDialogTitle class="text-center text-red-700">Delete Client</AlertDialogTitle>
+          <AlertDialogDescription class="text-center text-gray-600">
+            Are you sure you want to delete <strong class="text-gray-900">{{ clientToDelete?.name }}</strong>?
+            <br><br>
+            This action cannot be undone and will permanently delete all associated data.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel class="border-gray-300">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-red-600 hover:bg-red-700 text-white"
             @click="handleDelete"
           >
-            🗑️ Delete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            Delete Client
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
-  border-color: #38618C;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
-:deep(.text-\[#38618C\]) {
-  color: #38618C;
-}
-
-:deep(.bg-\[#35A7FF\]) {
-  background-color: #35A7FF;
-}
-
-:deep(.bg-\[#01FF19\]) {
-  background-color: #01FF19;
-}
-
-:deep(.bg-\[#FF5964\]) {
-  background-color: #FF5964;
-}
-
-:deep(.hover\:bg-\[#35A7FF\]\/90:hover) {
-  background-color: rgba(53, 167, 255, 0.9);
-}
-
-:deep(.hover\:bg-\[#01FF19\]\/90:hover) {
-  background-color: rgba(1, 255, 25, 0.9);
-}
-
-:deep(.hover\:bg-\[#FF5964\]\/90:hover) {
-  background-color: rgba(255, 89, 100, 0.9);
-}
-
-:deep(.focus\:border-\[#35A7FF\]:focus) {
-  border-color: #35A7FF;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Shield, TrendingDown, TrendingUp, User, Wallet } from 'lucide-vue-next'
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Shield, User } from 'lucide-vue-next';
+import { useRoute } from 'vue-router';
 
 const props = defineProps<{
   menuItems: Array<{ label: string; icon: string; path: string }>
@@ -15,17 +14,6 @@ const props = defineProps<{
 
 const route = useRoute()
 
-// Format portfolio total
-const formattedTotalValue = computed(() => {
-  const value = Number(props.totalValue) || 0
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2
-  }).format(value)
-})
-
-const isPositiveChange = computed(() => Number(props.dayChangePct) > 0)
 </script>
 
 
@@ -121,73 +109,6 @@ const isPositiveChange = computed(() => Number(props.dayChangePct) > 0)
       </router-link>
     </nav>
 
-    <!-- PORTFOLIO SUMMARY (CLIENT) - Design amélioré -->
-    <Card 
-      v-if="role !== 'ADMIN' && portfolio.length > 0"
-      class="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all group"
-    >
-      <CardContent class="p-4 sm:p-6">
-        <div class="space-y-4">
-          <!-- Header -->
-          <div class="flex items-center gap-2">
-            <Wallet class="w-4 h-4 text-blue-600" />
-            <span class="text-sm font-medium text-gray-700">Portfolio Value</span>
-          </div>
-
-          <!-- Value avec icône dynamique -->
-          <div class="flex items-center justify-between">
-            <div class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#38618C] to-[#35A7FF] bg-clip-text text-transparent">
-              {{ formattedTotalValue }}
-            </div>
-            
-            <div class="flex items-center gap-1">
-              <TrendingUp v-if="isPositiveChange" class="w-5 h-5 text-emerald-500 animate-pulse" />
-              <TrendingDown v-else class="w-5 h-5 text-red-500 animate-pulse" />
-              <Badge
-                class="text-xs font-bold px-3 py-1 shadow-sm"
-                :class="isPositiveChange
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                  : 'bg-red-100 text-red-800 border-red-200'"
-              >
-                {{ isPositiveChange ? '↑' : '↓' }} {{ Math.abs(Number(dayChangePct)).toFixed(2) }}%
-              </Badge>
-            </div>
-          </div>
-
-          <!-- Stats -->
-          <div class="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
-            <div class="text-center p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-              <div class="text-xs text-gray-600">Assets</div>
-              <div class="text-sm font-bold text-blue-700">{{ portfolio.length }}</div>
-            </div>
-            <div class="text-center p-2 bg-emerald-50 rounded-lg group-hover:bg-emerald-100 transition-colors">
-              <div class="text-xs text-gray-600">24h Change</div>
-              <div 
-                class="text-sm font-bold"
-                :class="isPositiveChange ? 'text-emerald-700' : 'text-red-700'"
-              >
-                {{ isPositiveChange ? '+' : '-' }}{{ Math.abs(Number(dayChangePct)).toFixed(2) }}%
-              </div>
-            </div>
-          </div>
-
-          <!-- Progress bar simplifiée -->
-          <div class="pt-2">
-            <div class="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Portfolio Performance</span>
-              <span>{{ isPositiveChange ? 'Growing' : 'Declining' }}</span>
-            </div>
-            <div class="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                class="h-full rounded-full transition-all duration-1000"
-                :class="isPositiveChange ? 'bg-emerald-500' : 'bg-red-500'"
-                :style="{ width: `${Math.min(100, Math.abs(Number(dayChangePct)) * 10)}%` }"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
 
 
 

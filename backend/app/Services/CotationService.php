@@ -118,9 +118,10 @@ public function getDailyVariation(string $symbol, ?float $currentPrice = null): 
      * 
      * @param string $symbol Code de la crypto
      * @param int $days Nombre de jours (défaut: 30)
-     * @return array Array de [timestamp_ms, prix]
+     * @param bool $includeVolume Inclure le volume dans les données (défaut: false pour tests)
+     * @return array Array de [timestamp_ms, prix] ou [timestamp_ms, prix, volume]
      */
-    public function generatePriceHistory(string $symbol, int $days = 30): array
+    public function generatePriceHistory(string $symbol, int $days = 30, bool $includeVolume = false): array
     {
         $this->loadCotationGenerator();
 
@@ -135,7 +136,11 @@ public function getDailyVariation(string $symbol, ?float $currentPrice = null): 
                 $currentPrice = $variation['newPrice'];
             }
 
-            $prices[] = [$timestamp, round($currentPrice, 2)];
+            if ($includeVolume) {
+                $prices[] = [$timestamp, round($currentPrice, 2), $variation['volume'] ?? 0];
+            } else {
+                $prices[] = [$timestamp, round($currentPrice, 2)];
+            }
         }
 
         return $prices;

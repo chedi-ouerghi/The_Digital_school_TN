@@ -2,20 +2,18 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, Share2, Download, MoreVertical } from 'lucide-vue-next'
+import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, Share2, Download, ExternalLink } from 'lucide-vue-next'
 
 // Composants UI
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Chart.js
 import { Chart, registerables } from 'chart.js'
 import { Line } from 'vue-chartjs'
+import type { ChartData, ChartOptions } from 'chart.js'
 Chart.register(...registerables)
 
 // ============================================================================
@@ -25,6 +23,7 @@ interface HistoryEntry {
   timestamp: number
   date: string
   price: number
+  volume: number
   change_24h_pct: number
 }
 
@@ -38,9 +37,41 @@ interface CryptoData {
   website: string
   price_eur: string
   price: string
-  market_cap: string | null
+  market_cap: string
   change_24h_pct: string
   change_24h: string
+  created_at: string
+  updated_at: string
+}
+
+interface CryptoDetailResponse {
+  crypto: {
+    id: string
+    symbol: string
+    name: string
+  }
+  meta: {
+    count: number
+    from: string
+    to: string
+    days: number
+  }
+  history: HistoryEntry[]
+}
+
+interface Transaction {
+  id: string
+  crypto_id: string
+  crypto_symbol: string
+  crypto_name: string
+  crypto_image: string
+  crypto_image_url: string
+  type: 'ACHAT' | 'VENTE'
+  quantity: number
+  price: number
+  unit_price_eur: number
+  total_eur: number
+  date: string
 }
 
 interface PositionData {
@@ -57,19 +88,14 @@ interface PositionData {
   transactions: Transaction[]
 }
 
-interface Transaction {
-  id: string
-  type: string
-  quantity: number
-  unit_price_eur: number
-  total_eur: number
-  date: string
-}
-
 interface WalletResponse {
   totalValue: number
   totalInvestment: number
+  totalPlusValue: number
+  totalPlusValuePercent: number
   assets: PositionData[]
+  totalUnits: number
+  buyCount: number
   balance_eur: number
 }
 
@@ -83,10 +109,9 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const positions = ref<PositionData | null>(null)
 const history = ref<HistoryEntry[]>([])
+const walletTransactions = ref<Transaction[]>([])
 const historyLoading = ref(false)
-const userBalance = ref(0)
 const timeRange = ref('30d')
-const chartType = ref('line')
 
 // ============================================================================
 // FONCTIONS UTILITAIRES
@@ -140,6 +165,13 @@ function formatDate(date: string): string {
   })
 }
 
+function formatDateShort(date: string): string {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
 // ============================================================================
 // APPELS API
 // ============================================================================
@@ -147,7 +179,7 @@ async function fetchCryptoDetail() {
   loading.value = true
   error.value = null
   try {
-    const id = route.params.id
+    const id = route.params.id as string
     const response = await api.crypto.show(id)
     crypto.value = response.data || response
     if (!crypto.value) throw new Error('Cryptocurrency not found')
@@ -159,15 +191,30 @@ async function fetchCryptoDetail() {
   }
 }
 
-async function fetchPositions() {
+async function fetchWalletTransactions() {
   if (!crypto.value) return
   try {
-    const response: WalletResponse = await api.wallet.list()
-    userBalance.value = response.balance_eur || 0
+    const response = await api.wallet.getTransactionsHistory()
+    // Filter transactions for this specific crypto
+    const transactions = response.transactions || []
+    walletTransactions.value = transactions.filter((tx: Transaction) => 
+      tx.crypto_id === crypto.value?.id
+    )
+  } catch (e: any) {
+    console.error('Error loading wallet transactions:', e)
+    walletTransactions.value = []
+  }
+}
+
+async function fetchWalletHoldings() {
+  if (!crypto.value) return
+  try {
+    const response = await api.wallet.list() as WalletResponse
+    // Find this crypto in wallet holdings
     const asset = response.assets?.find(a => a.symbol === crypto.value!.symbol)
     positions.value = asset || null
   } catch (e: any) {
-    console.error('Error loading positions:', e)
+    console.error('Error loading wallet holdings:', e)
     positions.value = null
   }
 }
@@ -177,14 +224,9 @@ async function fetchHistoricalData() {
   historyLoading.value = true
   try {
     const response = await api.crypto.history(crypto.value.id)
-    if (response.history && Array.isArray(response.history)) {
-      history.value = response.history
-    } else if (Array.isArray(response)) {
-      history.value = response
-    } else if (response.data?.history) {
-      history.value = response.data.history
-    } else if (response.data && Array.isArray(response.data)) {
-      history.value = response.data
+    const data = response as CryptoDetailResponse
+    if (data.history && Array.isArray(data.history)) {
+      history.value = data.history
     }
   } catch (e: any) {
     console.warn('Historical data not available:', e.message)
@@ -197,7 +239,11 @@ async function fetchHistoricalData() {
 async function loadAllData() {
   await fetchCryptoDetail()
   if (crypto.value) {
-    await Promise.all([fetchPositions(), fetchHistoricalData()])
+    await Promise.all([
+      fetchWalletHoldings(),
+      fetchWalletTransactions(),
+      fetchHistoricalData()
+    ])
   }
 }
 
@@ -205,7 +251,7 @@ async function loadAllData() {
 // LIFECYCLE & WATCHERS
 // ============================================================================
 onMounted(loadAllData)
-watch(() => route.params.id, loadAllData)
+watch(() => route.params.id as string, loadAllData)
 
 // ============================================================================
 // COMPUTED PROPERTIES
@@ -229,8 +275,10 @@ const profitLossPercentage = computed(() => {
   return (profitLoss.value / investedValue.value) * 100
 })
 
+
+
 // ============================================================================
-// CONFIGURATION DU GRAPHIQUE
+// CONFIGURATION DU GRAPHIQUE DYNAMIQUE
 // ============================================================================
 const filteredHistory = computed(() => {
   if (!history.value.length) return []
@@ -246,53 +294,166 @@ const filteredHistory = computed(() => {
   return history.value.filter(entry => entry.timestamp >= cutoff)
 })
 
-const chartData = computed(() => {
-  if (!filteredHistory.value.length) return null
-  
-  const isPositive = dailyChange.value >= 0
-  const lineColor = isPositive ? '#22c55e' : '#ef4444'
-  const fillColor = isPositive ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)'
-  
+const chartData = computed<ChartData<'line'>>(() => {
+  if (!filteredHistory.value.length) {
+    return {
+      labels: [],
+      datasets: []
+    }
+  }
+
+  // Déterminer la couleur de la ligne basée sur le dernier change_24h_pct
+  const lastEntry = filteredHistory.value[filteredHistory.value.length - 1]
+  const lineColor = lastEntry.change_24h_pct >= 0 ? '#22c55e' : '#ef4444'
+  const fillColor = lastEntry.change_24h_pct >= 0 
+    ? 'rgba(34, 197, 94, 0.1)' 
+    : 'rgba(239, 68, 68, 0.1)'
+
+  // Créer un dégradé pour le remplissage
+  const createGradient = (ctx: CanvasRenderingContext2D) => {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400)
+    if (lastEntry.change_24h_pct >= 0) {
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.3)')
+      gradient.addColorStop(1, 'rgba(34, 197, 94, 0.05)')
+    } else {
+      gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)')
+      gradient.addColorStop(1, 'rgba(239, 68, 68, 0.05)')
+    }
+    return gradient
+  }
+
   const labels = filteredHistory.value.map(entry => {
     const date = new Date(entry.timestamp)
     switch (timeRange.value) {
-      case '1d': return date.toLocaleTimeString('en-US', { hour: 'numeric' })
-      case '7d': return date.toLocaleDateString('en-US', { weekday: 'short' })
-      default: return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      case '1d': 
+        return date.toLocaleTimeString('en-US', { 
+          hour: 'numeric',
+          minute: '2-digit'
+        })
+      case '7d': 
+        return date.toLocaleDateString('en-US', { 
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        })
+      default: 
+        return date.toLocaleDateString('en-US', { 
+          month: 'short',
+          day: 'numeric'
+        })
     }
   })
-  
+
   return {
     labels,
-    datasets: [{
-      label: 'Price',
-      data: filteredHistory.value.map(entry => entry.price),
-      borderColor: lineColor,
-      backgroundColor: fillColor,
-      borderWidth: 2,
-      fill: true,
-      tension: 0.4,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      pointBackgroundColor: lineColor,
-    }]
+    datasets: [
+      {
+        label: `${crypto.value?.symbol || 'Crypto'} Price`,
+        data: filteredHistory.value.map(entry => entry.price),
+        borderColor: lineColor,
+        backgroundColor: (context) => {
+          const chart = context.chart
+          const { ctx, chartArea } = chart
+          if (!chartArea) return fillColor
+          return createGradient(ctx)
+        },
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 6,
+        pointBackgroundColor: lineColor,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+      }
+    ]
   }
 })
 
-const chartOptions = {
+const chartOptions = computed<ChartOptions<'line'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 11 } } },
-    y: {
-      position: 'right',
-      grid: { color: 'rgba(107, 114, 128, 0.1)' },
-      ticks: { color: '#6b7280', font: { size: 11 } }
+  interaction: {
+    mode: 'index',
+    intersect: false
+  },
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      backgroundColor: 'rgb(17, 24, 39)',
+      titleColor: 'rgb(249, 250, 251)',
+      bodyColor: 'rgb(229, 231, 235)',
+      borderColor: 'rgb(55, 65, 81)',
+      borderWidth: 1,
+      padding: 12,
+      displayColors: false,
+      callbacks: {
+        label: (context) => {
+          const value = context.parsed.y
+          return `Price: ${formatCurrency(value)}`
+        },
+        title: (tooltipItems) => {
+          const item = tooltipItems[0]
+          const index = item.dataIndex
+          const entry = filteredHistory.value[index]
+          if (!entry) return ''
+          
+          const date = new Date(entry.timestamp)
+          return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+        },
+        afterLabel: (context) => {
+          const index = context.dataIndex
+          const entry = filteredHistory.value[index]
+          if (!entry || index === filteredHistory.value.length - 1) return ''
+          
+          const change = entry.change_24h_pct
+          const sign = change >= 0 ? '+' : ''
+          return `24h Change: ${sign}${change.toFixed(2)}%`
+        }
+      }
     }
   },
-  interaction: { intersect: false, mode: 'index' }
-}
+  scales: {
+    x: {
+      grid: {
+        display: false
+      },
+      ticks: {
+        color: 'rgb(156, 163, 175)',
+        font: {
+          size: 11
+        },
+        maxRotation: 0
+      }
+    },
+    y: {
+      position: 'right',
+      grid: {
+        color: 'rgba(255, 255, 255, 0.05)',
+        drawBorder: false
+      },
+      ticks: {
+        color: 'rgb(156, 163, 175)',
+        font: {
+          size: 11
+        },
+        callback: (value) => formatCurrency(value)
+      }
+    }
+  },
+  elements: {
+    line: {
+      cubicInterpolationMode: 'monotone'
+    }
+  }
+}))
 
 // ============================================================================
 // ACTIONS UTILISATEUR
@@ -304,6 +465,12 @@ function goBack() {
 function goToBuy() {
   if (crypto.value) {
     router.push(`/dashboard/cryptos?buy=${crypto.value.id}`)
+  }
+}
+
+function goToSell() {
+  if (crypto.value && positions.value && positions.value.quantity > 0) {
+    router.push(`/dashboard/cryptos?sell=${crypto.value.id}`)
   }
 }
 
@@ -324,6 +491,10 @@ function shareCrypto() {
 function exportData() {
   // Implementation for data export
   console.log('Export data')
+}
+
+function viewAllTransactions() {
+  router.push('/dashboard/transactions')
 }
 </script>
 
@@ -349,7 +520,10 @@ function exportData() {
                   :src="makeImageUrl(crypto.image || crypto.image_url)"
                   :alt="crypto.name"
                   class="w-full h-full object-cover"
-                  @error="(e) => e.target.style.display = 'none'"
+                  @error="(e: Event) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }"
                 />
               </div>
               <div>
@@ -455,6 +629,7 @@ function exportData() {
                 variant="outline"
                 class="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                 :disabled="!positions || positions.quantity <= 0"
+                @click="goToSell"
               >
                 Sell
               </Button>
@@ -470,7 +645,7 @@ function exportData() {
               <div>
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Price Chart</h3>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ crypto.symbol.toUpperCase() }}/EUR
+                  {{ crypto.symbol.toUpperCase() }}/EUR - {{ timeRange }}
                 </div>
               </div>
               <div class="flex gap-2">
@@ -495,23 +670,40 @@ function exportData() {
                   <p class="text-gray-500 dark:text-gray-400">Loading chart...</p>
                 </div>
               </div>
-              <div v-else-if="!chartData" class="h-full flex items-center justify-center">
+              <div v-else-if="!chartData.datasets.length" class="h-full flex items-center justify-center">
                 <div class="text-center text-gray-500 dark:text-gray-400">
                   <div class="text-4xl mb-4">📊</div>
                   <p>No historical data available</p>
                 </div>
               </div>
-              <Line v-else :data="chartData" :options="chartOptions" />
+              <Line 
+                v-else 
+                :data="chartData" 
+                :options="chartOptions"
+                :key="filteredHistory.length"
+              />
             </div>
           </CardContent>
         </Card>
 
         <!-- Portfolio & Info Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Portfolio Section -->
+          <!-- Portfolio Section - YOUR HOLDINGS -->
           <Card class="border-gray-200 dark:border-gray-700">
             <CardContent class="p-6">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Your Holdings</h3>
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Your Holdings</h3>
+                <Badge 
+  v-if="positions && positions.quantity > 0" 
+  :variant="profitLoss >= 0 ? 'default' : 'destructive'"
+  :class="profitLoss >= 0 
+    ? 'bg-green-600 hover:bg-green-600 !text-white' 
+    : 'bg-red-600 hover:bg-red-600 !text-white'"
+>
+  {{ formatPercentage(profitLossPercentage) }}
+</Badge>
+
+              </div>
               
               <div v-if="!positions || positions.quantity <= 0" class="text-center py-12">
                 <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
@@ -554,48 +746,15 @@ function exportData() {
                     </span>
                   </div>
                 </div>
-
-                <!-- Transaction History -->
-                <div>
-                  <div class="flex items-center justify-between mb-4">
-                    <h4 class="font-medium text-gray-900 dark:text-white">Recent Transactions</h4>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ positions.transactions.length }} total</span>
-                  </div>
-                  
-                  <div class="space-y-3">
-                    <div 
-                      v-for="(tx, index) in positions.transactions.slice(0, 3)"
-                      :key="tx.id || index"
-                      class="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800 last:border-0"
-                    >
-                      <div class="flex items-center gap-3">
-                        <div 
-                          class="w-8 h-8 rounded-full flex items-center justify-center"
-                          :class="tx.type === 'ACHAT' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-red-100 dark:bg-red-900/20'"
-                        >
-                          <span class="text-xs font-medium" :class="tx.type === 'ACHAT' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                            {{ tx.type === 'ACHAT' ? 'B' : 'S' }}
-                          </span>
-                        </div>
-                        <div>
-                          <div class="font-medium text-gray-900 dark:text-white">
-                            {{ tx.type === 'ACHAT' ? 'Buy' : 'Sell' }} {{ crypto.symbol.toUpperCase() }}
-                          </div>
-                          <div class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ formatDate(tx.date) }}
-                          </div>
-                        </div>
-                      </div>
-                      <div class="text-right">
-                        <div class="font-medium text-gray-900 dark:text-white">
-                          {{ formatCurrency(tx.total_eur) }}
-                        </div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
-                          @ {{ formatCurrency(tx.unit_price_eur) }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <!-- View All Transactions Button -->
+                <div class="text-center">
+                  <Button 
+                    variant="outline"
+                    class="w-full border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                    @click="viewAllTransactions"
+                  >
+                    View All Transactions
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -608,6 +767,10 @@ function exportData() {
               
               <div class="space-y-4">
                 <div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-500 dark:text-gray-400">Name</span>
+                  <span class="font-medium text-gray-900 dark:text-white">{{ crypto.name }}</span>
+                </div>
+                <div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
                   <span class="text-gray-500 dark:text-gray-400">Symbol</span>
                   <code class="font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
                     {{ crypto.symbol.toUpperCase() }}
@@ -617,22 +780,23 @@ function exportData() {
                   <span class="text-gray-500 dark:text-gray-400">Category</span>
                   <span class="font-medium text-gray-900 dark:text-white">{{ crypto.category || 'Crypto' }}</span>
                 </div>
-                <!-- Safe website display -->
                 <div class="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-500 dark:text-gray-400">Market Cap</span>
+                  <span class="font-medium text-gray-900 dark:text-white">€{{ formatLargeNumber(marketCap) }}</span>
+                </div>
+                <!-- Safe website display -->
+                <div class="flex justify-between items-center py-3">
                   <span class="text-gray-500 dark:text-gray-400">Website</span>
                   <a 
                     v-if="crypto.website && crypto.website.startsWith('http')"
                     :href="crypto.website"
                     target="_blank"
-                    class="text-blue-600 dark:text-blue-400 hover:underline font-medium text-sm"
+                    class="text-blue-600 dark:text-blue-400 hover:underline font-medium text-sm flex items-center gap-1"
                   >
                     Visit
+                    <ExternalLink class="w-3 h-3" />
                   </a>
                   <span v-else class="text-gray-400 dark:text-gray-500 text-sm">N/A</span>
-                </div>
-                <div class="flex justify-between items-center py-3">
-                  <span class="text-gray-500 dark:text-gray-400">24h Volume</span>
-                  <span class="font-medium text-gray-900 dark:text-white">€{{ formatLargeNumber(marketCap * 0.1) }}</span>
                 </div>
               </div>
 
@@ -641,16 +805,22 @@ function exportData() {
                 <h4 class="font-medium text-gray-900 dark:text-white mb-4">Performance</h4>
                 <div class="grid grid-cols-2 gap-4">
                   <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div 
+                      :class="dailyChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" 
+                      class="text-2xl font-bold"
+                    >
                       {{ formatPercentage(dailyChange) }}
                     </div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">24h</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">24h Change</div>
                   </div>
                   <div class="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div 
+                      :class="get7DayChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" 
+                      class="text-2xl font-bold"
+                    >
                       {{ formatPercentage(get7DayChange) }}
                     </div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">7D</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">7D Change</div>
                   </div>
                 </div>
               </div>
@@ -658,28 +828,32 @@ function exportData() {
           </Card>
         </div>
 
-        <!-- Additional Market Data -->
+        <!-- Additional Statistics -->
         <Card class="border-gray-200 dark:border-gray-700">
           <CardContent class="p-6">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Advanced Statistics</h3>
             
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Market Dominance</div>
-                <div class="text-xl font-bold text-gray-900 dark:text-white">0.5%</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Current Price</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(currentPrice) }}</div>
               </div>
               <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Circulating Supply</div>
-                <div class="text-xl font-bold text-gray-900 dark:text-white">19.5M</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">24h Volume</div>
+                <div class="text-xl font-bold text-gray-900 dark:text-white">
+                  €{{ formatLargeNumber(history[history.length - 1]?.volume || 0) }}
+                </div>
               </div>
               <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Volume/Market Cap</div>
-                <div class="text-xl font-bold text-gray-900 dark:text-white">0.08</div>
-              </div>
-              <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">All Time High</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">30D High</div>
                 <div class="text-xl font-bold text-green-600 dark:text-green-400">
                   {{ formatCurrency(Math.max(...(history.map(h => h.price) || [currentPrice]))) }}
+                </div>
+              </div>
+              <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">30D Low</div>
+                <div class="text-xl font-bold text-red-600 dark:text-red-400">
+                  {{ formatCurrency(Math.min(...(history.map(h => h.price) || [currentPrice]))) }}
                 </div>
               </div>
             </div>

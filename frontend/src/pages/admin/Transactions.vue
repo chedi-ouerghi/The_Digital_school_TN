@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
@@ -12,6 +12,24 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Search,
+  RefreshCw,
+  Filter,
+  Download,
+  Eye,
+  XCircle,
+  Calendar,
+  User,
+  TrendingUp,
+  TrendingDown,
+  LayoutGrid,
+  List,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight, CheckCircle,
+  AlertCircle
+} from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
@@ -25,17 +43,27 @@ const page = ref(1)
 const total = ref(0)
 const viewMode = ref<'grid' | 'table'>('table')
 const statusFilter = ref<'all' | 'completed' | 'cancelled'>('all')
+const typeFilter = ref<'all' | 'ACHAT' | 'VENTE'>('all')
 const confirmDialog = ref(false)
 const selectedTransaction = ref<any>(null)
 const cancelReason = ref('')
 const itemsPerPage = 10
+const sortBy = ref<'date' | 'amount'>('date')
+const sortOrder = ref<'asc' | 'desc'>('desc')
 
-// Formatters
-const formatCurrency = (value: number): string => 
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(value)
+// Formatters améliorés
+const formatCurrency = (value: number | string): string => {
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  return new Intl.NumberFormat('fr-FR', { 
+    style: 'currency', 
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(num)
+}
 
 const formatDate = (date: string): string => 
-  new Date(date).toLocaleDateString('en-US', {
+  new Date(date).toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -43,17 +71,17 @@ const formatDate = (date: string): string =>
     minute: '2-digit'
   })
 
-const formatNumber = (value: any, decimals = 8): string => {
+const formatNumber = (value: any, decimals = 6): string => {
   const n = Number(value ?? 0)
-  return isFinite(n) && !isNaN(n) ? n.toFixed(decimals) : '0'
+  if (!isFinite(n) || isNaN(n)) return '0'
+  
+  // Format avec séparateurs de milliers
+  const parts = n.toFixed(decimals).split('.')
+  parts[0] = parts[0]?.replace(/\B(?=(\d{3})+(?!\d))/g, ',') ?? '0'
+  return parts.join('.')
 }
 
-const getProfilePicture = (profilePicture: string | null | undefined): string | undefined => {
-  if (!profilePicture) return undefined
-  return profilePicture.startsWith('http') 
-    ? profilePicture 
-    : `http://localhost:8000/storage/${profilePicture}`
-}
+
 
 // Computed properties
 const stats = computed(() => ({
@@ -62,18 +90,27 @@ const stats = computed(() => ({
     .filter(t => !t.cancelled_at)
     .reduce((sum, t) => sum + Number(t.total_eur || 0), 0),
   completed: transactions.value.filter(t => !t.cancelled_at).length,
-  cancelled: transactions.value.filter(t => t.cancelled_at).length
+  cancelled: transactions.value.filter(t => t.cancelled_at).length,
+  buys: transactions.value.filter(t => t.type === 'ACHAT' && !t.cancelled_at).length,
+  sells: transactions.value.filter(t => t.type === 'VENTE' && !t.cancelled_at).length
 }))
 
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
 
+  // Filtre par statut
   if (statusFilter.value === 'completed') {
     filtered = filtered.filter(t => !t.cancelled_at)
   } else if (statusFilter.value === 'cancelled') {
     filtered = filtered.filter(t => t.cancelled_at)
   }
 
+  // Filtre par type
+  if (typeFilter.value !== 'all') {
+    filtered = filtered.filter(t => t.type === typeFilter.value)
+  }
+
+  // Recherche
   if (search.value) {
     const term = search.value.toLowerCase()
     filtered = filtered.filter(t => {
@@ -81,8 +118,10 @@ const filteredTransactions = computed(() => {
       const crypto = t.crypto_wallet_asset?.cryptomoney
       return (
         user?.name?.toLowerCase().includes(term) ||
+        user?.email?.toLowerCase().includes(term) ||
         crypto?.symbol?.toLowerCase().includes(term) ||
-        crypto?.name?.toLowerCase().includes(term)
+        crypto?.name?.toLowerCase().includes(term) ||
+        t.id?.toLowerCase().includes(term)
       )
     })
   }
@@ -90,18 +129,35 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
+const sortedTransactions = computed(() => {
+  return [...filteredTransactions.value].sort((a, b) => {
+    let valueA, valueB
+    
+    if (sortBy.value === 'date') {
+      valueA = new Date(a.created_at).getTime()
+      valueB = new Date(b.created_at).getTime()
+    } else {
+      valueA = parseFloat(a.total_eur)
+      valueB = parseFloat(b.total_eur)
+    }
+    
+    return sortOrder.value === 'desc' ? valueB - valueA : valueA - valueB
+  })
+})
+
 const totalPages = computed(() => 
-  Math.ceil(filteredTransactions.value.length / itemsPerPage)
+  Math.ceil(sortedTransactions.value.length / itemsPerPage)
 )
 
 const paginatedTransactions = computed(() => {
   const start = (page.value - 1) * itemsPerPage
-  return filteredTransactions.value.slice(start, start + itemsPerPage)
+  return sortedTransactions.value.slice(start, start + itemsPerPage)
 })
 
 const showingRange = computed(() => ({
   from: (page.value - 1) * itemsPerPage + 1,
-  to: Math.min(page.value * itemsPerPage, filteredTransactions.value.length)
+  to: Math.min(page.value * itemsPerPage, sortedTransactions.value.length),
+  total: sortedTransactions.value.length
 }))
 
 // Functions
@@ -154,13 +210,31 @@ const handleCancel = async () => {
 const changePage = (newPage: number) => {
   if (newPage >= 1 && newPage <= totalPages.value) {
     page.value = newPage
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
 const resetFilters = () => {
   search.value = ''
   statusFilter.value = 'all'
+  typeFilter.value = 'all'
+  sortBy.value = 'date'
+  sortOrder.value = 'desc'
   page.value = 1
+}
+
+const toggleSort = (field: 'date' | 'amount') => {
+  if (sortBy.value === field) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = field
+    sortOrder.value = 'desc'
+  }
+}
+
+const exportTransactions = () => {
+  // Logique d'export
+  console.log('Exporting transactions...')
 }
 
 onMounted(fetchTransactions)
@@ -171,123 +245,352 @@ onMounted(fetchTransactions)
     <!-- Header -->
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-[#38618C] mb-1">Transaction History</h1>
-        <p class="text-gray-500">Manage and monitor all platform transactions</p>
+        <h1 class="text-3xl font-bold text-gray-900 mb-1">Transaction Management</h1>
+        <p class="text-gray-600">Monitor and manage all cryptocurrency transactions on the platform</p>
       </div>
       <div class="flex gap-2">
         <Button 
           variant="outline"
-          class="border-gray-300"
+          size="sm"
+          class="border-gray-300 gap-2"
           :disabled="loading"
           @click="resetFilters"
         >
+          <Filter class="h-4 w-4" />
           Reset Filters
         </Button>
         <Button 
-          class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+          variant="outline"
+          size="sm"
+          class="gap-2"
+          @click="exportTransactions"
+        >
+          <Download class="h-4 w-4" />
+          Export
+        </Button>
+        <Button 
+          class="bg-[#38618C] hover:bg-[#38618C]/90 text-white gap-2"
           :disabled="loading"
           @click="fetchTransactions"
         >
-          <span v-if="loading">Loading...</span>
-          <span v-else>Refresh Data</span>
+          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+          <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
         </Button>
       </div>
     </div>
 
     <!-- Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <Card
-v-for="(stat, key) in [
-        { label: 'Total Transactions', value: stats.total, icon: '📊', color: '#35A7FF' },
-        { label: 'Total Volume', value: formatCurrency(stats.volume), icon: '💰', color: '#01FF19' },
-        { label: 'Completed', value: stats.completed, icon: '✅', color: '#38618C' },
-        { label: 'Cancelled', value: stats.cancelled, icon: '❌', color: '#FF5964' }
-      ]" :key="key">
-        <CardContent class="p-6 text-center">
-          <div class="text-4xl mb-2">{{ stat.icon }}</div>
-          <div class="text-sm text-gray-500 mb-1">{{ stat.label }}</div>
-          <div class="text-2xl font-bold" :style="{ color: stat.color }">
-            {{ stat.value }}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <Card class="lg:col-span-2">
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Volume (24h)</p>
+              <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(stats.volume) }}</p>
+            </div>
+            <div class="p-3 rounded-full bg-blue-50">
+              <TrendingUp class="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Total Transactions</p>
+              <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+            </div>
+            <div class="p-3 rounded-full bg-gray-50">
+              <List class="h-6 w-6 text-gray-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Completed</p>
+              <p class="text-2xl font-bold text-green-600">{{ stats.completed }}</p>
+            </div>
+            <div class="p-3 rounded-full bg-green-50">
+              <CheckCircle class="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Cancelled</p>
+              <p class="text-2xl font-bold text-red-600">{{ stats.cancelled }}</p>
+            </div>
+            <div class="p-3 rounded-full bg-red-50">
+              <XCircle class="h-6 w-6 text-red-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent class="p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600">Buy/Sell Ratio</p>
+              <p class="text-lg font-bold text-gray-900">{{ stats.buys }}/{{ stats.sells }}</p>
+            </div>
+            <div class="p-3 rounded-full bg-purple-50">
+              <ArrowUpDown class="h-6 w-6 text-purple-600" />
+            </div>
           </div>
         </CardContent>
       </Card>
     </div>
 
-    <!-- Filters -->
+    <!-- Filters Card -->
     <Card>
-      <CardContent class="p-4">
-        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div class="flex flex-col sm:flex-row gap-4 flex-1">
-            <div class="relative flex-1 max-w-md">
+      <CardHeader>
+        <CardTitle class="text-lg">Filters</CardTitle>
+        <CardDescription>Refine transaction results using the filters below</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="flex flex-col lg:flex-row gap-4">
+          <!-- Search -->
+          <div class="flex-1">
+            <div class="relative">
+              <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 v-model="search"
-                placeholder="Search by client or cryptocurrency..."
-                class="pl-3"
+                placeholder="Search by client, email, crypto, or transaction ID..."
+                class="pl-10"
               />
             </div>
+          </div>
+          
+          <!-- Status Filter -->
+          <div class="w-full lg:w-48">
             <Select v-model="statusFilter">
-              <SelectTrigger class="w-full sm:w-40">
-                <SelectValue placeholder="Status Filter" />
+              <SelectTrigger>
+                <div class="flex items-center gap-2">
+                  <Filter class="h-4 w-4" />
+                  <SelectValue placeholder="Status" />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="completed" class="text-green-600">
+                  <div class="flex items-center gap-2">
+                    <CheckCircle class="h-4 w-4" />
+                    Completed
+                  </div>
+                </SelectItem>
+                <SelectItem value="cancelled" class="text-red-600">
+                  <div class="flex items-center gap-2">
+                    <XCircle class="h-4 w-4" />
+                    Cancelled
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div class="flex border rounded-md overflow-hidden">
+          
+          <!-- Type Filter -->
+          <div class="w-full lg:w-48">
+            <Select v-model="typeFilter">
+              <SelectTrigger>
+                <div class="flex items-center gap-2">
+                  <ArrowUpDown class="h-4 w-4" />
+                  <SelectValue placeholder="Transaction Type" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="ACHAT" class="text-green-600">
+                  <div class="flex items-center gap-2">
+                    <TrendingUp class="h-4 w-4" />
+                    Buy
+                  </div>
+                </SelectItem>
+                <SelectItem value="VENTE" class="text-red-600">
+                  <div class="flex items-center gap-2">
+                    <TrendingDown class="h-4 w-4" />
+                    Sell
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <!-- View Toggle -->
+          <div class="flex border rounded-lg overflow-hidden bg-gray-50">
             <Button
               variant="ghost"
               size="sm"
-              :class="viewMode === 'table' ? 'bg-blue-100 text-blue-700' : 'text-gray-600'"
+              :class="[
+                'rounded-none px-4',
+                viewMode === 'table' 
+                  ? 'bg-white text-gray-900 shadow-sm border' 
+                  : 'text-gray-600 hover:text-gray-900'
+              ]"
               @click="viewMode = 'table'"
             >
-              Table View
+              <List class="h-4 w-4 mr-2" />
+              Table
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              :class="viewMode === 'grid' ? 'bg-blue-100 text-blue-700' : 'text-gray-600'"
+              :class="[
+                'rounded-none px-4',
+                viewMode === 'grid' 
+                  ? 'bg-white text-gray-900 shadow-sm border' 
+                  : 'text-gray-600 hover:text-gray-900'
+              ]"
               @click="viewMode = 'grid'"
             >
-              Grid View
+              <LayoutGrid class="h-4 w-4 mr-2" />
+              Grid
+            </Button>
+          </div>
+        </div>
+        
+        <!-- Active Filters -->
+        <div v-if="search || statusFilter !== 'all' || typeFilter !== 'all'" class="mt-4 flex flex-wrap gap-2">
+          <Badge 
+            v-if="search"
+            variant="secondary"
+            class="gap-2"
+          >
+            Search: "{{ search }}"
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              class="h-4 w-4 p-0 hover:bg-transparent"
+              @click="search = ''"
+            >
+              <XCircle class="h-3 w-3" />
+            </Button>
+          </Badge>
+          <Badge 
+            v-if="statusFilter !== 'all'"
+            variant="secondary"
+            class="gap-2"
+          >
+            Status: {{ statusFilter === 'completed' ? 'Completed' : 'Cancelled' }}
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              class="h-4 w-4 p-0 hover:bg-transparent"
+              @click="statusFilter = 'all'"
+            >
+              <XCircle class="h-3 w-3" />
+            </Button>
+          </Badge>
+          <Badge 
+            v-if="typeFilter !== 'all'"
+            variant="secondary"
+            class="gap-2"
+          >
+            Type: {{ typeFilter === 'ACHAT' ? 'Buy' : 'Sell' }}
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              class="h-4 w-4 p-0 hover:bg-transparent"
+              @click="typeFilter = 'all'"
+            >
+              <XCircle class="h-3 w-3" />
+            </Button>
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Results Summary -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="text-sm text-gray-600">
+        Showing {{ showingRange.from }} to {{ showingRange.to }} of {{ showingRange.total }} transaction{{ showingRange.total !== 1 ? 's' : '' }}
+      </div>
+      <div v-if="sortedTransactions.length > 0" class="flex items-center gap-4">
+        <Select v-model="sortBy" @update:modelValue="sortOrder = 'desc'">
+          <SelectTrigger class="w-32">
+            <div class="flex items-center gap-2">
+              <ArrowUpDown class="h-4 w-4" />
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date">Date</SelectItem>
+            <SelectItem value="amount">Amount</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
+        >
+          <ArrowUpDown class="h-4 w-4 mr-2" />
+          {{ sortOrder === 'asc' ? 'Ascending' : 'Descending' }}
+        </Button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="space-y-4">
+      <div class="animate-pulse space-y-4">
+        <div class="h-12 bg-gray-200 rounded"></div>
+        <div class="space-y-3">
+          <div v-for="i in 5" :key="i" class="h-16 bg-gray-100 rounded"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <Card v-else-if="error" class="border-red-200 bg-red-50">
+      <CardContent class="p-6">
+        <div class="flex items-start gap-3">
+          <AlertCircle class="h-6 w-6 text-red-500 mt-0.5" />
+          <div>
+            <h3 class="font-semibold text-red-800 mb-1">Failed to Load Transactions</h3>
+            <p class="text-red-700 mb-3">{{ error }}</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              class="border-red-300 text-red-700 hover:bg-red-100"
+              @click="fetchTransactions"
+            >
+              <RefreshCw class="h-4 w-4 mr-2" />
+              Retry
             </Button>
           </div>
         </div>
       </CardContent>
     </Card>
 
-    <!-- Results Summary -->
-    <div v-if="filteredTransactions.length > 0" class="text-sm text-gray-600">
-      Showing {{ showingRange.from }} to {{ showingRange.to }} of {{ filteredTransactions.length }} transactions
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-      <p class="mt-4 text-gray-600">Loading transactions...</p>
-    </div>
-
-    <!-- Error State -->
-    <Card v-else-if="error" class="border-red-200 bg-red-50">
-      <CardContent class="p-6 text-center">
-        <div class="text-red-500 font-semibold mb-2">Error</div>
-        <p class="text-gray-600 mb-4">{{ error }}</p>
-        <Button class="bg-red-500 hover:bg-red-600 text-white" @click="fetchTransactions">
-          Retry
-        </Button>
-      </CardContent>
-    </Card>
-
     <!-- Empty State -->
-    <Card v-else-if="filteredTransactions.length === 0">
+    <Card v-else-if="sortedTransactions.length === 0">
       <CardContent class="p-12 text-center">
-        <div class="text-4xl mb-4">📭</div>
-        <h3 class="text-lg font-semibold text-gray-700 mb-2">No transactions found</h3>
-        <p class="text-gray-500">
-          {{ search || statusFilter !== 'all' ? 'Try adjusting your search filters' : 'No transactions available' }}
+        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <Search class="h-8 w-8 text-gray-400" />
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No transactions found</h3>
+        <p class="text-gray-600 mb-6 max-w-md mx-auto">
+          {{ search || statusFilter !== 'all' || typeFilter !== 'all' 
+            ? 'No transactions match your current filters. Try adjusting your search criteria.' 
+            : 'There are no transactions in the system yet.' 
+          }}
         </p>
+        <Button 
+          v-if="search || statusFilter !== 'all' || typeFilter !== 'all'"
+          variant="outline"
+          @click="resetFilters"
+        >
+          Clear All Filters
+        </Button>
       </CardContent>
     </Card>
 
@@ -296,159 +599,309 @@ v-for="(stat, key) in [
       <Card 
         v-for="t in paginatedTransactions" 
         :key="t.id"
-        class="cursor-pointer hover:shadow-lg transition-shadow"
-        @click="viewDetails(t.id)"
+        class="group hover:shadow-lg transition-all duration-200 hover:border-gray-300"
+        :class="{ 'border-red-200': t.cancelled_at }"
       >
-        <CardContent class="p-4">
-          <div class="flex justify-between items-start mb-3">
-            <div class="flex items-center gap-2">
-              <img
-                v-if="t.crypto_wallet_asset?.cryptomoney?.image_url"
-                :src="t.crypto_wallet_asset.cryptomoney.image_url"
-                :alt="t.crypto_wallet_asset.cryptomoney.symbol"
-                class="w-8 h-8 rounded-full"
-              />
-              <span class="font-semibold">
-                {{ t.crypto_wallet_asset?.cryptomoney?.symbol?.toUpperCase() }}
-              </span>
+        <CardContent class="p-5">
+          <!-- Header -->
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+              <div class="relative">
+                <img
+                  v-if="t.crypto_wallet_asset?.cryptomoney?.image_url"
+                  :src="t.crypto_wallet_asset.cryptomoney.image_url"
+                  :alt="t.crypto_wallet_asset.cryptomoney.symbol"
+                  class="w-10 h-10 rounded-full ring-2 ring-white"
+                />
+                <div v-else class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                  <span class="text-sm font-semibold text-gray-600">
+                    {{ t.crypto_wallet_asset?.cryptomoney?.symbol?.charAt(0) }}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-900">
+                  {{ t.crypto_wallet_asset?.cryptomoney?.symbol?.toUpperCase() }}
+                </div>
+                <div class="text-xs text-gray-500">{{ t.crypto_wallet_asset?.cryptomoney?.name }}</div>
+              </div>
             </div>
-            <Badge :class="t.type === 'ACHAT' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+            <Badge 
+              :class="[
+                'font-medium px-3 py-1',
+                t.type === 'ACHAT' 
+                  ? 'bg-green-50 text-green-700 border-green-200' 
+                  : 'bg-red-50 text-red-700 border-red-200'
+              ]"
+            >
               {{ t.type === 'ACHAT' ? 'BUY' : 'SELL' }}
             </Badge>
           </div>
           
-          <div class="space-y-2 mb-4">
-            <div class="flex items-center gap-2">
-              <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
-                {{ t.crypto_wallet_asset?.wallet?.user?.name?.charAt(0) }}
+          <!-- Client Info -->
+          <div class="mb-5">
+            <div class="flex items-center gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                <User class="h-4 w-4 text-blue-600" />
               </div>
-              <span class="text-sm">{{ t.crypto_wallet_asset?.wallet?.user?.name }}</span>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <div class="text-gray-500">Quantity</div>
-                <div class="font-mono">{{ formatNumber(t.quantity) }}</div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm text-gray-900 truncate">
+                  {{ t.crypto_wallet_asset?.wallet?.user?.name }}
+                </div>
+                <div class="text-xs text-gray-500 truncate">
+                  {{ t.crypto_wallet_asset?.wallet?.user?.email }}
+                </div>
               </div>
-              <div>
-                <div class="text-gray-500">Price</div>
-                <div>{{ formatCurrency(t.price) }}</div>
-              </div>
-            </div>
-            
-            <div class="border-t pt-2">
-              <div class="text-gray-500 text-sm">Total</div>
-              <div class="font-bold text-lg">{{ formatCurrency(t.total_eur) }}</div>
             </div>
           </div>
           
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-500">{{ formatDate(t.created_at) }}</span>
-            <Button 
-              v-if="!t.cancelled_at"
-              size="sm"
-              variant="ghost"
-              @click.stop="openCancelDialog(t)"
-            >
-              Cancel
-            </Button>
+          <!-- Transaction Details -->
+          <div class="space-y-3 mb-5">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Quantity</div>
+                <div class="font-mono text-sm font-semibold text-gray-900">
+                  {{ formatNumber(t.quantity) }}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Price per Unit</div>
+                <div class="text-sm font-semibold text-gray-900">
+                  {{ formatCurrency(t.price) }}
+                </div>
+              </div>
+            </div>
+            
+            <div class="border-t pt-3">
+              <div class="text-xs text-gray-500 mb-1">Total Amount</div>
+              <div class="text-lg font-bold text-gray-900">
+                {{ formatCurrency(t.total_eur) }}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="flex justify-between items-center pt-4 border-t">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <Calendar class="h-3 w-3" />
+              {{ formatDate(t.created_at) }}
+            </div>
+            <div class="flex gap-2">
+              <Button 
+                size="sm"
+                variant="ghost"
+                class="h-8 w-8 p-0"
+                @click.stop="viewDetails(t.id)"
+              >
+                <Eye class="h-4 w-4" />
+              </Button>
+              <Button 
+                v-if="!t.cancelled_at"
+                size="sm"
+                variant="ghost"
+                class="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                @click.stop="openCancelDialog(t)"
+              >
+                <XCircle class="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <!-- Cancelled Overlay -->
+          <div 
+            v-if="t.cancelled_at"
+            class="absolute inset-0 bg-red-50/80 backdrop-blur-sm rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Badge variant="destructive" class="px-3 py-1.5">
+              <XCircle class="h-4 w-4 mr-1.5" />
+              Cancelled
+            </Badge>
           </div>
         </CardContent>
       </Card>
     </div>
 
     <!-- Table View -->
-    <div v-else class="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Cryptocurrency</TableHead>
-            <TableHead class="text-right">Quantity</TableHead>
-            <TableHead class="text-right">Price</TableHead>
-            <TableHead class="text-right">Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead class="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow 
-            v-for="t in paginatedTransactions" 
-            :key="t.id"
-            class="hover:bg-gray-50"
-          >
-            <TableCell class="whitespace-nowrap">{{ formatDate(t.created_at) }}</TableCell>
-            <TableCell>
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  {{ t.crypto_wallet_asset?.wallet?.user?.name?.charAt(0) }}
-                </div>
-                <div>
-                  <div class="font-medium">{{ t.crypto_wallet_asset?.wallet?.user?.name }}</div>
-                  <div class="text-xs text-gray-500">{{ t.crypto_wallet_asset?.wallet?.user?.email }}</div>
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <Badge :class="t.type === 'ACHAT' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
-                {{ t.type === 'ACHAT' ? 'BUY' : 'SELL' }}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              <div class="flex items-center gap-2">
-                <img
-                  v-if="t.crypto_wallet_asset?.cryptomoney?.image_url"
-                  :src="t.crypto_wallet_asset.cryptomoney.image_url"
-                  :alt="t.crypto_wallet_asset.cryptomoney.symbol"
-                  class="w-6 h-6"
-                />
-                <div>
-                  <div>{{ t.crypto_wallet_asset?.cryptomoney?.symbol?.toUpperCase() }}</div>
-                  <div class="text-xs text-gray-500">{{ t.crypto_wallet_asset?.cryptomoney?.name }}</div>
-                </div>
-              </div>
-            </TableCell>
-            <TableCell class="text-right font-mono">{{ formatNumber(t.quantity) }}</TableCell>
-            <TableCell class="text-right">{{ formatCurrency(t.price) }}</TableCell>
-            <TableCell class="text-right font-bold">{{ formatCurrency(t.total_eur) }}</TableCell>
-            <TableCell>
-              <Badge :class="t.cancelled_at ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'">
-                {{ t.cancelled_at ? 'Cancelled' : 'Completed' }}
-              </Badge>
-            </TableCell>
-            <TableCell class="text-right">
-              <div class="flex gap-2 justify-end">
-                <Button size="sm" variant="outline" @click="viewDetails(t.id)">
-                  View Details
-                </Button>
+    <div v-else class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <Table>
+          <TableHeader class="bg-gray-50">
+            <TableRow>
+              <TableHead class="w-12"></TableHead>
+              <TableHead class="w-48">
                 <Button 
-                  v-if="!t.cancelled_at" 
-                  size="sm"
-                  variant="destructive"
-                  @click="openCancelDialog(t)"
+                  variant="ghost" 
+                  class="font-semibold text-gray-700 -ml-3"
+                  @click="toggleSort('date')"
                 >
-                  Cancel
+                  <div class="flex items-center gap-2">
+                    <Calendar class="h-4 w-4" />
+                    Date & Time
+                    <ArrowUpDown 
+                      class="h-3 w-3" 
+                      :class="{ 'text-blue-600': sortBy === 'date' }"
+                    />
+                  </div>
                 </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+              </TableHead>
+              <TableHead class="w-64">Client</TableHead>
+              <TableHead class="w-32">Type</TableHead>
+              <TableHead class="w-48">Cryptocurrency</TableHead>
+              <TableHead class="w-32 text-right">Quantity</TableHead>
+              <TableHead class="w-32 text-right">Unit Price</TableHead>
+              <TableHead class="w-40 text-right">
+                <Button 
+                  variant="ghost" 
+                  class="font-semibold text-gray-700 -mr-3"
+                  @click="toggleSort('amount')"
+                >
+                  <div class="flex items-center gap-2">
+                    Total
+                    <ArrowUpDown 
+                      class="h-3 w-3" 
+                      :class="{ 'text-blue-600': sortBy === 'amount' }"
+                    />
+                  </div>
+                </Button>
+              </TableHead>
+              <TableHead class="w-32">Status</TableHead>
+              <TableHead class="w-24 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow 
+              v-for="t in paginatedTransactions" 
+              :key="t.id"
+              class="group hover:bg-gray-50 border-t"
+              :class="{ 'bg-red-50/30': t.cancelled_at }"
+            >
+              <TableCell>
+                <div class="w-8 h-8 rounded-full flex items-center justify-center" 
+                  :class="t.type === 'ACHAT' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'">
+                  <component 
+                    :is="t.type === 'ACHAT' ? TrendingUp : TrendingDown" 
+                    class="h-4 w-4" 
+                  />
+                </div>
+              </TableCell>
+              <TableCell class="font-medium text-gray-900">
+                <div>{{ formatDate(t.created_at) }}</div>
+                <div class="text-xs text-gray-500 font-mono mt-1">{{ t.id.slice(0, 8) }}...</div>
+              </TableCell>
+              <TableCell>
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <span class="text-sm font-medium text-blue-600">
+                      {{ t.crypto_wallet_asset?.wallet?.user?.name?.charAt(0) }}
+                    </span>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">{{ t.crypto_wallet_asset?.wallet?.user?.name }}</div>
+                    <div class="text-sm text-gray-500 truncate max-w-[160px]">
+                      {{ t.crypto_wallet_asset?.wallet?.user?.email }}
+                    </div>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  :class="[
+                    'font-medium px-2.5 py-0.5',
+                    t.type === 'ACHAT' 
+                      ? 'bg-green-50 text-green-700 border-green-200' 
+                      : 'bg-red-50 text-red-700 border-red-200'
+                  ]"
+                >
+                  {{ t.type === 'ACHAT' ? 'BUY' : 'SELL' }}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div class="flex items-center gap-3">
+                  <div class="relative">
+                    <img
+                      v-if="t.crypto_wallet_asset?.cryptomoney?.image_url"
+                      :src="t.crypto_wallet_asset.cryptomoney.image_url"
+                      :alt="t.crypto_wallet_asset.cryptomoney.symbol"
+                      class="w-8 h-8 rounded-full ring-1 ring-gray-200"
+                    />
+                    <div v-else class="w-8 h-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                      <span class="text-xs font-semibold text-gray-600">
+                        {{ t.crypto_wallet_asset?.cryptomoney?.symbol?.charAt(0) }}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="font-medium text-gray-900">{{ t.crypto_wallet_asset?.cryptomoney?.symbol?.toUpperCase() }}</div>
+                    <div class="text-xs text-gray-500">{{ t.crypto_wallet_asset?.cryptomoney?.name }}</div>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell class="text-right font-mono text-gray-900">
+                {{ formatNumber(t.quantity) }}
+              </TableCell>
+              <TableCell class="text-right text-gray-900">
+                {{ formatCurrency(t.price) }}
+              </TableCell>
+              <TableCell class="text-right">
+                <div class="font-bold text-gray-900">{{ formatCurrency(t.total_eur) }}</div>
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  :class="[
+                    'font-medium px-2.5 py-0.5',
+                    t.cancelled_at 
+                      ? 'bg-red-50 text-red-700 border-red-200' 
+                      : 'bg-green-50 text-green-700 border-green-200'
+                  ]"
+                >
+                  <component 
+                    :is="t.cancelled_at ? XCircle : CheckCircle" 
+                    class="h-3 w-3 mr-1.5" 
+                  />
+                  {{ t.cancelled_at ? 'Cancelled' : 'Completed' }}
+                </Badge>
+              </TableCell>
+              <TableCell class="text-right">
+                <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    class="h-8 w-8 p-0"
+                    @click="viewDetails(t.id)"
+                  >
+                    <Eye class="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    v-if="!t.cancelled_at"
+                    size="sm" 
+                    variant="ghost" 
+                    class="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    @click="openCancelDialog(t)"
+                  >
+                    <XCircle class="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between">
+    <div v-if="totalPages > 1" class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
       <div class="text-sm text-gray-600">
-        Page {{ page }} of {{ totalPages }}
+        Page {{ page }} of {{ totalPages }} ({{ showingRange.total }} total transactions)
       </div>
-      <div class="flex gap-2">
+      <div class="flex items-center gap-2">
         <Button
           variant="outline"
+          size="sm"
           :disabled="page <= 1"
           @click="changePage(page - 1)"
+          class="gap-2"
         >
+          <ChevronLeft class="h-4 w-4" />
           Previous
         </Button>
         <div class="flex items-center gap-1">
@@ -457,6 +910,7 @@ v-for="(stat, key) in [
             :key="p"
             :variant="page === p ? 'default' : 'outline'"
             size="sm"
+            class="w-9 h-9 p-0"
             @click="changePage(p)"
           >
             {{ p }}
@@ -464,36 +918,70 @@ v-for="(stat, key) in [
         </div>
         <Button
           variant="outline"
+          size="sm"
           :disabled="page >= totalPages"
           @click="changePage(page + 1)"
+          class="gap-2"
         >
           Next
+          <ChevronRight class="h-4 w-4" />
         </Button>
       </div>
     </div>
 
     <!-- Cancel Dialog -->
     <Dialog v-model:open="confirmDialog">
-      <DialogContent>
+      <DialogContent class="max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancel Transaction</DialogTitle>
-          <DialogDescription>
-            This action cannot be undone. Please provide a reason for cancellation.
+          <div class="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle class="h-6 w-6 text-red-600" />
+          </div>
+          <DialogTitle class="text-center">Cancel Transaction</DialogTitle>
+          <DialogDescription class="text-center">
+            This action cannot be undone. The transaction will be marked as cancelled and all associated funds will be reversed.
           </DialogDescription>
         </DialogHeader>
         
         <div class="space-y-4 py-4">
-          <Input
-            v-model="cancelReason"
-            placeholder="Cancellation reason..."
-          />
+          <div v-if="selectedTransaction" class="bg-gray-50 rounded-lg p-4 space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600">Transaction ID:</span>
+              <span class="font-mono text-sm font-medium">{{ selectedTransaction.id }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600">Amount:</span>
+              <span class="font-bold">{{ formatCurrency(selectedTransaction.total_eur) }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-600">Client:</span>
+              <span class="font-medium">{{ selectedTransaction.crypto_wallet_asset?.wallet?.user?.name }}</span>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Cancellation Reason <span class="text-red-500">*</span>
+            </label>
+            <Input
+              v-model="cancelReason"
+              placeholder="Enter reason for cancellation..."
+              class="w-full"
+            />
+            <p class="text-xs text-gray-500 mt-2">
+              This reason will be visible to the client and logged in the system.
+            </p>
+          </div>
         </div>
         
         <DialogFooter>
           <Button variant="outline" @click="confirmDialog = false">
             Cancel
           </Button>
-          <Button variant="destructive" @click="handleCancel">
+          <Button 
+            variant="destructive" 
+            @click="handleCancel"
+            :disabled="!cancelReason.trim()"
+          >
             Confirm Cancellation
           </Button>
         </DialogFooter>

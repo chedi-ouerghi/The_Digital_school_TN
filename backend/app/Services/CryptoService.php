@@ -53,60 +53,70 @@ class CryptoService
                 'category' => 'Payment',
                 'website' => 'https://bitcoin.org',
                 'price_eur' => 95000.00,
+                'market_cap' => 1900000000000.00, // ~1.9T EUR
             ],
             'ETH' => [
                 'name' => 'Ethereum',
                 'category' => 'Smart Contracts',
                 'website' => 'https://ethereum.org',
                 'price_eur' => 3500.00,
+                'market_cap' => 420000000000.00, // ~420B EUR
             ],
             'XRP' => [
                 'name' => 'Ripple',
                 'category' => 'Payment',
                 'website' => 'https://ripple.com',
                 'price_eur' => 2.50,
+                'market_cap' => 140000000000.00, // ~140B EUR
             ],
             'BCH' => [
                 'name' => 'Bitcoin Cash',
                 'category' => 'Payment',
                 'website' => 'https://bitcoincash.org',
                 'price_eur' => 450.00,
+                'market_cap' => 9000000000.00, // ~9B EUR
             ],
             'ADA' => [
                 'name' => 'Cardano',
                 'category' => 'Smart Contracts',
                 'website' => 'https://cardano.org',
                 'price_eur' => 1.05,
+                'market_cap' => 35000000000.00, // ~35B EUR
             ],
             'LTC' => [
                 'name' => 'Litecoin',
                 'category' => 'Payment',
                 'website' => 'https://litecoin.org',
                 'price_eur' => 180.00,
+                'market_cap' => 14000000000.00, // ~14B EUR
             ],
             'XEM' => [
                 'name' => 'NEM',
                 'category' => 'Smart Contracts',
                 'website' => 'https://nem.io',
                 'price_eur' => 0.0012,
+                'market_cap' => 11000000000.00, // ~11B EUR
             ],
             'XLM' => [
                 'name' => 'Stellar',
                 'category' => 'Payment',
                 'website' => 'https://stellar.org',
                 'price_eur' => 0.35,
+                'market_cap' => 10000000000.00, // ~10B EUR
             ],
             'IOTA' => [
                 'name' => 'IOTA',
                 'category' => 'IoT',
                 'website' => 'https://www.iota.org',
                 'price_eur' => 0.30,
+                'market_cap' => 800000000.00, // ~800M EUR
             ],
             'DASH' => [
                 'name' => 'Dash',
                 'category' => 'Payment',
                 'website' => 'https://www.dash.org',
                 'price_eur' => 40.00,
+                'market_cap' => 500000000.00, // ~500M EUR
             ],
         ];
 
@@ -227,8 +237,8 @@ class CryptoService
             'days' => $days,
         ]);
 
-        // ✅ ÉTAPE 1: Générer les prix synthétiques
-        $generatedPrices = $this->cotationService->generatePriceHistory($crypto->symbol, $days);
+        // ✅ ÉTAPE 1: Générer les prix synthétiques (sans volume pour tests)
+        $generatedPrices = $this->cotationService->generatePriceHistory($crypto->symbol, $days, false);
 
         if (empty($generatedPrices)) {
             Log::warning('No prices generated', ['crypto_id' => $crypto->id]);
@@ -321,7 +331,7 @@ class CryptoService
      * @param int $days Nombre de jours
      * @return array Array de [timestamp_ms, prix, change_24h_pct]
      */
-    public function getMarketChart(string $cryptoId, int $days = 30): array
+    public function getMarketChart(string $cryptoId, int $days = 90): array
     {
         $cacheKey = 'crypto_history:' . $cryptoId . ':' . $days;
         $ttl = 60 * 60 * 24; // Cache 24h
@@ -375,7 +385,8 @@ class CryptoService
                 $prices[] = [
                     (int) strtotime($currentRecord['recorded_at']) * 1000,
                     (float) $currentRecord['price'],
-                    $change24h, // ✅ CLÉS: Index 2 = change_24h_pct
+                    (float) $currentRecord['volume'], // ✅ CLÉS: Index 2 = volume
+                    $change24h, // ✅ CLÉS: Index 3 = change_24h_pct
                 ];
             }
 

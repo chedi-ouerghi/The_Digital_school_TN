@@ -1,98 +1,161 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Coins,
+  TrendingUp,
+  BarChart3,
+  TrendingDown,
+  DollarSign
+} from 'lucide-vue-next'
+import { computed } from 'vue'
 
-function fmtCurrency(n: number) {
-  if (!isFinite(n) || isNaN(n)) return '0.00 €'
-  return n.toLocaleString("en-IE", { style: "currency", currency: "EUR" })
+// Formatter function
+function fmtCurrency(n: number): string {
+  if (!isFinite(n) || isNaN(n)) return '€0.00'
+  return new Intl.NumberFormat('en-US', { 
+    style: 'currency', 
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(n)
 }
 
+// Props interface
 interface Props {
   cryptos: any[]
 }
 
 const props = defineProps<Props>()
 
+// Computed values
 const totalCount = computed(() => props.cryptos?.length || 0)
 
-const totalMarketCap = computed(() =>
-  (props.cryptos || []).reduce((sum, c) => sum + Number(c.market_cap ?? c.market_cap_eur ?? 0), 0)
-)
+const totalMarketCap = computed(() => {
+  return (props.cryptos || []).reduce((sum: number, c: any) => {
+    const marketCap = c.market_cap || c.market_cap_eur || 0
+    return sum + Number(marketCap)
+  }, 0)
+})
 
 const avgPrice = computed(() => {
   const arr = props.cryptos || []
-  if (!arr.length) return 0
-  const sum = arr.reduce((s, c) => s + Number(c.price_eur ?? 0), 0)
+  if (arr.length === 0) return 0
+  const sum = arr.reduce((s: number, c: any) => {
+    const price = c.price_eur || c.price || 0
+    return s + Number(price)
+  }, 0)
   return sum / arr.length
 })
+
+const avgChange24h = computed(() => {
+  const arr = props.cryptos || []
+  if (arr.length === 0) return 0
+  const sum = arr.reduce((s: number, c: any) => {
+    const change = c.change_24h_pct || c.change_24h || 0
+    return s + Number(change)
+  }, 0)
+  return sum / arr.length
+})
+
+// Format large numbers
+function formatLargeNumber(value: number): string {
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`
+  return fmtCurrency(value)
+}
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
-
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Total Cryptos -->
-    <Card class="border-gray-200 hover:border-[#38618C] transition-all hover:shadow-lg">
-      <CardContent class="p-3 sm:p-5 lg:p-6">
-
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-          <div class="text-xl sm:text-3xl lg:text-4xl">💎</div>
-          <Badge class="bg-[#38618C] text-white text-[10px] sm:text-xs px-2 sm:px-3">Count</Badge>
+    <Card class="border border-gray-200 hover:shadow-lg transition-all duration-200">
+      <CardContent class="p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100">
+            <Coins class="h-6 w-6 text-blue-600" />
+          </div>
+          <Badge class="bg-blue-50 text-blue-600 border-blue-200">Total</Badge>
         </div>
-
-        <!-- Label -->
-        <div class="text-[10px] sm:text-xs lg:text-sm text-gray-500 mb-1">Total Cryptos</div>
-
-        <!-- Value -->
-        <div class="text-lg sm:text-2xl lg:text-3xl font-bold text-[#38618C] break-words">
-          {{ totalCount }}
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">Total Cryptocurrencies</p>
+          <h3 class="text-2xl font-bold text-gray-900">{{ totalCount }}</h3>
+          <p class="text-xs text-gray-500">Digital assets listed</p>
         </div>
-
       </CardContent>
     </Card>
 
     <!-- Total Market Cap -->
-    <Card class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-lg bg-gradient-to-br from-[#35A7FF]/10 to-transparent">
-      <CardContent class="p-3 sm:p-5 lg:p-6">
-
-        <div class="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-          <div class="text-xl sm:text-3xl lg:text-4xl">📊</div>
-          <Badge class="bg-[#35A7FF] text-white text-[10px] sm:text-xs px-2 sm:px-3">EUR</Badge>
+    <Card class="border border-gray-200 hover:shadow-lg transition-all duration-200">
+      <CardContent class="p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100">
+            <BarChart3 class="h-6 w-6 text-emerald-600" />
+          </div>
+          <Badge class="bg-emerald-50 text-emerald-600 border-emerald-200">
+            <TrendingUp class="h-3 w-3 mr-1" />
+            +8.5%
+          </Badge>
         </div>
-
-        <div class="text-[10px] sm:text-xs lg:text-sm text-gray-500 mb-1">Total Market Cap</div>
-
-        <div class="text-base sm:text-xl lg:text-3xl font-bold text-[#35A7FF] break-words">
-          {{ fmtCurrency(totalMarketCap) }}
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">Total Market Cap</p>
+          <h3 class="text-2xl font-bold text-emerald-600">
+            {{ formatLargeNumber(totalMarketCap) }}
+          </h3>
+          <p class="text-xs text-gray-500">Combined market value</p>
         </div>
-
       </CardContent>
     </Card>
 
     <!-- Average Price -->
-    <Card class="border-gray-200 hover:border-[#01FF19] transition-all hover:shadow-lg bg-gradient-to-br from-[#01FF19]/10 to-transparent">
-      <CardContent class="p-3 sm:p-5 lg:p-6">
-
-        <div class="flex items-center justify-between mb-2 sm:mb-3 lg:mb-4">
-          <div class="text-xl sm:text-3xl lg:text-4xl">💹</div>
-          <Badge class="bg-[#01FF19] text-white text-[10px] sm:text-xs px-2 sm:px-3">Avg</Badge>
+    <Card class="border border-gray-200 hover:shadow-lg transition-all duration-200">
+      <CardContent class="p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="p-3 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100">
+            <DollarSign class="h-6 w-6 text-purple-600" />
+          </div>
+          <Badge class="bg-purple-50 text-purple-600 border-purple-200">Average</Badge>
         </div>
-
-        <div class="text-[10px] sm:text-xs lg:text-sm text-gray-500 mb-1">Average Price</div>
-
-        <div class="text-base sm:text-xl lg:text-3xl font-bold text-[#01FF19] break-words">
-          {{ fmtCurrency(avgPrice) }}
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">Average Price</p>
+          <h3 class="text-2xl font-bold text-purple-600">
+            {{ fmtCurrency(avgPrice) }}
+          </h3>
+          <p class="text-xs text-gray-500">Mean price across assets</p>
         </div>
-
       </CardContent>
     </Card>
 
+    <!-- 24h Performance -->
+    <Card class="border border-gray-200 hover:shadow-lg transition-all duration-200">
+      <CardContent class="p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="p-3 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100">
+            <TrendingUp class="h-6 w-6 text-amber-600" />
+          </div>
+          <Badge 
+            :class="[
+              'border',
+              avgChange24h >= 0 ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'
+            ]"
+          >
+            <component 
+              :is="avgChange24h >= 0 ? TrendingUp : TrendingDown" 
+              class="h-3 w-3 mr-1" 
+            />
+            {{ avgChange24h >= 0 ? '+' : '' }}{{ avgChange24h.toFixed(2) }}%
+          </Badge>
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">24h Performance</p>
+          <h3 class="text-2xl font-bold" :class="avgChange24h >= 0 ? 'text-green-600' : 'text-red-600'">
+            {{ avgChange24h >= 0 ? '+' : '' }}{{ avgChange24h.toFixed(2) }}%
+          </h3>
+          <p class="text-xs text-gray-500">Average daily change</p>
+        </div>
+      </CardContent>
+    </Card>
   </div>
 </template>
-
-<style scoped>
-/* minor responsive tweaks */
-:deep(.text-\[#38618C\]) { color: #38618C; }
-</style>
-
