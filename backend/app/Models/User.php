@@ -22,6 +22,7 @@ class User extends Authenticatable
         'email',
         'email_verified_at',
         'password',
+        'password_changed_at',
         'role',
         'remember_token',
         'last_id_change_at',
@@ -33,6 +34,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'balance' => 'decimal:2',
         'password' => 'hashed', 
+        'password_changed_at' => 'datetime',
         'last_id_change_at' => 'datetime',
     ];
 

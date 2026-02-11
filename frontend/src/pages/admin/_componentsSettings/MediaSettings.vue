@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import {
-    Image as ImageIcon,
-    Upload,
-    X,
-    Trash2,
-    Save
-} from 'lucide-vue-next'
-import api from '../../../services/api'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Image as ImageIcon,
+  Save,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-vue-next'
+import { ref } from 'vue'
+import api from '../../../services/api'
 
 interface Props {
   profile: any

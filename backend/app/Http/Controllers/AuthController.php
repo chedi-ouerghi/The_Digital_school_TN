@@ -221,6 +221,7 @@ if (
                 return response()->json(['error' => 'Current password is invalid.'], 400);
             }
             $user->password = $validated['password'];
+            $user->password_changed_at = now();
             $user->save();
             return response()->json(['message' => 'Password updated successfully.']);
         } catch (\Illuminate\Validation\ValidationException $e) {

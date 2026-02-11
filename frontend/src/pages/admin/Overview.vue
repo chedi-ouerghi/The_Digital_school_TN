@@ -40,9 +40,6 @@ function goToClients() {
   router.push('/dashboard/admin/clients')
 }
 
-function goToBlogs() {
-  router.push('/dashboard/admin/blogs')
-}
 
 function goToTransactions() {
   router.push('/dashboard/admin/transactions')
@@ -63,8 +60,8 @@ function refreshData() {
             <Shield class="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
-            <p class="text-sm md:text-base text-gray-600">Real-time platform analytics & insights</p>
+<h1 class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
+<p class="text-sm md:text-base text-gray-600">Platform analytics & insights</p>
           </div>
         </div>
        
@@ -99,7 +96,6 @@ function refreshData() {
       <QuickActions 
         @go-to-clients="goToClients"
         @go-to-cryptos="goToCryptos"
-        @go-to-blogs="goToBlogs"
         @go-to-transactions="goToTransactions"
       />
 

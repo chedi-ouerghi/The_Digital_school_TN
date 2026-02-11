@@ -10,6 +10,7 @@ export interface User extends BaseModel {
   name: string;
   email: string;
   email_verified_at?: string;
+  password_changed_at?: string | null;
   role: 'admin' | 'client';
   remember_token?: string;
   balance?: number;
@@ -21,18 +22,7 @@ export interface User extends BaseModel {
   accountRequest?: AccountRequest;
 }
 
-// Blog post model
-export interface BlogPost extends BaseModel {
-  title: string;
-  slug: string;
-  category?: string;
-  summary?: string;
-  content?: string;
-  tags?: string[];
-  image?: string;
-  published_at?: string;
-  author?: User | null;
-}
+
 
 export interface PortfolioResponse extends BaseModel {
   success: boolean;

@@ -47,7 +47,7 @@ async function initializeCsrfToken(): Promise<void> {
     // 🔥 IMPORTANT: Utiliser l'URL absolue du backend, pas une URL relative
     // Le frontend (localhost:5173) ne peut pas servir cette route
     const csrfUrl = 'http://localhost:8000/sanctum/csrf-cookie';
-    
+
     const response = await fetch(csrfUrl, {
       method: 'GET',
       credentials: 'include',
@@ -55,16 +55,16 @@ async function initializeCsrfToken(): Promise<void> {
         'Accept': 'application/json',
       }
     });
-    
+
     console.log('🔐 CSRF Cookie Response:', {
       status: response.status,
       statusText: response.statusText,
       cookies: document.cookie
     });
-    
+
     // Attendre un peu pour s'assurer que le cookie est défini
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     const token = getXsrfToken();
     console.log('✅ CSRF token initialized', {
       token: token ? `${token.substring(0, 20)}...` : 'NOT FOUND'
@@ -80,7 +80,7 @@ async function initializeCsrfToken(): Promise<void> {
  */
 function getXsrfToken(): string | null {
   if (typeof document === 'undefined') return null;
-  
+
   const cookies = document.cookie.split(';');
   for (const cookie of cookies) {
     const [name, value] = cookie.trim().split('=');
@@ -100,7 +100,7 @@ async function request<T = any>(
     const headers: Record<string, string> = {
       Accept: 'application/json',
     };
-    
+
     // Only set Content-Type for non-FormData requests
     if (body && !(body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
@@ -126,7 +126,7 @@ async function request<T = any>(
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
-    
+
     let finalMethod = method;
     let finalBody = body;
 
@@ -143,17 +143,17 @@ async function request<T = any>(
       headers,
       // SÉCURITÉ : Inclure les cookies HttpOnly dans les requêtes cross-origin
       credentials: 'include',
-      body: finalBody && !(finalBody instanceof FormData) 
-        ? JSON.stringify(finalBody) 
+      body: finalBody && !(finalBody instanceof FormData)
+        ? JSON.stringify(finalBody)
         : (finalBody as any) || undefined,
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeout);
 
     const text = await res.text();
     let data: T | ApiError;
-    
+
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
@@ -263,7 +263,7 @@ export const authApi = {
     await initializeCsrfToken();
     return await request<LoginResponse>('/login', 'POST', payload);
   },
-  
+
   async requestAccount(payload: RegisterRequest): Promise<ApiResponse<User>> {
     await initializeCsrfToken();
     return await request<ApiResponse<User>>('/request-account', 'POST', payload);
@@ -273,24 +273,25 @@ export const authApi = {
     await initializeCsrfToken();
     return await request<ApiResponse<any>>('/verify-email', 'POST', payload);
   },
-  
+
   async logout(): Promise<void> {
     return await request<void>('/logout', 'POST');
   },
-  
+
   async profile(): Promise<User> {
-    return await request<User>('/profile', 'GET');
+    const response = await request<{ user: User }>('/profile', 'GET');
+    return response.user;
   },
-  
+
   async updateProfile(payload: UpdateUserInput): Promise<User> {
     return await request<User>('/profile', 'PUT', payload);
   },
-  
+
   async changePassword(payload: ChangePasswordRequest): Promise<void> {
     return await request<void>('/profile/password', 'PUT', payload);
   },
 
-    async getProfileStats(): Promise<PortfolioResponse> {
+  async getProfileStats(): Promise<PortfolioResponse> {
     return await request<PortfolioResponse>('/profile/stats', 'GET');
   },
 
@@ -347,19 +348,19 @@ export const cryptoApi = {
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.search) queryParams.append('search', params.search);
     if (params.category) queryParams.append('category', params.category);
-    
+
     const queryString = queryParams.toString();
     return await request<PaginatedResponse<Cryptomoney>>(`/cryptos${queryString ? `?${queryString}` : ''}`, 'GET');
   },
-  
+
   async show(id: string): Promise<Cryptomoney> {
     return await request<Cryptomoney>(`/cryptos/${id}`, 'GET');
   },
-  
+
   async history(id: string, days: number = 30): Promise<CryptoHistory[]> {
     return await request<CryptoHistory[]>(`/cryptos/${id}/history?days=${days}`, 'GET');
   },
-  
+
   // ✅ Synchroniser l'historique de toutes les cryptos (24h, 7j, 30j)
   async syncHistory(): Promise<ApiResponse<{ status: string; message: string; output: string[] }>> {
     return await request<ApiResponse<{ status: string; message: string; output: string[] }>>('/admin/cryptos/sync-history', 'POST');
@@ -393,68 +394,34 @@ export const walletApi = {
   async list(): Promise<Wallet> {
     return await request<Wallet>('/wallets', 'GET');
   },
-  
+
   async show(id: string): Promise<Wallet> {
     return await request<Wallet>(`/wallets/${id}`, 'GET');
   },
-  
+
   async transact(payload: TransactionRequest): Promise<ApiResponse<Transaction>> {
     return await request<ApiResponse<Transaction>>('/wallets/transaction', 'POST', payload);
   },
-  
+
   async plusValue(): Promise<PlusValueResponse> {
     return await request<PlusValueResponse>('/wallets/plus-value', 'GET');
   },
-  
+
   async history(): Promise<WalletHistoryResponse[]> {
     return await request<WalletHistoryResponse[]>('/wallets/history', 'GET');
   },
-  
+
   async walletHistory(id: string): Promise<WalletHistoryResponse[]> {
     return await request<WalletHistoryResponse[]>(`/wallets/${id}/history`, 'GET');
   },
-  
+
   async getTransactionsHistory(type?: 'ACHAT' | 'VENTE'): Promise<{ transactions: Transaction[] }> {
     return await request<{ transactions: Transaction[] }>(`/wallets/transactions/history${type ? `?type=${type}` : ''}`, 'GET');
   },
 };
 
 // ------------------
-// 📰 Blog posts (public)
-// ------------------
-export interface BlogListParams {
-  page?: number;
-  search?: string;
-  category?: string;
-}
-
-export const blogApi = {
-  async list(params: BlogListParams = {}) {
-    const queryParams = new URLSearchParams();
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.search) queryParams.append('search', params.search);
-    if (params.category) queryParams.append('category', params.category);
-
-    const queryString = queryParams.toString();
-    return await request<any>(`/blogs${queryString ? `?${queryString}` : ''}`, 'GET');
-  },
-
-  async show(slug: string) {
-    return await request<any>(`/blogs/${slug}`, 'GET');
-  },
-  async create(payload: any) {
-    return await request<any>('/admin/blogs', 'POST', payload);
-  },
-  async update(id: string | number, payload: any) {
-    return await request<any>(`/admin/blogs/${id}`, 'PUT', payload);
-  },
-  async delete(id: string | number) {
-    return await request<any>(`/admin/blogs/${id}`, 'DELETE');
-  },
-};
-
-// ------------------
-// 👨‍💼 Admin - Clients
+// ‍💼 Admin - Clients
 // ------------------
 
 export interface CreateClientRequest {
@@ -483,31 +450,31 @@ export const adminClientsApi = {
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.search) queryParams.append('search', params.search);
     if (params.role) queryParams.append('role', params.role);
-    
+
     const queryString = queryParams.toString();
     return await request<PaginatedResponse<User>>(`/admin/clients${queryString ? `?${queryString}` : ''}`, 'GET');
   },
-  
+
   async create(payload: CreateClientRequest): Promise<ApiResponse<User>> {
     return await request<ApiResponse<User>>('/admin/clients', 'POST', payload);
   },
-  
+
   async show(id: string): Promise<User> {
     return await request<User>(`/admin/clients/${id}`, 'GET');
   },
-  
+
   async update(id: string, payload: UpdateClientRequest): Promise<ApiResponse<User>> {
     return await request<ApiResponse<User>>(`/admin/clients/${id}`, 'PUT', payload);
   },
-  
+
   async delete(id: string): Promise<void> {
     return await request<void>(`/admin/clients/${id}`, 'DELETE');
   },
-  
+
   async transactions(id: string): Promise<PaginatedResponse<Transaction>> {
     return await request<PaginatedResponse<Transaction>>(`/admin/clients/${id}/transactions`, 'GET');
   },
-  
+
   async getPortfolio(id: string): Promise<Wallet> {
     return await request<Wallet>(`/admin/clients/${id}/wallet`, 'GET');
   },
@@ -525,11 +492,11 @@ export const adminAccountRequestsApi = {
   async list(): Promise<PaginatedResponse<AccountRequest>> {
     return await request<PaginatedResponse<AccountRequest>>('/admin/account-requests', 'GET');
   },
-  
+
   async approve(id: string, payload?: ApproveAccountRequestPayload): Promise<ApiResponse<AccountRequest>> {
     return await request<ApiResponse<AccountRequest>>(`/admin/account-requests/${id}/approve`, 'POST', payload);
   },
-  
+
   async reject(id: string, reason?: string): Promise<ApiResponse<AccountRequest>> {
     return await request<ApiResponse<AccountRequest>>(`/admin/account-requests/${id}/reject`, 'POST', { reason });
   },
@@ -576,21 +543,21 @@ export interface CancelTransactionRequest {
 export const adminTransactionsApi = {
   async list(params: TransactionListParams = {}): Promise<PaginatedResponse<Transaction>> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, value.toString());
       }
     });
-    
+
     const queryString = queryParams.toString();
     return await request<PaginatedResponse<Transaction>>(`/admin/transactions${queryString ? `?${queryString}` : ''}`, 'GET');
   },
-  
+
   async show(id: string): Promise<Transaction> {
     return await request<Transaction>(`/admin/transactions/${id}`, 'GET');
   },
-  
+
   async cancel(id: string, reason?: string): Promise<ApiResponse<Transaction>> {
     return await request<ApiResponse<Transaction>>(`/admin/transactions/${id}/cancel`, 'POST', { reason });
   },
@@ -612,15 +579,15 @@ export const notificationsApi = {
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.type) queryParams.append('type', params.type);
     if (params.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
-    
+
     const queryString = queryParams.toString();
     return await request<PaginatedResponse<Notification>>(`/notifications${queryString ? `?${queryString}` : ''}`, 'GET');
   },
-  
+
   async markAsRead(id: string): Promise<ApiResponse<Notification>> {
     return await request<ApiResponse<Notification>>(`/notifications/${id}/read`, 'PUT');
   },
-  
+
 
 };
 

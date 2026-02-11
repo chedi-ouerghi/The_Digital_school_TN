@@ -1,7 +1,5 @@
 import ProfilePage from '@/pages/client/profile/ProfilePage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import Blog from '../pages/Blog.vue'
-import BlogPost from '../pages/BlogPost.vue'
 import Dashboard from '../pages/Dashboard.vue'
 import Landing from '../pages/Landing.vue'
 import SignIn from '../pages/SignIn.vue'
@@ -11,7 +9,6 @@ import CryptoDetails from '../pages/admin/CryptoDetails.vue'
 import Cryptos from '../pages/admin/Cryptos.vue'
 import AdminOverview from '../pages/admin/Overview.vue'
 import Settings from '../pages/admin/Settings.vue'
-import Blogs from '../pages/admin/Blogs.vue'
 
 import AdminTransactionDetails from '../pages/admin/TransactionDetails.vue'
 import AdminTransactions from '../pages/admin/Transactions.vue'
@@ -26,16 +23,6 @@ const routes = [
     path: '/',
     name: '/Bitchest',
     component: Landing,
-  },
-  {
-    path: '/blog',
-    name: 'Blog',
-    component: Blog,
-  },
-  {
-    path: '/blog/:slug',
-    name: 'BlogPost',
-    component: BlogPost,
   },
   {
     path: '/signin',
@@ -108,12 +95,6 @@ const routes = [
         path: 'admin/transactions/:id',
         name: 'AdminTransactionDetails',
         component: AdminTransactionDetails,
-        meta: { requiresAuth: true, roles: ['ADMIN'] }
-      },
-      {
-        path: 'admin/blogs',
-        name: 'AdminBlogs',
-        component: Blogs,
         meta: { requiresAuth: true, roles: ['ADMIN'] }
       },
       {

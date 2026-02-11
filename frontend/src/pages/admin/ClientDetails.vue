@@ -340,11 +340,11 @@ function getTransactionStatus(tx: any) {
   if (tx.status?.toLowerCase() === 'annulée' || tx.cancelled_at) {
     return { label: 'Cancelled', color: 'bg-red-100 text-red-700 border-red-200' }
   }
-  if (tx.status?.toLowerCase() === 'completed' || tx.completed_at) {
-    return { label: 'Completed', color: 'bg-green-100 text-green-700 border-green-200' }
-  }
-  return { label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' }
+  // Default to completed (no pending status)
+  return { label: 'Completed', color: 'bg-green-100 text-green-700 border-green-200' }
 }
+
+
 </script>
 
 <template>

@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CryptoController;
-use App\Http\Controllers\BlogController;
 use App\Http\Controllers\PortefeuilleController;
 use App\Http\Controllers\NotificationController;
 
@@ -71,14 +70,6 @@ Route::prefix('v1')
 
     /*
     |--------------------------------------------------------------------------
-    | Public Blogs
-    |--------------------------------------------------------------------------
-    */
-    Route::get('blogs', [BlogController::class, 'index']);
-    Route::get('blogs/{slug}', [BlogController::class, 'show']);
-
-    /*
-    |--------------------------------------------------------------------------
     | AUTHENTICATED ROUTES
     |--------------------------------------------------------------------------
     */
@@ -134,15 +125,6 @@ Route::prefix('v1')
     ============================================================================
     */
     Route::middleware(['auth:sanctum', 'role:ADMIN'])->prefix('admin')->group(function () {
-
-        /*
-        |--------------------------------------------------------------------------
-        | ADMIN – BLOGS
-        |--------------------------------------------------------------------------
-        */
-        Route::post('blogs', [BlogController::class, 'store']);
-        Route::put('blogs/{id}', [BlogController::class, 'update']);
-        Route::delete('blogs/{id}', [BlogController::class, 'destroy']);
 
         /*
         |--------------------------------------------------------------------------

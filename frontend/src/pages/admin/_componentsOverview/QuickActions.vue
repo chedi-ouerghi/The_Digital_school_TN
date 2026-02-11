@@ -2,16 +2,13 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-    Users,
-    Coins,
-    FileText,
-    CreditCard
+  Users,
+  Coins, CreditCard
 } from 'lucide-vue-next';
 
 defineEmits<{
   goToClients: []
   goToCryptos: []
-  goToBlogs: []
   goToTransactions: []
 }>()
 </script>
@@ -40,13 +37,7 @@ defineEmits<{
           <span class="text-sm font-medium">Cryptocurrencies</span>
         </Button>
 
-        <Button 
-          @click="$emit('goToBlogs')"
-          class="h-auto py-4 px-4 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border border-purple-200 text-purple-700 hover:text-purple-800"
-        >
-          <FileText class="h-5 w-5" />
-          <span class="text-sm font-medium">Blog Posts</span>
-        </Button>
+        
 
         <Button 
           @click="$emit('goToTransactions')"

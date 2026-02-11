@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, ChevronDown, LogOut, Menu, RefreshCw, Settings, TrendingDown, TrendingUp, User, X } from 'lucide-vue-next';
+import { Bell, ChevronDown, Lock, LogOut, Menu, RefreshCw, Settings, TrendingDown, TrendingUp, User, X } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
@@ -24,8 +24,47 @@ const router = useRouter()
 const user = ref(auth.getUser())
 const role = ref(auth.getRole())
 
+// 🔐 SECURITY: Vérifier le statut du mot de passe
+const showPasswordWarning = ref(false)
+const passwordChecked = ref(false)
+
 // ✅ API Base URL
 const API_BASE = (import.meta.env as any).VITE_API_URL || 'http://localhost:8000'
+
+// ✅ Rendre la prop profile optionnelle avec une valeur par défaut
+interface Props {
+  profile?: any
+}
+const props = withDefaults(defineProps<Props>(), {
+  profile: () => ({})
+})
+
+// ✅ Fetch user profile if not provided via props
+const userProfile = ref<any>(props.profile)
+
+// ✅ Computed property for profile picture URL
+const getProfilePictureUrl = computed(() => {
+  const profileData = userProfile.value?.user || userProfile.value
+  
+  if (!profileData?.profile_picture) return ''
+  
+  // Check if it's already a full URL
+  if (profileData.profile_picture.startsWith('http')) {
+    return profileData.profile_picture
+  }
+  
+  // Handle relative paths
+  const picturePath = profileData.profile_picture.replace(/^\/+/, '')
+  
+  // Construct proper URL with API base
+  return `${API_BASE.replace(/\/+$/, '')}/storage/${picturePath}`
+})
+
+// ✅ Fallback for user data
+const displayUser = computed(() => {
+  const profileData = userProfile.value?.user || userProfile.value
+  return profileData || user.value || {}
+})
 
 // Données wallet et plus-value
 const portfolio = ref<any[]>([])
@@ -46,21 +85,19 @@ const notifError = ref<string | null>(null)
 // Mobile sidebar state
 const showMobileSidebar = ref(false)
 
-// ✅ CORRECTION: Helper pour construire l'URL du storage
-function apiBaseStorageUrl() {
-  try {
-    const u = new URL(API_BASE.replace('/api/v1', ''))
-    return u.origin
-  } catch {
-    return 'http://localhost:8000'
-  }
-}
-
-function storageUrl(path?: string | null) {
-  if (!path) return ''
-  if (path.startsWith('http')) return path
-  return `${apiBaseStorageUrl()}/storage/${path.replace(/^\/+/, '')}`
-}
+// ✅ User initials computed property
+const userInitials = computed(() => {
+  const name = displayUser.value?.name || displayUser.value?.email || ''
+  if (!name) return 'U'
+  
+  return name
+    .split(' ')
+    .map((word: string) => word[0])
+    .filter(Boolean)
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+})
 
 function logout() {
   auth.logout()
@@ -260,21 +297,6 @@ async function loadWalletData() {
   }
 }
 
-const userInitials = computed(() => {
-  if (!user.value?.name) return 'U'
-  return user.value.name
-    .split(' ')
-    .map((word: string) => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-})
-
-// ✅ CORRECTION: Utiliser la fonction storageUrl()
-const getProfilePictureUrl = computed(() => {
-  return storageUrl(user.value?.profile_picture)
-})
-
 async function refreshWallet() {
   await loadWalletData()
 }
@@ -287,7 +309,7 @@ const onBalanceUpdated = async (e: any) => {
         user.value = { ...(user.value || {}), solde: e.detail.balance }
       } else {
         const profile = await api.auth.profile()
-        user.value = profile || user.value
+        userProfile.value = profile || user.value
       }
       await loadWalletData()
     }
@@ -296,17 +318,79 @@ const onBalanceUpdated = async (e: any) => {
   }
 }
 
+// ✅ Function to load user profile
+async function loadUserProfile() {
+  try {
+    if (Object.keys(props.profile).length === 0) {
+      const profile = await api.auth.profile()
+      userProfile.value = profile
+      console.log('✅ User profile loaded:', profile)
+      console.log('📸 Profile picture URL:', getProfilePictureUrl.value)
+      
+      // 🔐 Vérifier le statut du mot de passe lors du chargement du profil
+      if (String(role.value).toUpperCase() === 'CLIENT') {
+        if (!profile.password_changed_at) {
+          showPasswordWarning.value = true
+        } else {
+          showPasswordWarning.value = false
+        }
+      }
+    } else {
+      userProfile.value = props.profile
+    }
+  } catch (err) {
+    console.error('❌ Failed to load user profile:', err)
+  }
+}
+
+// 🔐 Fonction pour vérifier le statut du mot de passe
+async function checkPasswordStatus() {
+  if (String(role.value).toUpperCase() !== 'CLIENT') return
+  
+  try {
+    const profile = await api.auth.profile()
+    if (!profile.password_changed_at) {
+      showPasswordWarning.value = true
+    } else {
+      showPasswordWarning.value = false
+    }
+  } catch (err) {
+    console.warn('Error checking password status:', err)
+  }
+}
+
+// 🔐 Écouter l'événement de changement de mot de passe
+function handlePasswordChanged() {
+  console.log('🔐 Password changed event detected')
+  checkPasswordStatus()
+}
+
 onMounted(async () => {
+  console.log('📱 Dashboard mounted')
+  console.log('👤 Props profile:', props.profile)
+  console.log('👤 Current user from auth:', user.value)
+  
+  await loadUserProfile()
+  
+  // 🔐 SECURITY: Vérifier que l'utilisateur a changé son mot de passe (pour les clients uniquement)
+  if (String(role.value).toUpperCase() === 'CLIENT' && !passwordChecked.value) {
+    await checkPasswordStatus()
+    passwordChecked.value = true
+  }
+  
+  // 🔐 Écouter l'événement de changement de mot de passe
+  window.addEventListener('password-changed', handlePasswordChanged)
+  
   await loadWalletData()
   
   window.addEventListener('balance-updated', onBalanceUpdated)
-
   fetchNotifications()
 })
 
 // Move onUnmounted to top level
 onUnmounted(() => {
   window.removeEventListener('balance-updated', onBalanceUpdated)
+  window.removeEventListener('password-changed', handlePasswordChanged)
 })
 
 const menuItems = computed(() => {
@@ -316,7 +400,6 @@ const menuItems = computed(() => {
     { label: 'Manage clients', icon: '👥', path: '/dashboard/admin/clients' },
     { label: 'Manage cryptos', icon: '💱', path: '/dashboard/admin/cryptos' },
     { label: 'Manage transactions', icon: '📋', path: '/dashboard/admin/transactions' },
-    { label: 'Manage Blogs', icon: '📋', path: '/dashboard/admin/blogs' },
     { label: 'Settings', icon: '⚙️', path: '/dashboard/admin/settings' }
   ] : [
     { label: 'Overview', icon: '📈', path: '/dashboard/overview' },
@@ -333,6 +416,34 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
 
 <template>
   <div class="min-h-screen w-full bg-white flex flex-col">
+
+    <!-- 🔐 PASSWORD WARNING ALERT -->
+    <div v-if="showPasswordWarning" class="w-full bg-gradient-to-r from-red-50 to-orange-50 border-b-2 border-red-300/50 px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex items-start gap-4 max-w-7xl mx-auto">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-lg">🔒</span>
+            <p class="font-semibold text-red-900">Security Notice: Change Your Password</p>
+          </div>
+          <p class="text-sm text-red-800 mb-3">
+            For your account security, you must change your temporary password before you can buy or sell cryptocurrencies.
+          </p>
+          <button
+            class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            @click="router.push('/dashboard/Portfolio')"
+          >
+            <Lock class="w-4 h-4" />
+            Go to Profile Settings
+          </button>
+        </div>
+        <button
+          class="mt-1 text-red-600 hover:text-red-800 transition-colors p-1"
+          @click="showPasswordWarning = false"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+    </div>
 
     <!-- HEADER -->
     <header class="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80 shadow-sm">
@@ -417,16 +528,21 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
             <!-- Separator -->
             <div class="h-8 w-px bg-slate-200/60 mx-1 hidden sm:block"></div>
 
-            <!-- ✅ CORRECTION: User Menu avec profile_picture corrigé -->
+            <!-- ✅ CORRECTED: User Menu -->
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <button class="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-100/80 transition-all duration-200 group">
                   <div class="relative">
                     <Avatar class="h-9 w-9 border-2 border-slate-200/60 group-hover:border-slate-300 transition-all duration-300 group-hover:scale-105">
                       <AvatarImage 
+                        v-if="getProfilePictureUrl"
                         :src="getProfilePictureUrl" 
-                        :alt="user?.name || 'User'"
+                        :alt="displayUser?.name || 'User'"
                         class="object-cover"
+                        @error="(e) => {
+                          console.warn('❌ Profile picture failed to load:', getProfilePictureUrl)
+                          e.target.style.display = 'none'
+                        }"
                       />
                       <AvatarFallback class="bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 font-semibold text-sm">
                         {{ userInitials }}
@@ -437,10 +553,10 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
 
                   <div class="hidden lg:block text-left">
                     <div class="text-sm font-semibold text-slate-900 leading-tight">
-                      {{ user?.name || user?.email }}
+                      {{ displayUser?.name || displayUser?.email }}
                     </div>
                     <div class="text-xs text-slate-500 leading-tight">
-                      {{ user?.email }}
+                      {{ displayUser?.email }}
                     </div>
                   </div>
 
@@ -453,8 +569,13 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
                   <div class="flex items-center gap-3">
                     <Avatar class="h-10 w-10 border border-slate-200">
                       <AvatarImage 
+                        v-if="getProfilePictureUrl"
                         :src="getProfilePictureUrl" 
-                        :alt="user?.name || 'User'"
+                        :alt="displayUser?.name || 'User'"
+                        @error="(e) => {
+                          console.warn('❌ Dropdown profile picture failed to load:', getProfilePictureUrl)
+                          e.target.style.display = 'none'
+                        }"
                       />
                       <AvatarFallback class="bg-slate-100 text-slate-700">
                         {{ userInitials }}
@@ -462,10 +583,13 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
                     </Avatar>
                     <div class="flex-1 min-w-0">
                       <div class="font-semibold text-slate-900 truncate">
-                        {{ user?.name }}
+                        {{ displayUser?.name || 'User' }}
                       </div>
                       <div class="text-sm text-slate-500 truncate">
-                        {{ user?.email }}
+                        {{ displayUser?.email }}
+                      </div>
+                      <div v-if="displayUser?.solde !== undefined" class="text-xs font-medium text-emerald-600 mt-1">
+                        Balance: {{ formatCurrency(displayUser.solde) }}
                       </div>
                     </div>
                   </div>
@@ -539,8 +663,6 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
 
     </div>
 
-    
-
     <!-- NOTIFICATIONS PANEL -->
     <Drawer :open="showNotifications" direction="right" @update:open="v => showNotifications = v">
       <DrawerContent class="w-full sm:w-96 lg:w-[420px] h-full ml-auto border-l border-slate-200 bg-white shadow-xl flex flex-col">
@@ -591,112 +713,110 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
           </div>
 
           <!-- NOTIFICATIONS LIST -->
-        <div
-  v-for="n in notifications"
-  :key="n.id"
-  class="p-4 transition-all duration-200 cursor-pointer hover:shadow-md group"
-  :class="[
-    n.is_read 
-      ? 'bg-white hover:bg-slate-50/80' 
-      : 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border-l-4 border-blue-500',
-    n.type === 'welcome' && 'bg-gradient-to-r from-green-50 to-emerald-50/40 border-l-4 border-green-500 shadow-md'
-  ]"
-  @click="!n.is_read && markNotificationAsRead(n)"
->
-  <!-- Header with icon, type badge and timestamp -->
-  <div class="flex gap-4 mb-3">
-    <!-- Icon -->
-    <div
-      class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl font-semibold transition-transform group-hover:scale-110 shadow-sm"
-      :class="[
-        n.is_read 
-          ? 'bg-slate-100 text-slate-600' 
-          : n.type === 'welcome'
-          ? 'bg-gradient-to-br from-green-200 to-emerald-200 text-green-700 shadow-lg'
-          : 'bg-blue-100 text-blue-600 shadow-md'
-      ]"
-    >
-      {{ getNotificationIcon(n.type) }}
-    </div>
+          <div
+            v-for="n in notifications"
+            :key="n.id"
+            class="p-4 transition-all duration-200 cursor-pointer hover:shadow-md group"
+            :class="[
+              n.is_read 
+                ? 'bg-white hover:bg-slate-50/80' 
+                : 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border-l-4 border-blue-500',
+              n.type === 'welcome' && 'bg-gradient-to-r from-green-50 to-emerald-50/40 border-l-4 border-green-500 shadow-md'
+            ]"
+            @click="!n.is_read && markNotificationAsRead(n)"
+          >
+            <!-- Header with icon, type badge and timestamp -->
+            <div class="flex gap-4 mb-3">
+              <!-- Icon -->
+              <div
+                class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl font-semibold transition-transform group-hover:scale-110 shadow-sm"
+                :class="[
+                  n.is_read 
+                    ? 'bg-slate-100 text-slate-600' 
+                    : n.type === 'welcome'
+                    ? 'bg-gradient-to-br from-green-200 to-emerald-200 text-green-700 shadow-lg'
+                    : 'bg-blue-100 text-blue-600 shadow-md'
+                ]"
+              >
+                {{ getNotificationIcon(n.type) }}
+              </div>
 
-    <!-- Type badge and read status -->
-    <div class="flex-1 min-w-0 flex items-start justify-between gap-2">
-      <div class="flex gap-2 flex-wrap items-center">
-        <!-- Type Badge -->
-        <Badge
-          class="text-xs font-semibold px-2.5 py-1 rounded-full border"
-          :class="getNotificationBgColor(n.type)"
-        >
-          {{ (n.type || 'info')
-            .replace(/_/g, ' ')
-            .split(' ')
-            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')
-          }}
-        </Badge>
+              <!-- Type badge and read status -->
+              <div class="flex-1 min-w-0 flex items-start justify-between gap-2">
+                <div class="flex gap-2 flex-wrap items-center">
+                  <!-- Type Badge -->
+                  <Badge
+                    class="text-xs font-semibold px-2.5 py-1 rounded-full border"
+                    :class="getNotificationBgColor(n.type)"
+                  >
+                    {{ (n.type || 'info')
+                      .replace(/_/g, ' ')
+                      .split(' ')
+                      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(' ')
+                    }}
+                  </Badge>
 
-        <!-- Read status indicator -->
-        <div v-if="!n.is_read" class="flex items-center gap-1">
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          <span class="text-xs font-medium text-blue-600">New</span>
-        </div>
-      </div>
+                  <!-- Read status indicator -->
+                  <div v-if="!n.is_read" class="flex items-center gap-1">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span class="text-xs font-medium text-blue-600">New</span>
+                  </div>
+                </div>
 
-      <!-- Timestamp -->
-      <span class="text-xs text-slate-500 whitespace-nowrap flex-shrink-0 bg-white/60 px-2 py-1 rounded-full">
-        {{ formatNotificationDate(n.created_at) }}
-      </span>
-    </div>
-  </div>
+                <!-- Timestamp -->
+                <span class="text-xs text-slate-500 whitespace-nowrap flex-shrink-0 bg-white/60 px-2 py-1 rounded-full">
+                  {{ formatNotificationDate(n.created_at) }}
+                </span>
+              </div>
+            </div>
 
-  <!-- Title (always bold and visible) -->
-  <h3 
-    class="font-bold mb-2 text-sm leading-snug pr-2 transition-colors"
-    :class="n.type === 'welcome' ? 'text-green-900' : 'text-slate-900'"
-  >
-    {{ n.title }}
-  </h3>
+            <!-- Title (always bold and visible) -->
+            <h3 
+              class="font-bold mb-2 text-sm leading-snug pr-2 transition-colors"
+              :class="n.type === 'welcome' ? 'text-green-900' : 'text-slate-900'"
+            >
+              {{ n.title }}
+            </h3>
 
-  <!-- Message (full text, separated from title) -->
-  <p 
-    class="text-sm leading-relaxed whitespace-pre-wrap mb-3 p-3 rounded-lg border-l-2 transition-all"
-    :class="n.type === 'welcome'
-      ? 'bg-gradient-to-br from-green-50 to-emerald-50/50 text-green-800 border-green-300'
-      : 'bg-white/40 text-slate-600 border-slate-200'"
-  >
-    {{ n.message }}
-  </p>
+            <!-- Message (full text, separated from title) -->
+            <p 
+              class="text-sm leading-relaxed whitespace-pre-wrap mb-3 p-3 rounded-lg border-l-2 transition-all"
+              :class="n.type === 'welcome'
+                ? 'bg-gradient-to-br from-green-50 to-emerald-50/50 text-green-800 border-green-300'
+                : 'bg-white/40 text-slate-600 border-slate-200'"
+            >
+              {{ n.message }}
+            </p>
 
-  <!-- Additional Info Row (if needed) -->
-  <div v-if="n.metadata || n.related_id" class="flex items-center justify-between pt-2 border-t border-slate-200/50 mt-2">
-    <span v-if="n.metadata" class="text-xs text-slate-500 font-mono">
-      ID: {{ n.metadata }}
-    </span>
-    <span v-else-if="n.related_id" class="text-xs text-slate-500 font-mono">
-      Ref: {{ n.related_id }}
-    </span>
-  </div>
+            <!-- Additional Info Row (if needed) -->
+            <div v-if="n.metadata || n.related_id" class="flex items-center justify-between pt-2 border-t border-slate-200/50 mt-2">
+              <span v-if="n.metadata" class="text-xs text-slate-500 font-mono">
+                ID: {{ n.metadata }}
+              </span>
+              <span v-else-if="n.related_id" class="text-xs text-slate-500 font-mono">
+                Ref: {{ n.related_id }}
+              </span>
+            </div>
 
-  <!-- Action button for unread -->
-  <div v-if="!n.is_read" class="mt-3 flex gap-2">
-    <Button
-      size="sm"
-      class="flex-1 text-xs h-8 rounded-lg transition-all font-medium"
-      :class="n.type === 'welcome'
-        ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md'
-        : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md'
-      "
-      @click.stop="markNotificationAsRead(n)"
-    >
-      ✓ Mark as read
-    </Button>
-  </div>
-  <div v-else class="mt-2">
-    <span class="text-xs text-slate-400 italic">✓ Read</span>
-  </div>
-</div>
-          
-
+            <!-- Action button for unread -->
+            <div v-if="!n.is_read" class="mt-3 flex gap-2">
+              <Button
+                size="sm"
+                class="flex-1 text-xs h-8 rounded-lg transition-all font-medium"
+                :class="n.type === 'welcome'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md'
+                "
+                @click.stop="markNotificationAsRead(n)"
+              >
+                ✓ Mark as read
+              </Button>
+            </div>
+            <div v-else class="mt-2">
+              <span class="text-xs text-slate-400 italic">✓ Read</span>
+            </div>
+          </div>
         </ScrollArea>
 
       </DrawerContent>

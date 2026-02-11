@@ -18,7 +18,6 @@ const colors = {
 
 const navItems = [
   { label: 'Home', href: '/' },
-  { label: 'Blog', href: '/blog', external: true },
   { label: 'Features', href: '/features' },
   { label: 'Pricing', href: '/pricing' },
 ]

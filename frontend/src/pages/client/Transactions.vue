@@ -3,11 +3,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../services/api'
 import {
-  Search, Filter, RefreshCw, Download, Calendar,
-  ArrowDownRight, AlertCircle, CheckCircle2, TrendingUp, TrendingDown, DollarSign, Package,
-  ArrowUpRight, Receipt, FileText,
-  ChevronRight, ChevronLeft, Hash, Clock, Coins,
-  Shield, Zap, Loader2, Eye, X
+    Search, Filter, RefreshCw, Download, Calendar,
+    ArrowDownRight, AlertCircle, CheckCircle2, TrendingUp, TrendingDown, DollarSign, Package,
+    ArrowUpRight, Receipt, FileText,
+    ChevronRight, ChevronLeft, Hash, Clock, Coins,
+    Shield, Zap, Loader2, Eye, X
 } from 'lucide-vue-next'
 // UI components
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -17,19 +17,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -280,6 +280,19 @@ const confirmSell = async () => {
 
   const qty = parseFloat(sellQuantity.value)
   const available = getAvailableQuantity(selectedAsset.value.crypto.symbol)
+
+  // 🔐 SECURITY: Vérifier que l'utilisateur a changé son mot de passe
+  try {
+    const profile = await api.auth.profile()
+    if (!profile.password_changed_at) {
+      sellError.value = 'You must change your password before making sales. Please go to your profile settings.'
+      return
+    }
+  } catch (err) {
+    console.error('Error checking password status:', err)
+    sellError.value = 'Error verifying your account status'
+    return
+  }
 
   // Validation
   if (!qty || qty <= 0) {

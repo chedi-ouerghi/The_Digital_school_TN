@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
 import {
+  AlertCircle,
   Settings as SettingsIcon,
-  Shield,
-  AlertCircle
+  Shield
 } from 'lucide-vue-next'
+import { onMounted, ref, watch } from 'vue'
 import api from '../../services/api'
 
 // UI Components
@@ -15,10 +15,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // Composants enfants
-import ProfileSettings from './_componentsSettings/ProfileSettings.vue'
-import MediaSettings from './_componentsSettings/MediaSettings.vue'
-import SecuritySettings from './_componentsSettings/SecuritySettings.vue'
 import AdvancedSettings from './_componentsSettings/AdvancedSettings.vue'
+import MediaSettings from './_componentsSettings/MediaSettings.vue'
+import ProfileSettings from './_componentsSettings/ProfileSettings.vue'
+import SecuritySettings from './_componentsSettings/SecuritySettings.vue'
 
 // Profile state
 const profile = ref<any>(null)

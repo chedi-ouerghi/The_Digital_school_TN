@@ -602,9 +602,10 @@ watch(selectedPeriod, () => {
           <CardContent>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="space-y-4">
+             
                 <div>
-                  <div class="text-sm text-gray-500 font-medium mb-1">Cryptocurrency ID</div>
-                  <div class="font-mono text-gray-900">{{ crypto.id }}</div>
+                  <div class="text-sm text-gray-500 font-medium mb-1">Symbol</div>
+                  <div class="font-bold text-gray-900">{{ crypto.symbol.toUpperCase() }}</div>
                 </div>
                 
                 <div>
@@ -635,11 +636,7 @@ watch(selectedPeriod, () => {
                   <div class="text-sm text-gray-500 font-medium mb-1">Created Date</div>
                   <div class="text-gray-900">{{ formatDate(crypto.created_at) }}</div>
                 </div>
-                
-                <div>
-                  <div class="text-sm text-gray-500 font-medium mb-1">Symbol</div>
-                  <div class="font-bold text-gray-900">{{ crypto.symbol.toUpperCase() }}</div>
-                </div>
+               
               </div>
             </div>
           </CardContent>

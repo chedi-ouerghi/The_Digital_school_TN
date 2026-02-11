@@ -70,13 +70,14 @@ export const auth = {
         email: user.email,
         name: user.name,
         role: user.role,
+        password_changed_at: user.password_changed_at,
       };
-      
-      try { 
+
+      try {
         if (typeof window !== 'undefined' && window.sessionStorage) {
           window.sessionStorage.setItem(STORAGE_USER_KEY, JSON.stringify(safeUser))
         }
-      } catch (e) { 
+      } catch (e) {
         console.warn('Impossible de stocker l\'utilisateur :', e)
       }
 
@@ -109,19 +110,20 @@ export const auth = {
     try {
       const response = await api.auth.profile()
       const profileUser = response?.user || response || null
-      
+
       if (profileUser) {
         const safeUser = {
           id: profileUser.id,
           email: profileUser.email,
           name: profileUser.name,
           role: profileUser.role,
+          password_changed_at: profileUser.password_changed_at,
         };
-        try { 
+        try {
           if (typeof window !== 'undefined' && window.sessionStorage) {
             window.sessionStorage.setItem(STORAGE_USER_KEY, JSON.stringify(safeUser))
           }
-        } catch {}
+        } catch { }
         return true
       }
       this.clearLocalAuth()
@@ -139,7 +141,7 @@ export const auth = {
    */
   getUser() {
     try {
-      const raw = typeof window !== 'undefined' && window.sessionStorage 
+      const raw = typeof window !== 'undefined' && window.sessionStorage
         ? window.sessionStorage.getItem(STORAGE_USER_KEY)
         : null
       return raw ? JSON.parse(raw) : null

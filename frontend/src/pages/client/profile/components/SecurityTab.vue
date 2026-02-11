@@ -41,6 +41,9 @@ const changePassword = async () => {
       password_confirmation: ''
     }
     
+    // 🔐 Émettre un événement pour notifier le Dashboard que le mot de passe a changé
+    window.dispatchEvent(new CustomEvent('password-changed'))
+    
     setTimeout(() => {
       message.value = null
     }, 3000)

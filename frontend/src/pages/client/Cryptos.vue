@@ -11,21 +11,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -289,6 +289,19 @@ async function handleBuy() {
   
   buyingError.value = ''
   buyingSuccess.value = ''
+  
+  // 🔐 SECURITY: Vérifier que l'utilisateur a changé son mot de passe
+  try {
+    const profile = await api.auth.profile()
+    if (!profile.password_changed_at) {
+      buyingError.value = 'You must change your password before making purchases. Please go to your profile settings.'
+      return
+    }
+  } catch (err) {
+    console.error('Error checking password status:', err)
+    buyingError.value = 'Error verifying your account status'
+    return
+  }
   
   const qty = parseFloat(quantity.value)
   if (!qty || qty <= 0) {

@@ -384,12 +384,6 @@ async function handleSyncHistory() {
                   {{ formatLargeNumber(crypto.market_cap || crypto.market_cap_eur) }}
                 </div>
               </div>
-              <div>
-                <div class="text-xs text-gray-500 mb-1">Volume (24h)</div>
-                <div class="text-sm font-semibold text-gray-900">
-                  {{ formatLargeNumber(crypto.volume_24h) }}
-                </div>
-              </div>
             </div>
           </div>
 
@@ -415,7 +409,6 @@ async function handleSyncHistory() {
               <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Price</th>
               <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">24h Change</th>
               <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Market Cap</th>
-              <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Volume (24h)</th>
               <th class="text-left py-3 px-6 text-sm font-medium text-gray-700">Actions</th>
             </tr>
           </thead>
@@ -474,11 +467,7 @@ async function handleSyncHistory() {
                   {{ formatLargeNumber(crypto.market_cap || crypto.market_cap_eur) }}
                 </div>
               </td>
-              <td class="py-4 px-6">
-                <div class="text-sm text-gray-900">
-                  {{ formatLargeNumber(crypto.volume_24h) }}
-                </div>
-              </td>
+             
               <td class="py-4 px-6">
                 <div class="flex gap-2">
                   <Button

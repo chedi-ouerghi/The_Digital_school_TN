@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-use Database\Seeders\BlogSeeder;
 use Database\Seeders\CryptoSeeder;
 
 
@@ -30,21 +29,11 @@ class DatabaseSeeder extends Seeder
         } catch (\Exception $e) {
             echo "Error creating admin user: " . $e->getMessage() . "\n";
         }
- // Seed blog posts
         try {
             $this->call([CryptoSeeder::class]);
             echo "Cryptos seeded successfully!\n";
         } catch (\Exception $e) {
             echo "Error seeding cryptos: " . $e->getMessage() . "\n";
         }
-
-        // Seed blog posts
-        try {
-            $this->call([BlogSeeder::class]);
-            echo "Blog posts seeded successfully!\n";
-        } catch (\Exception $e) {
-            echo "Error seeding blog posts: " . $e->getMessage() . "\n";
-        }
-
     }
 }

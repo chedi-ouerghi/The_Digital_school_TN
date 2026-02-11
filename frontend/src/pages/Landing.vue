@@ -394,7 +394,7 @@ onMounted(() => {
           <!-- Links -->
           <div v-for="section in [
             { title: 'PRODUCT', links: ['Features', 'Pricing', 'Security', 'API Docs'] },
-            { title: 'COMPANY', links: ['About', 'Blog', 'Careers', 'Contact'] },
+            { title: 'COMPANY', links: ['About', 'Careers', 'Contact'] },
             { title: 'LEGAL', links: ['Privacy', 'Terms', 'Compliance', 'Cookies'] }
           ]" :key="section.title">
             <h3 class="text-xs font-bold tracking-widest mb-6 opacity-70" :style="{ color: colors.primary }">

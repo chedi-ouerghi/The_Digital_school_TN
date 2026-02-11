@@ -82,6 +82,16 @@ class PortefeuilleController extends Controller
     public function transact(Request $request): JsonResponse
     {
         try {
+            $user = Auth::user();
+
+            // 🔐 SECURITY: Vérifier que l'utilisateur a changé son mot de passe
+            if (is_null($user->password_changed_at)) {
+                return response()->json([
+                    'error' => 'You must change your password before making transactions.',
+                    'message' => 'Pour des raisons de sécurité, vous devez d\'abord changer votre mot de passe temporaire.'
+                ], 403);
+            }
+
             DB::beginTransaction();
 
             $validated = $request->validate([
@@ -90,7 +100,6 @@ class PortefeuilleController extends Controller
                 'quantity' => 'required|numeric|min:0.00000001'
             ]);
 
-            $user = Auth::user();
             $crypto = Cryptomoney::where('symbol', $validated['symbol'])->firstOrFail();
             
             $result = $this->transactionService->handleTransaction(
