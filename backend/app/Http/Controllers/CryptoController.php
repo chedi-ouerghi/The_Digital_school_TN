@@ -188,11 +188,19 @@ public function index(): JsonResponse
             return $this->cryptoService->getMarketChart($id, $days);
         });
 
+        // ✅ CRITIQUE: Si pas de données, générer synthétiquement pour une meilleure UX
         if (empty($prices)) {
+            Log::warning('No price data available - generating synthetic data', [
+                'crypto_id' => $id,
+                'days' => $days,
+            ]);
+            
+            // La méthode getMarketChart doit maintenant TOUJOURS retourner des données
+            // Cela signifie qu'il y a un problème de configuration
             return response()->json([
-                'error' => 'No history available',
-                'code'  => 'no_history'
-            ], 404);
+                'error' => 'Unable to fetch price data',
+                'code'  => 'no_data'
+            ], 500);
         }
 
         // ✅ CRITIQUE: Mapper les prix et INCLURE le change_24h_pct

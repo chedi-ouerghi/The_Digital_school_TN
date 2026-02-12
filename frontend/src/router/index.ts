@@ -15,7 +15,6 @@ import AdminTransactions from '../pages/admin/Transactions.vue'
 import ClientCryptosDetails from '../pages/client/CryptosDetails.vue'
 import ClientOverview from '../pages/client/Overview.vue'
 import ClientPortfolioDetails from '../pages/client/PortfolioDetails.vue'
-import ClientTransactions from '../pages/client/Transactions.vue'
 import auth from '../services/auth'
 
 const routes = [
@@ -140,7 +139,7 @@ const routes = [
       {
         path: 'transactions',
         name: 'ClientTransactions',
-        component: ClientTransactions,
+        component: () => import('../pages/client/transactionsHistory/TransactionHistory.vue'),
         meta: { requiresAuth: true, roles: ['CLIENT'] }
       }
     ]

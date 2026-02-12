@@ -1,39 +1,57 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../../services/api'
-import {
-    Search, Filter, RefreshCw, Download, Calendar,
-    ArrowDownRight, AlertCircle, CheckCircle2, TrendingUp, TrendingDown, DollarSign, Package,
-    ArrowUpRight, Receipt, FileText,
-    ChevronRight, ChevronLeft, Hash, Clock, Coins,
-    Shield, Zap, Loader2, Eye, X
-} from 'lucide-vue-next'
-// UI components
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Switch } from '@/components/ui/switch'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  AlertCircle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock, Coins,
+  DollarSign,
+  Download,
+  Eye,
+  FileText,
+  Filter,
+  Hash,
+  Loader2,
+  Package,
+  Receipt,
+  RefreshCw,
+  Search,
+  Shield,
+  TrendingDown,
+  TrendingUp,
+  X,
+  Zap
+} from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../../services/api'
 
 const router = useRouter()
 
@@ -137,7 +155,11 @@ const formatFullDate = (date: string) => {
 const fetchWallet = async () => {
   try {
     const response = await api.wallet.list()
-    wallet.value = response
+    wallet.value = response as any
+    // Ensure we have the crypto wallet assets for merging with transaction data
+    if (!wallet.value.cryptoWalletAssets) {
+      wallet.value.cryptoWalletAssets = []
+    }
   } catch (e: any) {
     console.error('Error fetching wallet:', e)
     error.value = e.message || 'Error loading wallet data'
@@ -148,9 +170,20 @@ const loadTransactions = async () => {
   loading.value = true
   error.value = null
   try {
-    // Get transactions based on filter type
-    const data = await api.wallet.getTransactionsHistory(filterType.value === 'all' ? undefined : filterType.value)
-    const transactionsData = Array.isArray(data) ? data : []
+    console.log('🔄 Loading transactions with filterType:', filterType.value)
+    
+    // Always fetch ALL transactions first (don't filter at API level)
+    // The tabs will handle local filtering
+    const response = await api.wallet.getTransactionsHistory()
+    const transactionsData = response?.transactions || []
+    
+    console.log('✅ Fetched transactions:', transactionsData.length)
+    
+    if (!transactionsData || transactionsData.length === 0) {
+      console.warn('⚠️ No transactions received from API')
+      transactions.value = []
+      return
+    }
     
     // Process transactions
     transactions.value = transactionsData.map((tx: any) => ({
@@ -163,7 +196,7 @@ const loadTransactions = async () => {
       price: Number(tx.price || 0),
       unitPrice: Number(tx.unit_price_eur || tx.price || 0),
       total: Number(tx.total_eur || 0),
-      date: tx.date,
+      date: tx.created_at || tx.date,
       crypto: {
         id: tx.crypto_id,
         name: tx.crypto_name || 'Unknown',
@@ -173,20 +206,28 @@ const loadTransactions = async () => {
       }
     })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     
+    console.log('✅ Processed transactions:', transactions.value.length)
+    
     // Merge with wallet data for current prices
-    if (wallet.value?.assets) {
+    if (wallet.value?.cryptoWalletAssets) {
       transactions.value.forEach(tx => {
-        const asset = wallet.value.assets.find((a: any) => a.symbol === tx.crypto.symbol)
+        const asset = wallet.value.cryptoWalletAssets.find((a: any) => a.cryptomoney?.symbol === tx.crypto.symbol)
         if (asset) {
-          tx.crypto.current_price = asset.current_price_eur
-          tx.crypto.image_url = asset.image || tx.crypto.image_url
+          tx.crypto.current_price = asset.cryptomoney?.price_eur || 0
+          tx.crypto.image_url = asset.cryptomoney?.image_url || tx.crypto.image_url
         }
       })
     }
     
   } catch (e: any) {
-    console.error('Error loading transactions:', e)
-    error.value = e.message || 'Error loading transactions'
+    console.error('❌ Error loading transactions:', e)
+    console.error('Error details:', {
+      message: e.message,
+      status: e.response?.status,
+      statusText: e.response?.statusText,
+      data: e.response?.data
+    })
+    error.value = e.message || 'Error loading transactions. Please try again.'
   } finally {
     loading.value = false
     isRefreshing.value = false
@@ -439,15 +480,16 @@ const transactionStats = computed(() => {
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
 
-  // Filter by tab
+  // Filter by active tab (all, buy, sell)
   if (activeTab.value === 'buy') {
     filtered = filtered.filter(t => t.originalType === 'ACHAT')
   } else if (activeTab.value === 'sell') {
     filtered = filtered.filter(t => t.originalType === 'VENTE')
   }
-
-  // Filter by type (if not 'all')
-  if (filterType.value !== 'all') {
+  
+  // Also apply filterType if it's set differently from tab
+  // This allows advanced filter dropdown to work independently
+  if (filterType.value !== 'all' && activeTab.value === 'all') {
     filtered = filtered.filter(t => t.originalType === filterType.value)
   }
 
@@ -476,6 +518,8 @@ const filteredTransactions = computed(() => {
     filtered = filtered.filter(t => new Date(t.date) >= cutoff)
   }
 
+  console.log(`📊 Filtered transactions: ${filtered.length} (tab: ${activeTab.value}, type: ${filterType.value}, search: ${searchQuery.value})`)
+  
   return filtered
 })
 
@@ -593,15 +637,28 @@ const navigateToPage = (page: number) => {
 // LIFECYCLE & WATCHERS
 // ============================================================================
 onMounted(async () => {
+  console.log('🚀 Component mounted, fetching initial data...')
   await refreshData()
 })
 
-watch([filterType, dateRange], () => {
+// Watcher for active tab - reset pagination and reload
+watch(activeTab, (newTab, oldTab) => {
+  console.log(`📑 Tab changed from "${oldTab}" to "${newTab}"`)
+  currentPage.value = 1
+  // Don't reload from API, just filter locally
+  // The filteredTransactions computed property will handle the filtering
+})
+
+// Watcher for filter type and date range - reload transactions
+watch([filterType, dateRange], (newValues, oldValues) => {
+  console.log(`🔍 Filters changed:`, { filterType: newValues[0], dateRange: newValues[1] })
   currentPage.value = 1
   loadTransactions()
 })
 
+// Watcher for search query - reset pagination
 watch(searchQuery, () => {
+  console.log(`🔎 Search query changed: "${searchQuery.value}"`)
   currentPage.value = 1
 })
 </script>
@@ -643,8 +700,8 @@ watch(searchQuery, () => {
           <Button
             variant="outline"
             class="gap-2 border-[#E2E8F0] text-[#64748B] hover:bg-[#35A7FF]/5 hover:text-[#35A7FF]"
-            @click="refreshData"
             :disabled="isRefreshing"
+            @click="refreshData"
           >
             <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': isRefreshing }" />
             {{ isRefreshing ? 'Refreshing...' : 'Refresh' }}
@@ -652,8 +709,8 @@ watch(searchQuery, () => {
           
           <Button 
             class="gap-2 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
-            @click="exportTransactions"
             :disabled="filteredTransactions.length === 0"
+            @click="exportTransactions"
           >
             <Download class="w-4 h-4" />
             Export CSV
@@ -678,7 +735,8 @@ watch(searchQuery, () => {
             :key="index"
             class="group relative overflow-hidden border-[#E2E8F0] hover:border-[#35A7FF]/30 hover:shadow-lg transition-all duration-300"
           >
-            <div class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" 
+            <div
+class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" 
                  :style="{ background: `linear-gradient(135deg, ${stat.color}20, transparent)` }"></div>
             <CardContent class="p-5 relative">
               <div class="flex items-center justify-between mb-4">
@@ -736,8 +794,8 @@ watch(searchQuery, () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    @click="resetFilters"
                     :disabled="searchQuery === '' && filterType === 'all' && dateRange === '30d'"
+                    @click="resetFilters"
                   >
                     Clear All
                   </Button>

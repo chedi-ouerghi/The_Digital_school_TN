@@ -237,8 +237,8 @@ async function handleSyncHistory() {
                 variant="outline"
                 size="sm"
                 class="gap-2"
-                @click="emit('refresh')"
                 :disabled="props.loading"
+                @click="emit('refresh')"
               >
                 <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': props.loading }" />
                 Refresh
@@ -474,8 +474,8 @@ async function handleSyncHistory() {
                     size="sm"
                     variant="ghost"
                     class="h-8 w-8 p-0"
-                    @click.stop="emit('viewDetails', crypto.id)"
                     title="View Details"
+                    @click.stop="emit('viewDetails', crypto.id)"
                   >
                     <ExternalLink class="h-4 w-4" />
                   </Button>

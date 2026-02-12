@@ -1,19 +1,19 @@
 <script setup lang="ts">
+import { ArrowLeft, Download, ExternalLink, RefreshCw, Share2, TrendingDown, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, Share2, Download, ExternalLink } from 'lucide-vue-next'
 
 // Composants UI
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Chart.js
+import type { ChartData, ChartOptions } from 'chart.js'
 import { Chart, registerables } from 'chart.js'
 import { Line } from 'vue-chartjs'
-import type { ChartData, ChartOptions } from 'chart.js'
 Chart.register(...registerables)
 
 // ============================================================================
@@ -112,6 +112,7 @@ const history = ref<HistoryEntry[]>([])
 const walletTransactions = ref<Transaction[]>([])
 const historyLoading = ref(false)
 const timeRange = ref('30d')
+const chartRenderKey = ref(0)
 
 // ============================================================================
 // FONCTIONS UTILITAIRES
@@ -223,14 +224,41 @@ async function fetchHistoricalData() {
   if (!crypto.value?.id) return
   historyLoading.value = true
   try {
-    const response = await api.crypto.history(crypto.value.id)
-    const data = response as CryptoDetailResponse
-    if (data.history && Array.isArray(data.history)) {
-      history.value = data.history
+    // Map time ranges to days
+    const dayMap: Record<string, number> = {
+      '1d': 1,
+      '7d': 7,
+      '30d': 30,
+      '60d': 60
+    }
+    
+    const days = dayMap[timeRange.value] || 30
+    console.log(`📊 Fetching ${timeRange.value} (${days} days) for ${crypto.value.symbol}...`)
+    
+    try {
+      const response = await api.crypto.history(crypto.value.id, days)
+      const data = response as any
+      
+      if (data.history && Array.isArray(data.history)) {
+        history.value = data.history
+        console.log(`✅ Loaded ${history.value.length} data points`)
+        // Force chart re-render by updating the key
+        chartRenderKey.value++
+      } else {
+        console.warn('Invalid history data structure')
+        history.value = []
+        chartRenderKey.value++
+      }
+    } catch (apiError: any) {
+      console.debug(`API returned error (expected fallback): ${apiError.message}`)
+      // API error is handled - history.value remains as is or becomes empty
+      history.value = []
+      chartRenderKey.value++
     }
   } catch (e: any) {
-    console.warn('Historical data not available:', e.message)
+    console.debug('Chart data fetch failed:', e instanceof Error ? e.message : 'Unknown error')
     history.value = []
+    chartRenderKey.value++
   } finally {
     historyLoading.value = false
   }
@@ -252,6 +280,17 @@ async function loadAllData() {
 // ============================================================================
 onMounted(loadAllData)
 watch(() => route.params.id as string, loadAllData)
+
+// Watch timeRange changes to fetch new data
+watch(timeRange, async () => {
+  console.log(`📊 Time range changed to ${timeRange.value}`)
+  await fetchHistoricalData()
+}, { immediate: false })
+
+// Watch for history changes to trigger chart re-render
+watch(history, () => {
+  console.log(`📈 History updated: ${history.value.length} points`)
+}, { deep: true })
 
 // ============================================================================
 // COMPUTED PROPERTIES
@@ -281,17 +320,9 @@ const profitLossPercentage = computed(() => {
 // CONFIGURATION DU GRAPHIQUE DYNAMIQUE
 // ============================================================================
 const filteredHistory = computed(() => {
-  if (!history.value.length) return []
-  const now = new Date().getTime()
-  let cutoff = now
-  switch (timeRange.value) {
-    case '1d': cutoff -= 24 * 60 * 60 * 1000; break
-    case '7d': cutoff -= 7 * 24 * 60 * 60 * 1000; break
-    case '30d': cutoff -= 30 * 24 * 60 * 60 * 1000; break
-    case '90d': cutoff -= 90 * 24 * 60 * 60 * 1000; break
-    default: return history.value
-  }
-  return history.value.filter(entry => entry.timestamp >= cutoff)
+  // Don't filter - use all the data returned from the API
+  // The API already returns data for the requested time range
+  return history.value
 })
 
 const chartData = computed<ChartData<'line'>>(() => {
@@ -322,26 +353,35 @@ const chartData = computed<ChartData<'line'>>(() => {
     return gradient
   }
 
-  const labels = filteredHistory.value.map(entry => {
+  // Format les labels selon le time range - plus intelligemment
+  const labels = filteredHistory.value.map((entry, index) => {
     const date = new Date(entry.timestamp)
-    switch (timeRange.value) {
-      case '1d': 
-        return date.toLocaleTimeString('en-US', { 
-          hour: 'numeric',
-          minute: '2-digit'
-        })
-      case '7d': 
-        return date.toLocaleDateString('en-US', { 
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric'
-        })
-      default: 
-        return date.toLocaleDateString('en-US', { 
-          month: 'short',
-          day: 'numeric'
-        })
+    const isFirstPoint = index === 0
+    const isLastPoint = index === filteredHistory.value.length - 1
+    const isEveryNthPoint = index % Math.max(1, Math.floor(filteredHistory.value.length / 10)) === 0
+    
+    // Afficher les premiers, derniers et points réguliers
+    if (isFirstPoint || isLastPoint || isEveryNthPoint || filteredHistory.value.length < 15) {
+      switch (timeRange.value) {
+        case '1d': 
+          return date.toLocaleTimeString('en-US', { 
+            hour: 'numeric',
+            minute: '2-digit'
+          })
+        case '7d': 
+          return date.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+          })
+        default: 
+          return date.toLocaleDateString('en-US', { 
+            month: 'short',
+            day: 'numeric'
+          })
+      }
     }
+    return ''
   })
 
   return {
@@ -359,12 +399,13 @@ const chartData = computed<ChartData<'line'>>(() => {
         },
         borderWidth: 3,
         fill: true,
-        tension: 0.4,
+        tension: 0.2, // Moins courbe pour mieux suivre les données
         pointRadius: 0,
-        pointHoverRadius: 6,
+        pointHoverRadius: 8,
         pointBackgroundColor: lineColor,
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
+        clip: false, // Permettre aux points de déborder
       }
     ]
   }
@@ -382,13 +423,22 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
       display: false
     },
     tooltip: {
-      backgroundColor: 'rgb(17, 24, 39)',
+      enabled: true,
+      backgroundColor: 'rgba(17, 24, 39, 0.95)',
       titleColor: 'rgb(249, 250, 251)',
       bodyColor: 'rgb(229, 231, 235)',
-      borderColor: 'rgb(55, 65, 81)',
+      borderColor: 'rgba(75, 192, 192, 0.3)',
       borderWidth: 1,
       padding: 12,
       displayColors: false,
+      titleFont: {
+        size: 12,
+        weight: 'bold'
+      },
+      bodyFont: {
+        size: 11
+      },
+      boxPadding: 6,
       callbacks: {
         label: (context) => {
           const value = context.parsed.y
@@ -405,13 +455,15 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
             weekday: 'long',
             year: 'numeric',
             month: 'long',
-            day: 'numeric'
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
           })
         },
         afterLabel: (context) => {
           const index = context.dataIndex
           const entry = filteredHistory.value[index]
-          if (!entry || index === filteredHistory.value.length - 1) return ''
+          if (!entry) return ''
           
           const change = entry.change_24h_pct
           const sign = change >= 0 ? '+' : ''
@@ -423,28 +475,36 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
   scales: {
     x: {
       grid: {
-        display: false
-      },
-      ticks: {
-        color: 'rgb(156, 163, 175)',
-        font: {
-          size: 11
-        },
-        maxRotation: 0
-      }
-    },
-    y: {
-      position: 'right',
-      grid: {
-        color: 'rgba(255, 255, 255, 0.05)',
+        display: false,
         drawBorder: false
       },
       ticks: {
         color: 'rgb(156, 163, 175)',
         font: {
-          size: 11
+          size: 10
         },
-        callback: (value) => formatCurrency(value)
+        maxRotation: 45,
+        minRotation: 0,
+        maxTicksLimit: timeRange.value === '1d' ? 12 : 8
+      }
+    },
+    y: {
+      position: 'right',
+      grid: {
+        color: 'rgba(75, 192, 192, 0.08)',
+        drawBorder: false,
+        lineWidth: 0.5
+      },
+      ticks: {
+        color: 'rgb(156, 163, 175)',
+        font: {
+          size: 10
+        },
+        callback: (value) => formatCurrency(value),
+        padding: 8
+      },
+      border: {
+        display: false
       }
     }
   },
@@ -538,17 +598,17 @@ function viewAllTransactions() {
               variant="ghost" 
               size="sm"
               class="text-gray-600 dark:text-gray-300"
-              @click="refreshData"
               :disabled="loading"
+              @click="refreshData"
             >
               <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }" />
             </Button>
             <Button 
-              variant="ghost" 
+              v-if="crypto" 
+              variant="ghost"
               size="sm"
               class="text-gray-600 dark:text-gray-300"
               @click="shareCrypto"
-              v-if="crypto"
             >
               <Share2 class="w-4 h-4" />
             </Button>
@@ -645,19 +705,25 @@ function viewAllTransactions() {
               <div>
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Price Chart</h3>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ crypto.symbol.toUpperCase() }}/EUR - {{ timeRange }}
+                  {{ crypto.symbol.toUpperCase() }}/EUR 
+                  <span v-if="filteredHistory.length > 0">
+                    • {{ filteredHistory.length }} data points
+                  </span>
                 </div>
               </div>
-              <div class="flex gap-2">
+              <div class="flex gap-2 flex-wrap">
                 <Button
-                  v-for="range in ['1d', '7d', '30d', '90d']"
+                  v-for="range in ['1d', '7d', '30d', '60d']"
                   :key="range"
                   size="sm"
                   :variant="timeRange === range ? 'default' : 'outline'"
-                  @click="timeRange = range"
-                  class="text-xs"
+                  class="text-xs font-medium"
+                  :disabled="historyLoading"
+                  @click="() => {
+                    timeRange = range
+                  }"
                 >
-                  {{ range }}
+                  {{ range === '1d' ? '24 Hours' : range === '7d' ? '1 Week' : range === '30d' ? '1 Month' : '2 Months' }}
                 </Button>
               </div>
             </div>
@@ -670,7 +736,7 @@ function viewAllTransactions() {
                   <p class="text-gray-500 dark:text-gray-400">Loading chart...</p>
                 </div>
               </div>
-              <div v-else-if="!chartData.datasets.length" class="h-full flex items-center justify-center">
+              <div v-else-if="!chartData.datasets.length || !history.length" class="h-full flex items-center justify-center">
                 <div class="text-center text-gray-500 dark:text-gray-400">
                   <div class="text-4xl mb-4">📊</div>
                   <p>No historical data available</p>
@@ -678,9 +744,9 @@ function viewAllTransactions() {
               </div>
               <Line 
                 v-else 
-                :data="chartData" 
+                :key="`chart-${chartRenderKey}`"
+                :data="chartData"
                 :options="chartOptions"
-                :key="filteredHistory.length"
               />
             </div>
           </CardContent>
@@ -839,21 +905,21 @@ function viewAllTransactions() {
                 <div class="text-xl font-bold text-gray-900 dark:text-white">{{ formatCurrency(currentPrice) }}</div>
               </div>
               <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">24h Volume</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Current Volume</div>
                 <div class="text-xl font-bold text-gray-900 dark:text-white">
-                  €{{ formatLargeNumber(history[history.length - 1]?.volume || 0) }}
+                  {{ history.length > 0 ? `€${formatLargeNumber(history[history.length - 1]?.volume || 0)}` : 'N/A' }}
                 </div>
               </div>
               <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">30D High</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Period High</div>
                 <div class="text-xl font-bold text-green-600 dark:text-green-400">
-                  {{ formatCurrency(Math.max(...(history.map(h => h.price) || [currentPrice]))) }}
+                  {{ history.length > 0 ? formatCurrency(Math.max(...history.map(h => h.price))) : 'N/A' }}
                 </div>
               </div>
               <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">30D Low</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Period Low</div>
                 <div class="text-xl font-bold text-red-600 dark:text-red-400">
-                  {{ formatCurrency(Math.min(...(history.map(h => h.price) || [currentPrice]))) }}
+                  {{ history.length > 0 ? formatCurrency(Math.min(...history.map(h => h.price))) : 'N/A' }}
                 </div>
               </div>
             </div>

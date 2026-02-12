@@ -27,6 +27,10 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { ChartData, ChartOptions } from 'chart.js'
+import { Chart, registerables } from 'chart.js'
+import { Line } from 'vue-chartjs'
+Chart.register(...registerables)
 interface HistoryEntry {
   timestamp: number
   date: string
@@ -58,20 +62,211 @@ const crypto = ref<CryptoData | null>(null)
 const history = ref<HistoryEntry[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
-const selectedPeriod = ref<'24h' | '7d' | '30d'>('30d')
+const selectedPeriod = ref<'1d' | '7d' | '30d' | '60d'>('30d')
 const hoveredData = ref<HistoryEntry | null>(null)
 const activeTab = ref('overview')
 const currentPage = ref(1)
 const itemsPerPage = 7
+const chartRenderKey = ref(0)
 
 // Computed Properties
-const isPositiveTrend = computed(() => {
-  if (!history.value.length) return true
-  const first = history.value[0].price
-  const last = history.value[history.value.length - 1].price
-  return last >= first
+const filteredHistory = computed(() => {
+  // Don't filter - use all the data returned from the API
+  // The API already returns data for the requested time range
+  return history.value
 })
 
+const chartData = computed<ChartData<'line'>>(() => {
+  if (!filteredHistory.value.length) {
+    return {
+      labels: [],
+      datasets: []
+    }
+  }
+
+  // Determine line color based on the last entry's change_24h_pct
+  const lastEntry = filteredHistory.value[filteredHistory.value.length - 1]
+  const lineColor = lastEntry.change_24h_pct >= 0 ? '#22c55e' : '#ef4444'
+  const fillColor = lastEntry.change_24h_pct >= 0 
+    ? 'rgba(34, 197, 94, 0.1)' 
+    : 'rgba(239, 68, 68, 0.1)'
+
+  // Create gradient for fill
+  const createGradient = (ctx: any) => {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400)
+    if (lastEntry.change_24h_pct >= 0) {
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.3)')
+      gradient.addColorStop(1, 'rgba(34, 197, 94, 0.05)')
+    } else {
+      gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)')
+      gradient.addColorStop(1, 'rgba(239, 68, 68, 0.05)')
+    }
+    return gradient
+  }
+
+  // Format labels intelligently
+  const labels = filteredHistory.value.map((entry, index) => {
+    const date = new Date(entry.timestamp)
+    const isFirstPoint = index === 0
+    const isLastPoint = index === filteredHistory.value.length - 1
+    const isEveryNthPoint = index % Math.max(1, Math.floor(filteredHistory.value.length / 10)) === 0
+    
+    // Show first, last, and regular interval points
+    if (isFirstPoint || isLastPoint || isEveryNthPoint || filteredHistory.value.length < 15) {
+      switch (selectedPeriod.value) {
+        case '1d': 
+          return date.toLocaleTimeString('en-US', { 
+            hour: 'numeric',
+            minute: '2-digit'
+          })
+        case '7d': 
+          return date.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+          })
+        default: 
+          return date.toLocaleDateString('en-US', { 
+            month: 'short',
+            day: 'numeric'
+          })
+      }
+    }
+    return ''
+  })
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: `${crypto.value?.symbol || 'Crypto'} Price`,
+        data: filteredHistory.value.map(entry => entry.price),
+        borderColor: lineColor,
+        backgroundColor: (context) => {
+          const chart = context.chart
+          const { ctx, chartArea } = chart
+          if (!chartArea) return fillColor
+          return createGradient(ctx)
+        },
+        borderWidth: 3,
+        fill: true,
+        tension: 0.2,
+        pointRadius: 0,
+        pointHoverRadius: 8,
+        pointBackgroundColor: lineColor,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        clip: false,
+      }
+    ]
+  }
+})
+
+const chartOptions = computed<ChartOptions<'line'>>(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: {
+    mode: 'index',
+    intersect: false
+  },
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      enabled: true,
+      backgroundColor: 'rgba(17, 24, 39, 0.95)',
+      titleColor: 'rgb(249, 250, 251)',
+      bodyColor: 'rgb(229, 231, 235)',
+      borderColor: 'rgba(75, 192, 192, 0.3)',
+      borderWidth: 1,
+      padding: 12,
+      displayColors: false,
+      titleFont: {
+        size: 12,
+        weight: 'bold'
+      },
+      bodyFont: {
+        size: 11
+      },
+      boxPadding: 6,
+      callbacks: {
+        label: (context) => {
+          const value = context.parsed.y
+          return `Price: ${formatCurrency(value)}`
+        },
+        title: (tooltipItems) => {
+          const item = tooltipItems[0]
+          const index = item.dataIndex
+          const entry = filteredHistory.value[index]
+          if (!entry) return ''
+          
+          const date = new Date(entry.timestamp)
+          return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        },
+        afterLabel: (context) => {
+          const index = context.dataIndex
+          const entry = filteredHistory.value[index]
+          if (!entry) return ''
+          
+          const change = entry.change_24h_pct
+          const sign = change >= 0 ? '+' : ''
+          return `24h Change: ${sign}${change.toFixed(2)}%`
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false,
+        drawBorder: false
+      },
+      ticks: {
+        color: 'rgb(156, 163, 175)',
+        font: {
+          size: 10
+        },
+        maxRotation: 45,
+        minRotation: 0,
+        maxTicksLimit: selectedPeriod.value === '1d' ? 12 : 8
+      }
+    },
+    y: {
+      position: 'right',
+      grid: {
+        color: 'rgba(75, 192, 192, 0.08)',
+        drawBorder: false,
+        lineWidth: 0.5
+      },
+      ticks: {
+        color: 'rgb(156, 163, 175)',
+        font: {
+          size: 10
+        },
+        callback: (value) => formatCurrency(value),
+        padding: 8
+      },
+      border: {
+        display: false
+      }
+    }
+  },
+  elements: {
+    line: {
+      cubicInterpolationMode: 'monotone'
+    }
+  }
+}))
+
+// Computed Properties (basics needed)
 const currentPrice = computed(() => {
   return crypto.value?.price_eur ? parseFloat(crypto.value.price_eur) : 0
 })
@@ -84,64 +279,22 @@ const marketCap = computed(() => {
   return crypto.value?.market_cap ? parseFloat(crypto.value.market_cap) : 0
 })
 
-const filteredHistory = computed(() => {
-  if (!history.value.length) return []
-  
-  const days = selectedPeriod.value === '24h' ? 1 : selectedPeriod.value === '7d' ? 7 : 30
-  const cutoffDate = new Date()
-  cutoffDate.setDate(cutoffDate.getDate() - days)
-  
-  return history.value.filter(h => new Date(h.date) >= cutoffDate)
-})
-
-const chartData = computed(() => {
-  const data = filteredHistory.value
-  if (data.length < 2) return null
-  
-  const prices = data.map(d => d.price)
-  const volumes = data.map(d => d.volume)
-  const minPrice = Math.min(...prices)
-  const maxPrice = Math.max(...prices)
-  const maxVolume = Math.max(...volumes)
-  const priceRange = maxPrice - minPrice || 1
-  
-  return {
-    data,
-    minPrice,
-    maxPrice,
-    maxVolume,
-    priceRange,
-    points: data.map((d, i) => ({
-      ...d,
-      x: (i / (data.length - 1)) * 100,
-      y: 100 - ((d.price - minPrice) / priceRange) * 100,
-      volumeHeight: (d.volume / maxVolume) * 40,
-      index: i
-    }))
-  }
+const isPositiveTrend = computed(() => {
+  if (!history.value.length) return true
+  const first = history.value[0].price
+  const last = history.value[history.value.length - 1].price
+  return last >= first
 })
 
 const chartMetrics = computed(() => {
-  if (!chartData.value) return null
-  const data = chartData.value.data
+  if (!filteredHistory.value.length) return null
+  const data = filteredHistory.value
   const high = Math.max(...data.map(d => d.price))
   const low = Math.min(...data.map(d => d.price))
-  const change = ((data[data.length - 1].price - data[0].price) / data[0].price) * 100
+  const change = data.length > 0 ? ((data[data.length - 1].price - data[0].price) / data[0].price) * 100 : 0
   const avgVolume = data.reduce((sum, d) => sum + d.volume, 0) / data.length
   
   return { high, low, change, avgVolume }
-})
-
-// Pagination
-const paginatedHistory = computed(() => {
-  const sorted = filteredHistory.value.slice().reverse()
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return sorted.slice(start, end)
-})
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredHistory.value.length / itemsPerPage)
 })
 
 // Format functions
@@ -180,34 +333,19 @@ const formatDateTime = (date: string) => {
   })
 }
 
-// Fetch data
-async function fetchData() {
-  loading.value = true
-  error.value = null
-  try {
-    const cryptoId = route.params.id as string
-    crypto.value = await api.crypto.show(cryptoId)
-    const historyData = await api.crypto.history(cryptoId)
-    history.value = historyData.history || []
-    currentPage.value = 1
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to load cryptocurrency data'
-    console.error('Error fetching data:', e)
-  } finally {
-    loading.value = false
-  }
-}
+// Pagination
+const paginatedHistory = computed(() => {
+  const sorted = filteredHistory.value.slice().reverse()
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return sorted.slice(start, end)
+})
 
-// Chart interaction
-function handleChartHover(index: number) {
-  hoveredData.value = filteredHistory.value[index]
-}
+const totalPages = computed(() => {
+  return Math.ceil(filteredHistory.value.length / itemsPerPage)
+})
 
-function handleChartLeave() {
-  hoveredData.value = null
-}
-
-// Navigation
+// Navigation functions
 function goBack() {
   router.back()
 }
@@ -218,12 +356,48 @@ function openWebsite() {
   }
 }
 
-// Lifecycle
-onMounted(() => fetchData())
-watch(selectedPeriod, () => {
+// Fetch data
+async function fetchData() {
+  loading.value = true
+  error.value = null
+  try {
+    const cryptoId = route.params.id as string
+    crypto.value = await api.crypto.show(cryptoId)
+    
+    // Fetch historical data with the current time range
+    const dayMap: Record<string, number> = {
+      '1d': 1,
+      '7d': 7,
+      '30d': 30,
+      '60d': 60
+    }
+    
+    const days = dayMap[selectedPeriod.value] || 30
+    try {
+      const historyData = await api.crypto.history(cryptoId, days)
+      history.value = historyData.history || []
+    } catch (e: any) {
+      history.value = []
+    }
+    
+    currentPage.value = 1
+    chartRenderKey.value++
+  } catch (e: any) {
+    error.value = e?.message || 'Failed to load cryptocurrency data'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Watch selectedPeriod to fetch new data
+watch(selectedPeriod, async () => {
   hoveredData.value = null
   currentPage.value = 1
+  await fetchData()
 })
+
+// Lifecycle
+onMounted(() => fetchData())
 </script>
 
 <template>
@@ -332,14 +506,7 @@ watch(selectedPeriod, () => {
         </div>
         
         <div class="flex gap-2">
-          <Button variant="outline" class="gap-2">
-            <Star class="h-4 w-4" />
-            Watchlist
-          </Button>
-          <Button variant="outline" class="gap-2">
-            <Share2 class="h-4 w-4" />
-            Share
-          </Button>
+       
           <Button variant="outline" class="gap-2">
             <Download class="h-4 w-4" />
             Export
@@ -421,7 +588,7 @@ watch(selectedPeriod, () => {
             
             <div class="flex gap-2">
               <Button
-                v-for="period in ['24h', '7d', '30d'] as const"
+                v-for="period in ['1d', '7d', '30d', '60d'] as const"
                 :key="period"
                 :variant="selectedPeriod === period ? 'default' : 'outline'"
                 size="sm"
@@ -429,164 +596,50 @@ watch(selectedPeriod, () => {
                 @click="selectedPeriod = period"
               >
                 <Clock class="h-3 w-3" />
-                {{ period }}
+                {{ period === '1d' ? '24 Hours' : period === '7d' ? '1 Week' : period === '30d' ? '1 Month' : '2 Months' }}
               </Button>
             </div>
           </div>
         </CardHeader>
         
         <CardContent>
-          <div v-if="chartData" class="space-y-6">
-            <!-- Chart Metrics -->
-            <div v-if="chartMetrics" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div class="text-center p-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
-                <div class="text-sm text-blue-700 font-medium mb-1">Period High</div>
-                <div class="text-xl font-bold text-blue-800">{{ formatCurrency(chartMetrics.high) }}</div>
-              </div>
-              
-              <div class="text-center p-4 rounded-lg bg-gradient-to-r from-green-50 to-green-100 border border-green-200">
-                <div class="text-sm text-green-700 font-medium mb-1">Period Low</div>
-                <div class="text-xl font-bold text-green-800">{{ formatCurrency(chartMetrics.low) }}</div>
-              </div>
-              
-              <div class="text-center p-4 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
-                <div class="text-sm text-purple-700 font-medium mb-1">Period Change</div>
-                <div 
-                  class="text-xl font-bold"
-                  :class="chartMetrics.change >= 0 ? 'text-green-700' : 'text-red-700'"
-                >
-                  {{ formatPercent(chartMetrics.change) }}
-                </div>
-              </div>
+          <!-- Chart Metrics -->
+          <div v-if="chartMetrics" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="text-center p-4 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200">
+              <div class="text-sm text-blue-700 font-medium mb-1">Period High</div>
+              <div class="text-xl font-bold text-blue-800">{{ formatCurrency(chartMetrics.high) }}</div>
             </div>
-
-            <!-- Chart Container -->
-            <div class="relative">
-              <!-- SVG Chart -->
-              <svg 
-                class="w-full h-80"
-                viewBox="0 0 1200 300"
-                preserveAspectRatio="xMidYMid meet"
-                @mouseleave="handleChartLeave"
-              >
-                <!-- Gradient Definitions -->
-                <defs>
-                  <linearGradient id="chart-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop 
-                      offset="0%" 
-                      :stop-color="isPositiveTrend ? '#10b981' : '#ef4444'"
-                      stop-opacity="0.2"
-                    />
-                    <stop 
-                      offset="100%" 
-                      :stop-color="isPositiveTrend ? '#10b981' : '#ef4444'"
-                      stop-opacity="0"
-                    />
-                  </linearGradient>
-                </defs>
-
-                <!-- Grid -->
-                <g class="opacity-30">
-                  <line x1="80" y1="40" x2="80" y2="340" stroke="#d1d5db" stroke-width="1.5" />
-                  <line x1="80" y1="340" x2="1120" y2="340" stroke="#d1d5db" stroke-width="1.5" />
-                  
-                  <template v-for="i in 5" :key="`grid-${i}`">
-                    <line 
-                      x1="80" 
-                      :y1="60 + (i * 70)" 
-                      x2="1120" 
-                      :y2="60 + (i * 70)" 
-                      stroke="#e5e7eb" 
-                      stroke-width="1" 
-                      stroke-dasharray="4,4"
-                    />
-                  </template>
-                </g>
-
-                <!-- Area Path -->
-                <path 
-                  :d="`M ${chartData.points[0].x * 10.4 + 80} ${chartData.points[0].y * 2.8 + 40} 
-                    ${chartData.points.slice(1).map(p => `L ${p.x * 10.4 + 80} ${p.y * 2.8 + 40}`).join(' ')} 
-                    L ${chartData.points[chartData.points.length - 1].x * 10.4 + 80} 340
-                    L 80 340 Z`"
-                  fill="url(#chart-gradient)"
-                />
-
-                <!-- Line Path -->
-                <polyline 
-                  :points="chartData.points.map(p => `${p.x * 10.4 + 80},${p.y * 2.8 + 40}`).join(' ')"
-                  fill="none"
-                  :stroke="isPositiveTrend ? '#10b981' : '#ef4444'"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-
-                <!-- Data Points -->
-                <g class="cursor-crosshair">
-                  <circle 
-                    v-for="(point, i) in chartData.points.filter((_, idx) => idx % Math.ceil(chartData.points.length / 15) === 0 || idx === chartData.points.length - 1)"
-                    :key="i"
-                    :cx="point.x * 10.4 + 80"
-                    :cy="point.y * 2.8 + 40"
-                    r="5"
-                    :fill="hoveredData?.index === point.index ? 'white' : isPositiveTrend ? '#10b981' : '#ef4444'"
-                    :stroke="isPositiveTrend ? '#10b981' : '#ef4444'"
-                    stroke-width="2"
-                    class="transition-all duration-200 hover:r-6 hover:stroke-gray-900"
-                    @mouseenter="handleChartHover(point.index)"
-                  />
-                </g>
-
-                <!-- Hover Line -->
-                <line 
-                  v-if="hoveredData"
-                  :x1="hoveredData.x * 10.4 + 80"
-                  y1="40"
-                  :x2="hoveredData.x * 10.4 + 80"
-                  y2="340"
-                  stroke="#9ca3af"
-                  stroke-width="1.5"
-                  stroke-dasharray="5,5"
-                />
-              </svg>
-
-              <!-- Hover Tooltip -->
+            
+            <div class="text-center p-4 rounded-lg bg-gradient-to-r from-green-50 to-green-100 border border-green-200">
+              <div class="text-sm text-green-700 font-medium mb-1">Period Low</div>
+              <div class="text-xl font-bold text-green-800">{{ formatCurrency(chartMetrics.low) }}</div>
+            </div>
+            
+            <div class="text-center p-4 rounded-lg bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200">
+              <div class="text-sm text-purple-700 font-medium mb-1">Period Change</div>
               <div 
-                v-if="hoveredData"
-                class="absolute z-50 transform -translate-x-1/2"
-                :style="{ left: `${hoveredData.x}%` }"
+                class="text-xl font-bold"
+                :class="chartMetrics.change >= 0 ? 'text-green-700' : 'text-red-700'"
               >
-                <div class="bg-gray-900 text-white rounded-lg shadow-xl p-4 min-w-[200px] transform -translate-y-full -mt-4">
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm text-gray-300">
-                      {{ formatDate(hoveredData.date) }}
-                    </span>
-                    <Badge 
-                      :class="[
-                        'text-xs',
-                        hoveredData.change_24h_pct >= 0 ? 'bg-green-500' : 'bg-red-500'
-                      ]"
-                    >
-                      {{ formatPercent(hoveredData.change_24h_pct) }}
-                    </Badge>
-                  </div>
-                  <div class="text-xl font-bold text-blue-400 mb-1">
-                    {{ formatCurrency(hoveredData.price, 2) }}
-                  </div>
-                  <div class="text-sm text-gray-400">
-                    Volume: {{ formatLargeNumber(hoveredData.volume) }}
-                  </div>
-                </div>
+                {{ formatPercent(chartMetrics.change) }}
               </div>
             </div>
           </div>
-          
-          <div v-else class="h-80 flex items-center justify-center text-gray-500">
-            <div class="text-center">
-              <BarChart3 class="h-12 w-12 mx-auto mb-3 text-gray-400" />
-              <p>No chart data available</p>
+
+          <!-- Chart -->
+          <div class="h-[350px]">
+            <div v-if="!chartData.datasets.length || !history.length" class="h-full flex items-center justify-center">
+              <div class="text-center text-gray-500">
+                <BarChart3 class="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <p>No chart data available</p>
+              </div>
             </div>
+            <Line 
+              v-else 
+              :key="`chart-${chartRenderKey}`"
+              :data="chartData"
+              :options="chartOptions"
+            />
           </div>
         </CardContent>
       </Card>
@@ -674,7 +727,7 @@ watch(selectedPeriod, () => {
                   <span class="text-sm text-gray-700">Price Stability</span>
                   <span class="text-sm font-medium text-blue-600">High</span>
                 </div>
-                <Progress model-value="85" class="bg-blue-100" />
+                <Progress :model-value="85" class="bg-blue-100" />
               </div>
               
               <div>
@@ -682,7 +735,7 @@ watch(selectedPeriod, () => {
                   <span class="text-sm text-gray-700">Market Adoption</span>
                   <span class="text-sm font-medium text-purple-600">Established</span>
                 </div>
-                <Progress model-value="92" class="bg-purple-100" />
+                <Progress :model-value="92" class="bg-purple-100" />
               </div>
               
               <Alert v-if="change24h < -5" class="border-amber-200 bg-amber-50">

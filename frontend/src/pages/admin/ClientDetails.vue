@@ -429,7 +429,8 @@ function getTransactionStatus(tx: any) {
             <!-- Profile Header -->
             <div class="flex flex-col items-center text-center mb-6">
               <!-- Banner -->
-              <div v-if="makeImageUrl(client.profile_banner)" 
+              <div
+v-if="makeImageUrl(client.profile_banner)" 
                    class="w-full h-32 mb-8 rounded-lg overflow-hidden bg-gradient-to-r from-blue-500 to-blue-600">
                 <img
                   :src="makeImageUrl(client.profile_banner)"

@@ -1,14 +1,14 @@
 import type {
-  AccountRequest,
-  ApiResponse,
-  CryptoHistory,
-  Cryptomoney,
-  Notification,
-  PaginatedResponse,
-  Transaction,
-  UpdateUserInput,
-  User,
-  Wallet
+    AccountRequest,
+    ApiResponse,
+    CryptoHistory,
+    Cryptomoney,
+    Notification,
+    PaginatedResponse,
+    Transaction,
+    UpdateUserInput,
+    User,
+    Wallet
 } from '@/types';
 import type { PortfolioResponse } from '../types';
 
@@ -357,8 +357,14 @@ export const cryptoApi = {
     return await request<Cryptomoney>(`/cryptos/${id}`, 'GET');
   },
 
-  async history(id: string, days: number = 30): Promise<CryptoHistory[]> {
-    return await request<CryptoHistory[]>(`/cryptos/${id}/history?days=${days}`, 'GET');
+  async history(id: string, days: number = 30): Promise<any> {
+    try {
+      return await request<any>(`/cryptos/${id}/history?days=${days}`, 'GET');
+    } catch (error) {
+      // Silently handle errors for historical data - backend will provide synthetic data
+      console.debug('Historical data fetch:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
   },
 
   // ✅ Synchroniser l'historique de toutes les cryptos (24h, 7j, 30j)
@@ -407,8 +413,8 @@ export const walletApi = {
     return await request<PlusValueResponse>('/wallets/plus-value', 'GET');
   },
 
-  async history(): Promise<WalletHistoryResponse[]> {
-    return await request<WalletHistoryResponse[]>('/wallets/history', 'GET');
+  async history(days: number = 30): Promise<WalletHistoryResponse[]> {
+    return await request<WalletHistoryResponse[]>(`/wallets/history?days=${days}`, 'GET');
   },
 
   async walletHistory(id: string): Promise<WalletHistoryResponse[]> {

@@ -113,14 +113,21 @@ class PortefeuilleController extends Controller
 
             $newWallet = $user->fresh()->wallets()->first();
 
+            // Clear transaction history cache after successful transaction
+            Cache::forget('transactions_history:user_' . $user->id . ':type_all');
+            Cache::forget('transactions_history:user_' . $user->id . ':type_ACHAT');
+            Cache::forget('transactions_history:user_' . $user->id . ':type_VENTE');
+
             return response()->json([
                 'message' => $result,
+                'success' => true,
                 'new_balance' => (float) ($newWallet?->balance_eur ?? 0),
                 'transaction_details' => [
                     'type' => $validated['type'],
                     'quantity' => (float) $validated['quantity'],
                     'crypto' => $crypto->symbol,
-                    'price' => (float) $crypto->price_eur
+                    'price' => (float) $crypto->price_eur,
+                    'total' => (float) ($validated['quantity'] * $crypto->price_eur)
                 ]
             ]);
 
@@ -177,12 +184,19 @@ class PortefeuilleController extends Controller
      *     summary="Get wallet value history",
      *     tags={"wallet"},
      *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="days",
+     *         in="query",
+     *         description="Number of days to retrieve history for (7, 30, 90, or 365)",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=30)
+     *     ),
      *     @OA\Response(response=200, description="History retrieved successfully"),
      *     @OA\Response(response=404, description="Wallet not found"),
      *     @OA\Response(response=500, description="Internal error")
      * )
      */
-    public function history(): JsonResponse
+    public function history(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -194,7 +208,15 @@ class PortefeuilleController extends Controller
                 ], 404);
             }
 
-            $history = $this->walletService->getPortfolioHistory($wallet->id);
+            $days = (int) $request->query('days', 30);
+            
+            // Validate days parameter
+            $allowedDays = [7, 30, 90, 365];
+            if (!in_array($days, $allowedDays)) {
+                $days = 30;
+            }
+
+            $history = $this->walletService->getPortfolioHistory($wallet->id, $days);
             return response()->json($history);
 
         } catch (\Exception $e) {
@@ -248,7 +270,9 @@ class PortefeuilleController extends Controller
                 return $this->walletService->getTransactionsHistory($wallet->id, $type);
             });
 
-            return response()->json($transactions);
+            return response()->json([
+                'transactions' => $transactions
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error retrieving transaction history',
