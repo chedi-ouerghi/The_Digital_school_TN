@@ -1,0 +1,38 @@
+.task-modal {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.task-modal-content {
+    width: 400px;
+    background: linear-gradient(#212121, #212121) padding-box,
+        linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box !important;
+    border: 2px solid transparent;
+    padding: 32px 24px;
+    font-size: 14px;
+    font-family: inherit;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-sizing: border-box;
+    border-radius: 16px;
+}
+
+.task-modal-header {
+    background-color: #212121;
+    color: #fff;
+    border-bottom: none;
+}
+
+.task-modal-body {
+    background-color: #212121;
+    color: #fff;
+}
+
+.task-modal .close {
+    color: #fff;
+}
+
+.task-modal .close:hover {
+    color: #e81cff;
+}

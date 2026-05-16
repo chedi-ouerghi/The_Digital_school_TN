@@ -1,0 +1,199 @@
+body {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 23px;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+}
+
+
+.container {
+  max-width: 100% !important;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 10px;
+  background-image: url('https://i.gifer.com/XFbw.gif') ;
+  /* background-color: rgba(7, 109, 125, 0.517); */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.container-todoList{
+      max-width: 50% !important;
+      width: 100% !important;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 10px;
+  background: rgba(7, 109, 125, 0.779);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.header {
+  margin-bottom: 40px;
+}
+
+.title {
+  color: black;
+}
+
+.controls {
+  width: 100%;
+}
+
+.search-input,
+.add-input {
+  color: #fff;
+  border: none;
+  background: rgba(0, 0, 0, 0.2);
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.search-input:focus,
+.add-input:focus {
+  outline: none;
+}
+
+.filter {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: column;
+    width: 35%;
+}
+
+.todo-counter {
+  margin: 20px 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+
+.todo-add-section {
+  width: 65%;
+  margin: 20px 0;
+  display: flex;
+}
+
+.add-form {
+  display: flex;
+  align-items: center;
+  /* justify-content: center; */
+  height: 7vh;
+  width: 50%;
+gap: 1%;
+}
+
+.add-button {
+  width: 100%;
+  background: #423a6f;
+  color: #fff;
+  border: none;
+  border-radius: 13px;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.add-button_add{
+    position: relative;
+    top: 7%;
+    width: 25%;
+}
+
+
+.add-button_add:hover {
+  background: #352f5b;
+}
+
+.todos {
+  width: 100%;
+  padding: 0;
+  list-style: none;
+}
+
+.todos li {
+  background: #423a6f;
+  color: #fff;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.todos li:hover {
+  background: #352f5b;
+}
+
+.delete {
+  cursor: pointer;
+}
+
+
+.list-group{
+  height: 35vh !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Chrome, Edge, Safari */
+.list-group::-webkit-scrollbar {
+  width: 12px;
+}
+
+.list-group::-webkit-scrollbar-track {
+  background: #2f2f2f; /* Couleur de la piste */
+  border-radius: 10px;
+}
+
+.list-group::-webkit-scrollbar-thumb {
+  background-color: #5a5a5a; /* Couleur du pouce */
+  border-radius: 10px;
+  border: 3px solid #2f2f2f; /* Crée un espace entre le pouce et la piste */
+}
+
+/* Firefox */
+.list-group {
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a5a #2f2f2f;
+}
+
+/* Styling the scrollbar for Internet Explorer */
+.list-group {
+  -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+}
+
+.list-group::-ms-scrollbar {
+  width: 12px;
+}
+
+.list-group::-ms-scrollbar-track {
+  background: #2f2f2f;
+  border-radius: 10px;
+}
+
+.list-group::-ms-scrollbar-thumb {
+  background-color: #5a5a5a;
+  border-radius: 10px;
+  border: 3px solid #2f2f2f;
+}
+
+/* Universal Scrollbar Styles for Better Compatibility */
+.list-group {
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a5a #2f2f2f;
+}
+
+.list-group::-webkit-scrollbar {
+  width: 12px;
+}
+
+.list-group::-webkit-scrollbar-track {
+  background: #2f2f2f;
+}
+
+.list-group::-webkit-scrollbar-thumb {
+  background-color: #5a5a5a;
+  border-radius: 10px;
+  border: 3px solid #2f2f2f;
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Calendrier de l'année</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div id="calendar"></div>
+
+    <script>
+        // Fonction pour générer le calendrier
+        function generateCalendar(year) {
+            var calendar = document.getElementById('calendar');
+            var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+            // Boucle sur les mois
+            for (var i = 0; i < months.length; i++) {
+                var month = months[i];
+                var monthElement = document.createElement('div');
+                monthElement.classList.add('month');
+                monthElement.innerHTML = '<h2>' + month + ' ' + year + '</h2>';
+
+                // Créer une table pour représenter le mois
+                var table = document.createElement('table');
+                var daysInMonth = new Date(year, i + 1, 0).getDate();
+
+                // Créer les en-têtes de jour
+                var headerRow = '<tr>';
+                for (var j = 0; j < 7; j++) {
+                    headerRow += '<th>' + ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][j] + '</th>';
+                }
+                headerRow += '</tr>';
+                table.innerHTML += headerRow;
+
+                // Remplir le reste de la table avec les jours du mois
+                var day = 1;
+                for (var j = 0; j < 6; j++) {
+                    var row = '<tr>';
+                    for (var k = 0; k < 7; k++) {
+                        if (day <= daysInMonth) {
+                            var cellClass = k === 0 ? 'sunday' : '';
+                            row += '<td class="' + cellClass + '">' + (day++) + '</td>';
+                        } else {
+                            row += '<td></td>';
+                        }
+                    }
+                    row += '</tr>';
+                    table.innerHTML += row;
+                }
+
+                monthElement.appendChild(table);
+                calendar.appendChild(monthElement);
+            }
+        }
+
+        // Appeler la fonction pour générer le calendrier de l'année en cours
+        generateCalendar(new Date().getFullYear());
+    </script>
+</body>
+</html>

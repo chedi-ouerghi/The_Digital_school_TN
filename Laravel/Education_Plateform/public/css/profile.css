@@ -1,0 +1,46 @@
+/* Ajoutez ce code dans votre fichier CSS */
+
+.profile-container {
+    width: 35%;
+    position: relative;
+    left: 27rem;
+    top: 1rem;
+    border: 1px solid gray;
+    border-radius: 35px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+.profile-heading {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.profile-info {
+    margin-bottom: 10px;
+}
+
+.logout-form {
+    margin-top: 20px;
+}
+
+.logout-button {
+    padding: 10px 20px;
+    background-color: #f90;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+    background-color: #f60;
+}
+
+.not-logged-in {
+    color: red;
+}

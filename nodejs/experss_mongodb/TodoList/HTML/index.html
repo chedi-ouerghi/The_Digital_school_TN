@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo list</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Todo list</h1>
+        <div>
+            <input class="add-todo" placeholder="Ajouter une tache" type="text" name="" id="todo-add">
+            <button id="btn-add" class="btn-add">+</button>
+        </div>
+        <div class="delete-btns">
+            <button id="btn-delete-selected">Delete selected</button>
+            <button id="btn-delete-all">Delete all</button>
+        </div>
+        <div id="list-container">
+            <!-- <div class="todolist-items">
+                <div>tache</div>
+                <div class="todolist-items-btns">
+                    <div id="completed-item">Complete</div>
+                    <div id="delete-item">Delete</div>
+                </div>
+            </div> -->
+        </div>
+        <div class="filter-btns">
+            <div class="filter-btn-container">
+                <button id="filter-btn" class="btn-add">Filter</button>
+                <div class="filters-list">
+                    <div id="filter-list-completed-all">All</div>
+                    <div id="filter-list-completed-pending">Pending</div>
+                    <div id="filter-list-completed-option">Completed</div>
+                </div>
+            </div>
+            <span>Completed: <span id="result-completed">0</span></span>
+            <span>Total tasks: <span id="result-tasks">0</span></span>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

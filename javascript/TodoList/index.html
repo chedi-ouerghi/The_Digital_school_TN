@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToDo List</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+       <header>
+        <h1>ToDo List</h1>
+        </header>
+        <div class="input-group">
+            <div class="form-group">
+                <input type="text" id="task" class="input" type="text"  placeholder="📑 Add your todo here..">
+            </div>
+            <button id="addTask" class="ajouter">Ajouter</button>
+        </div>
+        
+        <div class="button-group">
+            <button id="clearAll" class="Supprimer">Delete All</button>
+            <button id="deleteSelected" class="Supprimer"> Delete Selected</button>
+        </div>
+        
+        <hr>
+        <div class="task-list">
+            <ul id="taskList" class="label-compteur"></ul>
+        </div>
+<div class="bottom-div">
+         <div class="filter-group">
+            <!-- <label for="filter" >Filtre :</label> -->
+            <select id="filter" class="filtre-bouton">
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+            </select>
+        </div>
+        <div class="counter-group">
+            <p>Completed: <span id="completedCount">0</span></p>
+            <p>Total Tasks: <span id="totalCount">0</span></p>
+        </div>
+    </div>
+</div>
+    <script src="index.js"></script>
+</body>
+</html>

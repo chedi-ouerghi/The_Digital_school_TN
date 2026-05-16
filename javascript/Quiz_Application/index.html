@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz</title>
+</head>
+<style>
+    * {
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* background: #f3f4f6;  */
+    background-image: url('https://images.pexels.com/photos/9829615/pexels-photo-9829615.jpeg?auto=compress&cs=tinysrgb&w=600');
+}
+
+.quiz-container {
+    max-width: 40%;
+    width: 40%;
+    text-align: center;
+    border: 1px solid #e5e7eb; 
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 0 10px #e5e7eb; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: #ffffff2b; 
+}
+.h1{
+margin-bottom: 10px;
+color: rgb(36, 30, 30);
+text-align: center;
+}
+#options label {
+    display: block;
+    margin: 10px 0;
+}
+
+.score-box {
+    position: absolute;
+    border: 1px solid #e5e7eb;
+    top: 25%;
+    width: 40%;
+    left: 30%;
+    box-shadow: 0 0 10px #e5e7eb;
+    background: #ffffff2b;
+}
+
+.result-container {
+    display: none;
+    margin-top: 20px;
+}
+
+.score-block {
+    display: flex;
+    position: relative;
+    left: 2px;
+    max-width: 85%;
+    margin: 50px auto;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-size: x-large;
+    text-decoration: underline;
+    text-decoration-color: #4b5563;
+    font-weight: bold;
+}
+
+.restart {
+    position: relative;
+    width: 20%;
+    height: 30px;
+    border-radius: 15px;
+    border: 2px solid #4b5563;
+    margin-bottom: 10px;
+    text-align: center;
+    left: 25rem;
+    cursor: pointer;
+    background: #ffffff;
+}
+.restart:hover{
+    color: blanchedalmond;
+    background-color: rgb(207, 131, 8);
+}
+
+.submit {
+    width: 20%;
+    height: 30px;
+    border-radius: 15px;
+    border: 2px solid #4b5563;
+    margin-bottom: 10px;
+    text-align: center;
+    cursor: pointer;
+    background: #ffffff;
+}
+
+.submit:hover{
+    color: blanchedalmond;
+    background-color: rgb(207, 131, 8);
+}
+</style>
+<body>
+    <div class="quiz-container" id="quiz-container">
+        <h1 class="h1">Quiz  Application using Javascript</h1>
+        <h2 id="question"></h2>
+        <div id="options"></div>
+        <button id="submit" class="submit">Submit</button>
+    </div>
+    <div id="result" class="result-container">
+        <div class="score-box">
+            <h1 class="h1">Quiz  Application using Javascript</h1>
+        <p id="score" class="score-block"></p>
+        <button id="restart" class="restart">Restart Quiz</button>
+        </div>
+    </div>
+    <script >
+        const quizData = [
+    {
+        question: " What is the capital of Thailand?",
+        a: "Bangkok",
+        b: "Rome",
+        c: "Berlin",
+        correct: "a"
+    },
+    {
+        question: "what is the capital of gujarat ?",
+        a: "Gandhinagar",
+        b: "Bangkok",
+        c: "london",
+        correct: "a"
+    },
+    {
+        question: "what is the capital of india ?",
+        a: "Pékin",
+        b: "tunis",
+        c: "New Delhi",
+        correct: "c"
+    }
+];
+
+let currentQuestion = 0;
+let score = 0;
+
+const quizContainer = document.getElementById("quiz-container");
+const questionElement = document.getElementById("question");
+const optionElements = document.getElementById("options");
+const submitButton = document.getElementById("submit");
+const resultElement = document.getElementById("result");
+const scoreElement = document.getElementById("score");
+const restartButton = document.getElementById("restart");
+
+submitButton.addEventListener("click", submitAnswer);
+restartButton.addEventListener("click", restartQuiz);
+
+
+function loadQuestion() {
+    quizContainer.style.display = "block";
+    resultElement.style.display = "none";
+    const currentQuizData = quizData[currentQuestion];
+    questionElement.textContent = currentQuizData.question;
+
+    optionElements.innerHTML = `
+        <label>
+            <input type="radio" name="answer" value="a" required>${currentQuizData.a}</input>
+        </label>
+        <label>
+            <input type="radio" name="answer" value="b" required>${currentQuizData.b}</input>
+        </label>
+        <label>
+            <input type="radio" name="answer" value="c" required>${currentQuizData.c}</input>
+        </label>
+    `;
+}
+
+function submitAnswer() {
+    const selectedOption = document.querySelector('input[name="answer"]:checked');
+    if (!selectedOption) {
+        alert('Please select an option!');
+        console.error("Please select an option!");
+        return;
+    }
+
+    const answer = selectedOption.value;
+    if (answer === quizData[currentQuestion].correct) {
+        score++;
+        // alert('Correct answer! Current score: ' + score);
+        console.log("Correct answer! Current score: " + score);
+    } else {
+        // alert("Wrong answer! Current score: " + score);
+        console.log("Wrong answer! Current score: " + score);
+    }
+    
+    currentQuestion++;
+    if (currentQuestion < quizData.length) {
+        loadQuestion();
+    } else {
+        showResult();
+    }
+}
+
+function showResult() {
+    quizContainer.style.display = "none";
+    resultElement.style.display = "block";
+    scoreElement.textContent = `Your score: ${score} out of ${quizData.length}`;
+}
+
+function restartQuiz() {
+    currentQuestion = 0;
+    score = 0;
+    quizContainer.style.display = "block";
+    resultElement.style.display = "none";
+    loadQuestion();
+}
+
+loadQuestion();
+    </script>
+</body>
+</html>
