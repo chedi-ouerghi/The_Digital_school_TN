@@ -231,7 +231,7 @@ onUnmounted(destroyCharts)
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#38618C] to-[#35A7FF] bg-clip-text text-transparent">
+        <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-dark to-brand-blue bg-clip-text text-transparent">
           Portfolio Overview
         </h1>
         <p class="text-sm text-gray-500 mt-1">Track your investments and performance</p>
@@ -239,7 +239,7 @@ onUnmounted(destroyCharts)
       <Button 
         variant="outline" 
         :disabled="loading"
-        class="border-gray-300 hover:border-[#35A7FF] hover:bg-[#35A7FF]/5 transition-all"
+        class="border-gray-300 hover:border-brand-blue hover:bg-brand-blue/5 transition-all"
         @click="fetchData"
       >
         <RefreshCw class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
@@ -250,13 +250,13 @@ onUnmounted(destroyCharts)
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- Total Invested -->
-      <Card class="group relative overflow-hidden bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-[#38618C] transition-all duration-300 hover:shadow-lg">
-        <div class="absolute top-4 right-4 w-10 h-10 rounded-lg bg-[#38618C]/10 flex items-center justify-center">
-          <Euro class="w-5 h-5 text-[#38618C]" />
+      <Card class="group relative overflow-hidden bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:border-brand-dark transition-all duration-300 hover:shadow-lg">
+        <div class="absolute top-4 right-4 w-10 h-10 rounded-lg bg-brand-dark/10 flex items-center justify-center">
+          <Euro class="w-5 h-5 text-brand-dark" />
         </div>
         <CardContent class="p-6 pt-8">
           <div class="text-sm font-medium text-gray-500 mb-2">Total Invested</div>
-          <div class="text-2xl font-bold text-[#38618C] mb-1">
+          <div class="text-2xl font-bold text-brand-dark mb-1">
             {{ loading ? '...' : formatCurrency(stats?.total_invested || 0) }}
           </div>
           <div class="text-xs text-gray-400">Capital invested</div>
@@ -329,7 +329,7 @@ onUnmounted(destroyCharts)
           <CardHeader class="pb-4">
             <div class="flex items-center justify-between">
               <CardTitle class="flex items-center gap-2 text-lg font-semibold">
-                <TrendingUp class="w-5 h-5 text-[#38618C]" />
+                <TrendingUp class="w-5 h-5 text-brand-dark" />
                 Portfolio Evolution
               </CardTitle>
               <span v-if="stats" class="text-sm font-medium px-3 py-1 rounded-full bg-gray-100">
@@ -357,7 +357,7 @@ onUnmounted(destroyCharts)
         <Card class="border-gray-200 hover:shadow-xl transition-all duration-300">
           <CardHeader class="pb-4">
             <CardTitle class="flex items-center gap-2 text-lg font-semibold">
-              <PieChart class="w-5 h-5 text-[#38618C]" />
+              <PieChart class="w-5 h-5 text-brand-dark" />
               Asset Distribution
             </CardTitle>
           </CardHeader>
@@ -421,7 +421,7 @@ onUnmounted(destroyCharts)
                   </div>
                 </td>
                 <td class="text-right py-4 px-6">
-                  <div class="font-bold text-[#35A7FF]">
+                  <div class="font-bold text-brand-blue">
                     {{ formatCurrency(item.value) }}
                   </div>
                 </td>
@@ -455,7 +455,7 @@ onUnmounted(destroyCharts)
         View Transaction History
       </Button>
       <Button 
-        class="bg-gradient-to-r from-[#38618C] to-[#35A7FF] hover:from-[#2d4f6f] hover:to-[#2a8ee6] text-white px-8 shadow-md hover:shadow-lg transition-all"
+        class="bg-gradient-to-r from-brand-dark to-brand-blue hover:from-[#2d4f6f] hover:to-[#2a8ee6] text-white px-8 shadow-md hover:shadow-lg transition-all"
         @click="router.push('/dashboard/cryptos')"
       >
         Explore Cryptocurrencies

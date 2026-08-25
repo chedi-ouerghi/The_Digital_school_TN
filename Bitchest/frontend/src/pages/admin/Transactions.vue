@@ -27,7 +27,7 @@ import {
   List,
   ArrowUpDown,
   ChevronLeft,
-  ChevronRight, 
+  ChevronRight,
   CheckCircle,
   AlertCircle
 } from 'lucide-vue-next'
@@ -227,7 +227,6 @@ const toggleSort = (field: 'date' | 'amount') => {
 }
 
 const exportTransactions = () => {
-  console.log('Exporting transactions...')
 }
 
 onMounted(fetchTransactions)
@@ -578,7 +577,7 @@ v-for="stat in [
       <Card 
         v-for="t in paginatedTransactions" 
         :key="t.id"
-        class="group relative hover:shadow-lg transition-all duration-200 border hover:border-[#38618C]/30 cursor-pointer"
+        class="group relative hover:shadow-lg transition-all duration-200 border hover:border-brand-dark/30 cursor-pointer"
         :class="{ 'border-red-200 bg-red-50/20': t.cancelled_at }"
         @click="viewDetails(t.id)"
       >
@@ -594,8 +593,8 @@ v-for="stat in [
                     class="w-full h-full object-cover"
                   />
                 </div>
-                <div v-else class="w-10 h-10 rounded-full bg-gradient-to-br from-[#38618C]/10 to-[#38618C]/20 flex items-center justify-center">
-                  <span class="text-sm font-semibold text-[#38618C]">
+                <div v-else class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-dark/10 to-brand-dark/20 flex items-center justify-center">
+                  <span class="text-sm font-semibold text-brand-dark">
                     {{ t.crypto_wallet_asset?.cryptomoney?.symbol?.charAt(0) || '?' }}
                   </span>
                 </div>
@@ -622,8 +621,8 @@ v-for="stat in [
           <!-- Client Info -->
           <div class="mb-4">
             <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg group-hover:bg-gray-100 transition-colors">
-              <div class="w-8 h-8 rounded-full bg-[#38618C]/10 flex items-center justify-center flex-shrink-0">
-                <User class="h-4 w-4 text-[#38618C]" />
+              <div class="w-8 h-8 rounded-full bg-brand-dark/10 flex items-center justify-center flex-shrink-0">
+                <User class="h-4 w-4 text-brand-dark" />
               </div>
               <div class="flex-1 min-w-0">
                 <div class="font-medium text-sm text-gray-900 truncate">
@@ -671,9 +670,9 @@ v-for="stat in [
               <Button 
                 size="sm"
                 variant="ghost"
-                class="h-8 w-8 p-0 hover:bg-[#38618C]/10 active:bg-[#38618C]/20 transition-colors"
+                class="h-8 w-8 p-0 hover:bg-brand-dark/10 active:bg-brand-dark/20 transition-colors"
               >
-                <Eye class="h-4 w-4 text-[#38618C]" />
+                <Eye class="h-4 w-4 text-brand-dark" />
               </Button>
               <Button 
                 v-if="!t.cancelled_at"
@@ -720,7 +719,7 @@ v-for="stat in [
                     <span class="sm:hidden">Date</span>
                     <ArrowUpDown 
                       class="h-3 w-3" 
-                      :class="{ 'text-[#38618C]': sortBy === 'date' }"
+                      :class="{ 'text-brand-dark': sortBy === 'date' }"
                     />
                   </div>
                 </Button>
@@ -740,7 +739,7 @@ v-for="stat in [
                     <span>Total</span>
                     <ArrowUpDown 
                       class="h-3 w-3" 
-                      :class="{ 'text-[#38618C]': sortBy === 'amount' }"
+                      :class="{ 'text-brand-dark': sortBy === 'amount' }"
                     />
                   </div>
                 </Button>
@@ -776,8 +775,8 @@ class="w-8 h-8 rounded-full flex items-center justify-center"
               </TableCell>
               <TableCell class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-[#38618C]/10 flex items-center justify-center flex-shrink-0">
-                    <span class="text-sm font-medium text-[#38618C]">
+                  <div class="w-8 h-8 rounded-full bg-brand-dark/10 flex items-center justify-center flex-shrink-0">
+                    <span class="text-sm font-medium text-brand-dark">
                       {{ t.crypto_wallet_asset?.wallet?.user?.name?.charAt(0) || '?' }}
                     </span>
                   </div>
@@ -842,13 +841,16 @@ class="w-8 h-8 rounded-full flex items-center justify-center"
               </TableCell>
               <TableCell class="px-4 py-3 text-right">
                 <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    class="h-8 w-8 p-0 hover:bg-[#38618C]/10 active:bg-[#38618C]/20 transition-colors"
-                  >
-                    <Eye class="h-4 w-4 text-[#38618C]" />
-                  </Button>
+                  <router-link :to="`/dashboard/admin/transactions/${t.id}`">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      class="h-8 w-8 p-0 hover:bg-brand-dark/10 active:bg-brand-dark/20 transition-colors"
+                      @click.stop
+                    >
+                      <Eye class="h-4 w-4 text-brand-dark" />
+                    </Button>
+                  </router-link>
                   <Button 
                     v-if="!t.cancelled_at"
                     size="sm" 
@@ -889,7 +891,7 @@ class="w-8 h-8 rounded-full flex items-center justify-center"
             :variant="page === p ? 'default' : 'outline'"
             size="sm"
             class="w-9 h-9 p-0 transition-colors"
-            :class="page === p ? 'bg-[#38618C] hover:bg-[#2c4e6e]' : 'hover:bg-gray-100 active:bg-gray-200'"
+            :class="page === p ? 'bg-brand-dark hover:bg-[#2c4e6e]' : 'hover:bg-gray-100 active:bg-gray-200'"
             @click="changePage(p)"
           >
             {{ p }}

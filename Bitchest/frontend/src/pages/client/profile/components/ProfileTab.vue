@@ -61,7 +61,7 @@ onMounted(() => {
 <template>
   <Card class="border-gray-200 shadow-lg">
     <CardHeader>
-      <CardTitle class="text-[#38618C]">Profile Information</CardTitle>
+      <CardTitle class="text-brand-dark">Profile Information</CardTitle>
     </CardHeader>
     <CardContent>
       <form class="space-y-4" @submit.prevent="updateProfile">
@@ -73,7 +73,7 @@ onMounted(() => {
             type="text"
             placeholder="Your name"
             required
-            class="transition-colors focus:border-[#35A7FF]"
+            class="transition-colors focus:border-brand-blue"
           />
         </div>
 
@@ -85,7 +85,7 @@ onMounted(() => {
             type="email"
             placeholder="your@email.com"
             required
-            class="transition-colors focus:border-[#35A7FF]"
+            class="transition-colors focus:border-brand-blue"
           />
         </div>
 
@@ -96,7 +96,7 @@ onMounted(() => {
           </div>
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Account status:</span>
-            <Badge :class="profile.email_verified_at ? 'bg-[#01FF19]/20 text-[#01FF19]' : 'bg-[#FF5964]/20 text-[#FF5964]'">
+            <Badge :class="profile.email_verified_at ? 'bg-brand-green/20 text-brand-green' : 'bg-brand-red/20 text-brand-red'">
               {{ profile.email_verified_at ? '✓ Verified' : '⚠ Not verified' }}
             </Badge>
           </div>
@@ -105,7 +105,7 @@ onMounted(() => {
         <Button 
           type="submit" 
           :disabled="updatingProfile"
-          class="w-full bg-[#35A7FF] hover:bg-[#38618C] text-white transition-colors"
+          class="w-full bg-brand-blue hover:bg-brand-dark text-white transition-colors"
         >
           {{ updatingProfile ? 'Updating...' : 'Update Profile' }}
         </Button>

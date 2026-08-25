@@ -1,20 +1,11 @@
 <script setup lang="ts">
 import CustomSidebar from '@/components/CustomSidebar.vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, ChevronDown, Lock, LogOut, Menu, RefreshCw, Settings, TrendingDown, TrendingUp, User, X } from 'lucide-vue-next';
+import { Lock, Menu, X } from 'lucide-vue-next';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
@@ -99,9 +90,20 @@ const userInitials = computed(() => {
     .slice(0, 2)
 })
 
-function logout() {
-  auth.logout()
-  router.push('/signin')
+// ✅ FIX double-clic : attendre la fin du logout (API + nettoyage session)
+// avant de naviguer, sinon le guard requiresGuest de /signin revalide la
+// session encore active et renvoie vers le dashboard.
+const isLoggingOut = ref(false)
+
+async function logout() {
+  if (isLoggingOut.value) return
+  isLoggingOut.value = true
+  try {
+    await auth.logout()
+  } finally {
+    isLoggingOut.value = false
+    await router.push('/signin')
+  }
 }
 
 async function fetchNotifications() {
@@ -136,12 +138,21 @@ async function markNotificationAsRead(n: any) {
 
 async function markAllAsRead() {
   try {
-    const unreadNotifications = notifications.value.filter(n => !n.is_read)
-    for (const n of unreadNotifications) {
-      await markNotificationAsRead(n)
-    }
+    await api.notifications.markAllAsRead()
+    notifications.value.forEach(n => {
+      n.is_read = true
+      n.read_at = n.read_at || new Date().toISOString()
+    })
   } catch (err) {
     console.warn('Cannot mark all notifications as read', err)
+  }
+}
+
+async function openNotification(n: any) {
+  if (!n.is_read) await markNotificationAsRead(n)
+  if (typeof n.action_url === 'string' && n.action_url.startsWith('/dashboard/')) {
+    await router.push(n.action_url)
+    showNotifications.value = false
   }
 }
 
@@ -324,8 +335,6 @@ async function loadUserProfile() {
     if (Object.keys(props.profile).length === 0) {
       const profile = await api.auth.profile()
       userProfile.value = profile
-      console.log('✅ User profile loaded:', profile)
-      console.log('📸 Profile picture URL:', getProfilePictureUrl.value)
       
       // 🔐 Vérifier le statut du mot de passe lors du chargement du profil
       if (String(role.value).toUpperCase() === 'CLIENT') {
@@ -361,15 +370,10 @@ async function checkPasswordStatus() {
 
 // 🔐 Écouter l'événement de changement de mot de passe
 function handlePasswordChanged() {
-  console.log('🔐 Password changed event detected')
   checkPasswordStatus()
 }
 
 onMounted(async () => {
-  console.log('📱 Dashboard mounted')
-  console.log('👤 Props profile:', props.profile)
-  console.log('👤 Current user from auth:', user.value)
-  
   await loadUserProfile()
   
   // 🔐 SECURITY: Vérifier que l'utilisateur a changé son mot de passe (pour les clients uniquement)
@@ -445,199 +449,12 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
       </div>
     </div>
 
-    <!-- HEADER -->
-    <header class="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80 shadow-sm">
-      <div class="px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-
-          <!-- LEFT SIDE - Logo & Mobile Menu -->
-          <div class="flex items-center gap-3 flex-1">
-            <!-- Mobile Menu Button -->
-            <button
-              class="lg:hidden p-2.5 text-slate-600 hover:bg-slate-100/80 rounded-xl transition-all duration-200 hover:scale-105"
-              @click="showMobileSidebar = true"
-            >
-              <Menu class="w-5 h-5" />
-            </button>
-
-            <!-- Logo -->
-            <div class="flex items-center gap-3">
-              <img 
-                src="/assets/bitchest_logo.png"
-                class="h-8 w-auto hover:opacity-80 transition-all duration-300 hover:scale-105"
-                alt="Bitchest"
-              />
-              <div class="hidden sm:block h-6 w-px bg-slate-200/60"></div>
-            </div>
-
-            <!-- Role Badge - Desktop -->
-            <div class="hidden sm:flex items-center">
-              <Badge 
-                class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-blue-50 to-indigo-50 text-slate-700 border-slate-200/60"
-                variant="outline"
-              >
-                {{ String(role).toLowerCase() }}
-              </Badge>
-            </div>
-          </div>
-
-          <!-- RIGHT SIDE - Actions & User -->
-          <div class="flex items-center gap-2">
-            
-            <!-- ✅ CORRECTION: Affichage Plus-Value corrigé -->
-            <div v-if="!String(role).toUpperCase().includes('ADMIN')" class="hidden lg:flex items-center gap-4 mr-4">
-              <div class="text-right">
-                <div class="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <span>{{ displayValue }}</span>
-                  <TrendingUp v-if="isPositiveChange" class="w-4 h-4 text-green-500" />
-                  <TrendingDown v-else class="w-4 h-4 text-rose-500" />
-                </div>
-                <div 
-                  class="text-xs font-medium"
-                  :class="isPositiveChange ? 'text-green-600' : 'text-rose-600'"
-                >
-                  {{ displayPercentage }} 
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-9 w-9 p-0 hover:bg-slate-100/80 rounded-xl"
-                :disabled="loadingWallet"
-                @click="refreshWallet"
-              >
-                <RefreshCw class="w-4 h-4" :class="{'animate-spin': loadingWallet}" />
-              </Button>
-            </div>
-
-            <!-- Notifications -->
-            <button
-              class="relative p-2.5 text-slate-600 hover:bg-slate-100/80 rounded-xl transition-all duration-200 hover:scale-105"
-              aria-label="Open notifications"
-              @click="toggleNotifications"
-            >
-              <Bell class="w-5 h-5" />
-              <span
-                v-if="unreadCount > 0"
-                class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-r from-rose-500 to-pink-500 rounded-full border-2 border-white shadow-sm"
-              >
-                {{ unreadCount > 9 ? '9+' : unreadCount }}
-              </span>
-            </button>
-
-            <!-- Separator -->
-            <div class="h-8 w-px bg-slate-200/60 mx-1 hidden sm:block"></div>
-
-            <!-- ✅ CORRECTED: User Menu -->
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <button class="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-100/80 transition-all duration-200 group">
-                  <div class="relative">
-                    <Avatar class="h-9 w-9 border-2 border-slate-200/60 group-hover:border-slate-300 transition-all duration-300 group-hover:scale-105">
-                      <AvatarImage 
-                        v-if="getProfilePictureUrl"
-                        :src="getProfilePictureUrl" 
-                        :alt="displayUser?.name || 'User'"
-                        class="object-cover"
-                        @error="(e) => {
-                          console.warn('❌ Profile picture failed to load:', getProfilePictureUrl)
-                          e.target.style.display = 'none'
-                        }"
-                      />
-                      <AvatarFallback class="bg-gradient-to-br from-slate-100 to-slate-200 text-slate-700 font-semibold text-sm">
-                        {{ userInitials }}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
-                  </div>
-
-                  <div class="hidden lg:block text-left">
-                    <div class="text-sm font-semibold text-slate-900 leading-tight">
-                      {{ displayUser?.name || displayUser?.email }}
-                    </div>
-                    <div class="text-xs text-slate-500 leading-tight">
-                      {{ displayUser?.email }}
-                    </div>
-                  </div>
-
-                  <ChevronDown class="w-4 h-4 text-slate-400 hidden lg:block transition-transform group-hover:scale-110" />
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent class="w-56 mr-2 mt-2" align="end">
-                <DropdownMenuLabel class="p-4">
-                  <div class="flex items-center gap-3">
-                    <Avatar class="h-10 w-10 border border-slate-200">
-                      <AvatarImage 
-                        v-if="getProfilePictureUrl"
-                        :src="getProfilePictureUrl" 
-                        :alt="displayUser?.name || 'User'"
-                        @error="(e) => {
-                          console.warn('❌ Dropdown profile picture failed to load:', getProfilePictureUrl)
-                          e.target.style.display = 'none'
-                        }"
-                      />
-                      <AvatarFallback class="bg-slate-100 text-slate-700">
-                        {{ userInitials }}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div class="flex-1 min-w-0">
-                      <div class="font-semibold text-slate-900 truncate">
-                        {{ displayUser?.name || 'User' }}
-                      </div>
-                      <div class="text-sm text-slate-500 truncate">
-                        {{ displayUser?.email }}
-                      </div>
-                      <div v-if="displayUser?.solde !== undefined" class="text-xs font-medium text-emerald-600 mt-1">
-                        Balance: {{ formatCurrency(displayUser.solde) }}
-                      </div>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem
-                  v-if="String(role).toUpperCase().includes('ADMIN')"
-                  class="cursor-pointer p-3"
-                  @click="router.push('/dashboard/admin/settings')"
-                >
-                  <Settings class="w-4 h-4 mr-3" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  v-else
-                  class="cursor-pointer p-3"
-                  @click="router.push('/dashboard/portfolio')"
-                >
-                  <User class="w-4 h-4 mr-3" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem 
-                  class="cursor-pointer p-3 text-rose-600 focus:text-rose-600 focus:bg-rose-50/50"
-                  @click="logout"
-                >
-                  <LogOut class="w-4 h-4 mr-3" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-        </div>
-      </div>
-    </header>
-  
-    <!-- MAIN LAYOUT -->
+    <!-- MAIN LAYOUT (le header a été supprimé : sidebar + contenu principal uniquement) -->
     <div class="flex flex-1 min-h-0 w-full">
 
       <!-- DESKTOP SIDEBAR -->
       <aside
-        class="hidden lg:flex flex-col w-72 border-r border-slate-200 bg-white shadow-sm sticky left-0 top-[4.5rem] h-[calc(100vh-4.5rem)] overflow-y-auto"
+        class="hidden lg:flex flex-col w-72 border-r border-slate-200 bg-white shadow-sm sticky left-0 top-0 h-screen overflow-y-auto"
       >
         <div class="p-6">
           <CustomSidebar
@@ -646,14 +463,36 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
             :total-value="totalValue"
             :day-change-pct="dayChangePct"
             :role="role"
+            :user-name="displayUser?.name || displayUser?.email"
+            :user-email="displayUser?.email"
+            :user-initials="userInitials"
+            :profile-picture-url="getProfilePictureUrl"
+            :unread-count="unreadCount"
+            :plus-value-display="displayValue"
+            :plus-value-percent-display="displayPercentage"
+            :plus-positive="isPositiveChange"
+            :loading-wallet="loadingWallet"
+            @open-notifications="toggleNotifications"
+            @logout="logout"
+            @refresh="refreshWallet"
           />
         </div>
       </aside>
 
       <!-- MAIN CONTENT -->
-      <main class="flex-1 overflow-y-auto min-h-0">
+      <main class="flex-1 overflow-y-auto min-h-0 relative">
+        <!-- Bouton menu mobile (remplace le bouton hamburger du header supprimé) -->
+        <button
+          type="button"
+          class="lg:hidden fixed top-4 left-4 z-40 p-2.5 bg-white border border-slate-200 shadow-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200"
+          aria-label="Open navigation"
+          @click="showMobileSidebar = true"
+        >
+          <Menu class="w-5 h-5" />
+        </button>
+
         <div class="px-4 sm:px-8 lg:px-12 py-10 max-w-full">
-          <Card class="bg-white border border-slate-200 shadow-sm rounded-3xl w-full min-h-[calc(100vh-12rem)]">
+          <Card class="bg-white border border-slate-200 shadow-sm rounded-3xl w-full min-h-[calc(100vh-8rem)]">
             <CardContent class="p-6 sm:p-10">
               <router-view />
             </CardContent>
@@ -723,7 +562,7 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
                 : 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border-l-4 border-blue-500',
               n.type === 'welcome' && 'bg-gradient-to-r from-green-50 to-emerald-50/40 border-l-4 border-green-500 shadow-md'
             ]"
-            @click="!n.is_read && markNotificationAsRead(n)"
+            @click="openNotification(n)"
           >
             <!-- Header with icon, type badge and timestamp -->
             <div class="flex gap-4 mb-3">
@@ -846,6 +685,18 @@ const displayPercentage = computed(() => loadingWallet.value ? '...' : formatPer
             :total-value="totalValue"
             :day-change-pct="dayChangePct"
             :role="role"
+            :user-name="displayUser?.name || displayUser?.email"
+            :user-email="displayUser?.email"
+            :user-initials="userInitials"
+            :profile-picture-url="getProfilePictureUrl"
+            :unread-count="unreadCount"
+            :plus-value-display="displayValue"
+            :plus-value-percent-display="displayPercentage"
+            :plus-positive="isPositiveChange"
+            :loading-wallet="loadingWallet"
+            @open-notifications="toggleNotifications"
+            @logout="logout"
+            @refresh="refreshWallet"
           />
         </ScrollArea>
 

@@ -57,9 +57,9 @@ watch(() => props.clientId, async (id) => {
 
 <template>
   <Dialog :open="open" @update:open="emit('close')">
-    <DialogContent class="sm:max-w-4xl max-h-[90vh] overflow-y-auto border-[#38618C]">
+    <DialogContent class="sm:max-w-4xl max-h-[90vh] overflow-y-auto border-brand-dark">
       <DialogHeader>
-        <DialogTitle class="text-[#38618C] font-bold text-xl">
+        <DialogTitle class="text-brand-dark font-bold text-xl">
           {{ client?.name || 'Détails du client' }}
         </DialogTitle>
       </DialogHeader>
@@ -73,7 +73,7 @@ watch(() => props.clientId, async (id) => {
         <!-- Informations du client -->
         <Card>
           <CardHeader>
-            <CardTitle class="text-[#38618C]">Informations personnelles</CardTitle>
+            <CardTitle class="text-brand-dark">Informations personnelles</CardTitle>
           </CardHeader>
           <CardContent>
             <div class="grid grid-cols-2 gap-4">
@@ -100,7 +100,7 @@ watch(() => props.clientId, async (id) => {
         <!-- wallet -->
         <Card v-if="portfolio?.length">
           <CardHeader>
-            <CardTitle class="text-[#38618C]">wallet</CardTitle>
+            <CardTitle class="text-brand-dark">wallet</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -129,7 +129,7 @@ watch(() => props.clientId, async (id) => {
         <!-- Dernières transactions -->
         <Card v-if="transactions.length">
           <CardHeader>
-            <CardTitle class="text-[#38618C]">Dernières transactions</CardTitle>
+            <CardTitle class="text-brand-dark">Dernières transactions</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -146,7 +146,7 @@ watch(() => props.clientId, async (id) => {
                 <TableRow v-for="tx in transactions" :key="tx.id">
                   <TableCell>{{ formatDate(tx.created_at) }}</TableCell>
                   <TableCell>
-                    <span :class="tx.type === 'ACHAT' ? 'text-[#01FF19]' : 'text-[#FF5964]'">
+                    <span :class="tx.type === 'ACHAT' ? 'text-brand-green' : 'text-brand-red'">
                       {{ tx.type }}
                     </span>
                   </TableCell>
@@ -163,7 +163,7 @@ watch(() => props.clientId, async (id) => {
       <div class="mt-6 flex justify-end">
         <Button 
           variant="outline"
-          class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+          class="border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white"
           @click="emit('close')"
         >
           Fermer
@@ -174,11 +174,11 @@ watch(() => props.clientId, async (id) => {
 </template>
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
+:deep(.border-brand-dark) {
   border-color: #38618C;
 }
 
-:deep(.text-\[#38618C\]) {
+:deep(.text-brand-dark) {
   color: #38618C;
 }
 </style>

@@ -15,7 +15,7 @@
         <div>
           <div class="flex items-center gap-3 mb-4">
             <div class="w-36 h-14 rounded-lg  flex items-center justify-center">
-          <img src="/assets/bitchest_logo.png" alt="BitChest" class="h-20" />
+              <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
             </div>
             
           </div>

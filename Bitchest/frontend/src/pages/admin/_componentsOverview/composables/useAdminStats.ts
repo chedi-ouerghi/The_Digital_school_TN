@@ -4,21 +4,51 @@ import api from '../../../../services/api'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement)
 
+interface AdminTopCrypto {
+  id: number
+  name: string
+  symbol: string
+  image?: string
+  image_url?: string
+  total_qty?: number
+  total_volume?: number
+}
+
+interface AdminRecentTransaction {
+  id: string
+  quantity?: number
+  total_eur?: number
+  type?: string
+  crypto_name?: string
+  crypto_image?: string
+  cryptomoney?: {
+    name?: string
+    image?: string
+  }
+}
+
+interface AdminStatsData {
+  total_users?: number
+  total_volume?: number
+  top_cryptos?: AdminTopCrypto[]
+  recent_transactions?: AdminRecentTransaction[]
+}
+
 export function useAdminStats() {
-  const stats = ref<any>(null)
+  const stats = ref<AdminStatsData>({})
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const cryptoDetails = ref<Map<number, any>>(new Map())
-  const recentTransactions = ref<any[]>([])
+  const cryptoDetails = ref<Map<number, AdminTopCrypto>>(new Map())
+  const recentTransactions = ref<AdminRecentTransaction[]>([])
 
   // Fonctions utilitaires
-  function formatCurrency(value: any): string {
+  function formatCurrency(value: unknown): string {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '0,00 €'
     return n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
   }
 
-  function formatNumber(value: any, decimals = 2): string {
+  function formatNumber(value: unknown, decimals = 2): string {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '0'
     return n.toFixed(decimals)
@@ -29,16 +59,16 @@ export function useAdminStats() {
     error.value = null
     try {
       const data = await api.admin.stats.global()
-      stats.value = data?.data || {}
+      stats.value = (data?.data || {}) as AdminStatsData
 
       // Mapper les cryptos dans cryptoDetails pour un accès facile
       if (stats.value.top_cryptos?.length) {
-        stats.value.top_cryptos.forEach((crypto: any) => {
+        stats.value.top_cryptos.forEach((crypto) => {
           cryptoDetails.value.set(Number(crypto.id), {
             id: Number(crypto.id),
             name: crypto.name,
             symbol: crypto.symbol,
-            image_url: getImageUrl(crypto.image),
+            image_url: getImageUrl(crypto.image || ''),
             total_qty: crypto.total_qty,
             total_volume: crypto.total_volume
           })
@@ -47,28 +77,29 @@ export function useAdminStats() {
 
       // Mapper et construire les URLs des images pour top_cryptos
       if (stats.value.top_cryptos?.length) {
-        stats.value.top_cryptos = stats.value.top_cryptos.map((crypto: any) => ({
+        stats.value.top_cryptos = stats.value.top_cryptos.map((crypto) => ({
           ...crypto,
-          image: getImageUrl(crypto.image)
+          image: getImageUrl(crypto.image || '')
         }))
       }
 
       // Mapper les transactions récentes avec les images
       if (stats.value.recent_transactions?.length) {
-        recentTransactions.value = stats.value.recent_transactions
+        stats.value.recent_transactions
           .slice(0, 10)
-          .map((tx: any) => ({
-            ...tx,
-            // Créer un objet cryptomoney avec l'image
-            cryptomoney: {
-              name: tx.crypto_name,
-              image: getImageUrl(tx.crypto_image || '')
-            }
-          }))
+          .forEach((tx) => {
+            recentTransactions.value.push({
+              ...tx,
+              cryptomoney: {
+                name: tx.crypto_name,
+                image: getImageUrl(tx.crypto_image || '')
+              }
+            })
+          })
       }
 
-    } catch (err: any) {
-      error.value = err.message || String(err)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
       console.error('Erreur chargement stats:', err)
     } finally {
       loading.value = false
@@ -96,10 +127,10 @@ export function useAdminStats() {
     const topCryptos = stats.value?.top_cryptos || []
     
     return {
-      labels: topCryptos.map((c: any) => (c.symbol || 'UNKNOWN').toUpperCase()),
+      labels: topCryptos.map((c: AdminTopCrypto) => (c.symbol || 'UNKNOWN').toUpperCase()),
       datasets: [{
         label: 'Quantité tradée',
-        data: topCryptos.map((c: any) => Number(c.total_qty || 0)),
+        data: topCryptos.map((c: AdminTopCrypto) => Number(c.total_qty || 0)),
         backgroundColor: [
           'rgba(1, 255, 25, 0.8)',
           'rgba(53, 167, 255, 0.8)',
@@ -149,9 +180,9 @@ export function useAdminStats() {
     const topCryptos = stats.value?.top_cryptos || []
     
     return {
-      labels: topCryptos.map((c: any) => (c.symbol || 'UNKNOWN').toUpperCase()),
+      labels: topCryptos.map((c: AdminTopCrypto) => (c.symbol || 'UNKNOWN').toUpperCase()),
       datasets: [{
-        data: topCryptos.map((c: any) => Number(c.total_volume || 0)),
+        data: topCryptos.map((c: AdminTopCrypto) => Number(c.total_volume || 0)),
         backgroundColor: [
           'rgba(1, 255, 25, 0.8)',
           'rgba(53, 167, 255, 0.8)',

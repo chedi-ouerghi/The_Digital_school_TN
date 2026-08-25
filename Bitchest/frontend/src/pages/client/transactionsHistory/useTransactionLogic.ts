@@ -1,11 +1,11 @@
 // composables/useTransactionLogic.ts
 import {
-    ArrowDownRight,
-    ArrowUpRight
+  ArrowDownRight,
+  ArrowUpRight
 } from 'lucide-vue-next'
 import { type Ref } from 'vue'
-import { useRouter } from 'vue-router'
 import api from '../../../services/api'
+import type { Cryptomoney, Transaction } from '../../../types/models'
 
 export const colors = {
   primary: '#35A7FF',
@@ -15,9 +15,57 @@ export const colors = {
   neutral: '#64748B'
 }
 
+export interface WalletEntry {
+  symbol?: string
+  quantity?: number
+  cryptomoney?: Cryptomoney
+}
+
+export interface WalletData {
+  cryptoWalletAssets?: WalletEntry[]
+  assets?: WalletEntry[]
+  totalValue?: number
+  totalInvestment?: number
+  totalPlusValue?: number
+  totalPlusValuePercent?: number
+  balance_eur?: number
+  buyCount?: number
+  totalUnits?: number
+}
+
+export interface TransactionItem {
+  id: string
+  crypto_id?: string | number
+  originalType: string
+  type: string
+  typeLabel: string
+  quantity: number
+  price: number
+  unitPrice: number
+  total: number
+  date: string
+  crypto: {
+    id?: string | number
+    name: string
+    symbol: string
+    image_url: string
+    current_price: number
+  }
+  average_price?: number
+}
+
+type RawTransaction = Transaction & {
+  crypto_id?: string
+  unit_price_eur?: number
+  crypto_name?: string
+  crypto_symbol?: string
+  crypto_image_url?: string
+  date?: string
+}
+
 export function useTransactionLogic(
-  wallet: Ref<any>,
-  transactions: Ref<any[]>,
+  wallet: Ref<WalletData>,
+  transactions: Ref<TransactionItem[]>,
   loading: Ref<boolean>,
   error: Ref<string | null>,
   isRefreshing: Ref<boolean>,
@@ -27,38 +75,36 @@ export function useTransactionLogic(
   searchQuery: Ref<string>,
   currentPage: Ref<number>,
   showSellDialog: Ref<boolean>,
-  selectedAsset: Ref<any>,
+  selectedAsset: Ref<TransactionItem | null>,
   sellQuantity: Ref<string>,
   sellError: Ref<string | null>,
   sellSuccess: Ref<string | null>,
   isSelling: Ref<boolean>
 ) {
-  const router = useRouter()
-
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
-  const formatCurrency = (value: any) => {
+  const formatCurrency = (value: unknown) => {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '€0.00'
-    return n.toLocaleString('en-US', { 
-      style: 'currency', 
-      currency: 'EUR', 
+    return n.toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'EUR',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })
   }
 
-  const formatCompactCurrency = (value: any) => {
+  const formatCompactCurrency = (value: unknown) => {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '€0'
-    
+
     if (n >= 1000000) return `€${(n / 1000000).toFixed(2)}M`
     if (n >= 1000) return `€${(n / 1000).toFixed(1)}K`
     return formatCurrency(n)
   }
 
-  const formatNumber = (value: any, decimals = 8) => {
+  const formatNumber = (value: unknown, decimals = 8) => {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '0'
     const formatted = n.toFixed(decimals)
@@ -67,23 +113,23 @@ export function useTransactionLogic(
 
   const formatRelativeDate = (date: string | Date) => {
     if (!date) return 'Unknown'
-    
+
     try {
       const now = new Date()
       const transactionDate = new Date(date)
-      
+
       // Handle invalid dates
       if (isNaN(transactionDate.getTime())) return 'Invalid date'
-      
+
       const diff = now.getTime() - transactionDate.getTime()
-      
+
       const seconds = Math.floor(diff / 1000)
       const minutes = Math.floor(seconds / 60)
       const hours = Math.floor(minutes / 60)
       const days = Math.floor(hours / 24)
       const months = Math.floor(days / 30)
       const years = Math.floor(months / 12)
-      
+
       if (years > 0) return `${years} year${years > 1 ? 's' : ''} ago`
       if (months > 0) return `${months} month${months > 1 ? 's' : ''} ago`
       if (days > 0) return `${days}d ago`
@@ -113,13 +159,13 @@ export function useTransactionLogic(
   const fetchWallet = async () => {
     try {
       const response = await api.wallet.list()
-      wallet.value = response as any
+      wallet.value = response as unknown as WalletData
       if (!wallet.value.cryptoWalletAssets) {
         wallet.value.cryptoWalletAssets = []
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('Error fetching wallet:', e)
-      error.value = e.message || 'Error loading wallet data'
+      error.value = e instanceof Error ? e.message : 'Error loading wallet data'
     }
   }
 
@@ -127,20 +173,17 @@ export function useTransactionLogic(
     loading.value = true
     error.value = null
     try {
-      console.log('🔄 Loading transactions with filterType:', filterType.value)
-      
+
       const response = await api.wallet.getTransactionsHistory()
       const transactionsData = response?.transactions || []
-      
-      console.log('✅ Fetched transactions:', transactionsData.length)
-      
+
       if (!transactionsData || transactionsData.length === 0) {
         console.warn('⚠️ No transactions received from API')
         transactions.value = []
         return
       }
-      
-      transactions.value = transactionsData.map((tx: any) => ({
+
+      transactions.value = transactionsData.map((tx: RawTransaction) => ({
         id: tx.id,
         crypto_id: tx.crypto_id,
         originalType: tx.type,
@@ -150,7 +193,7 @@ export function useTransactionLogic(
         price: Number(tx.price || 0),
         unitPrice: Number(tx.unit_price_eur || tx.price || 0),
         total: Number(tx.total_eur || 0),
-        date: tx.created_at || tx.date,
+        date: tx.created_at || tx.date || '',
         crypto: {
           id: tx.crypto_id,
           name: tx.crypto_name || 'Unknown',
@@ -159,22 +202,20 @@ export function useTransactionLogic(
           current_price: 0
         }
       })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      
-      console.log('✅ Processed transactions:', transactions.value.length)
-      
+
       if (wallet.value?.cryptoWalletAssets) {
         transactions.value.forEach(tx => {
-          const asset = wallet.value.cryptoWalletAssets.find((a: any) => a.cryptomoney?.symbol === tx.crypto.symbol)
+          const asset = wallet.value?.cryptoWalletAssets?.find((a) => a.cryptomoney?.symbol === tx.crypto.symbol)
           if (asset) {
             tx.crypto.current_price = asset.cryptomoney?.price_eur || 0
-            tx.crypto.image_url = asset.cryptomoney?.image_url || tx.crypto.image_url
+            tx.crypto.image_url = asset.cryptomoney?.image || tx.crypto.image_url
           }
         })
       }
-      
-    } catch (e: any) {
+
+    } catch (e) {
       console.error('❌ Error loading transactions:', e)
-      error.value = e.message || 'Error loading transactions. Please try again.'
+      error.value = e instanceof Error ? e.message : 'Error loading transactions. Please try again.'
     } finally {
       loading.value = false
       isRefreshing.value = false
@@ -184,9 +225,7 @@ export function useTransactionLogic(
   const refreshData = async () => {
     isRefreshing.value = true
     try {
-      console.log('🔄 Refreshing wallet and transaction data...')
       await Promise.all([fetchWallet(), loadTransactions()])
-      console.log('✅ Data refresh completed')
     } finally {
       isRefreshing.value = false
     }
@@ -199,11 +238,11 @@ export function useTransactionLogic(
     if (!selectedAsset.value) return
     const available = getAvailableQuantity(selectedAsset.value.crypto.symbol)
     const quantity = parseFloat(sellQuantity.value || '0')
-    
+
     if (quantity > available) {
       sellQuantity.value = available.toFixed(8)
     }
-    
+
     if (quantity < 0.00000001 && quantity > 0) {
       sellQuantity.value = '0.00000001'
     }
@@ -239,17 +278,17 @@ export function useTransactionLogic(
 
   const getAvailableQuantity = (symbol: string) => {
     if (!wallet.value?.assets) return 0
-    const asset = wallet.value.assets.find((a: any) => a.symbol === symbol)
+    const asset = wallet.value.assets.find((a) => a.symbol === symbol)
     return asset ? Number(asset.quantity || 0) : 0
   }
 
-  const canSell = (tx: any) => {
+  const canSell = (tx: TransactionItem) => {
     if (tx.originalType !== 'ACHAT') return false
     const available = getAvailableQuantity(tx.crypto.symbol)
     return available > 0 && available >= 0.00000001
   }
 
-  const openSellDialog = (tx: any) => {
+  const openSellDialog = (tx: TransactionItem) => {
     selectedAsset.value = tx
     selectedAsset.value.average_price = tx.unitPrice
     sellQuantity.value = getAvailableQuantity(tx.crypto.symbol).toFixed(8)
@@ -302,39 +341,30 @@ export function useTransactionLogic(
     sellError.value = null
 
     try {
-      console.log('🔄 Initiating sell transaction:', {
-        symbol: selectedAsset.value.crypto.symbol,
-        quantity: qty,
-        price: selectedAsset.value.crypto.current_price || selectedAsset.value.unitPrice
-      })
 
-      const response = await api.wallet.transact({
+      await api.wallet.transact({
         symbol: selectedAsset.value.crypto.symbol,
         type: 'VENTE',
         quantity: qty,
       })
 
-      console.log('✅ Sale transaction completed:', response)
-      
       sellSuccess.value = '✅ Sale completed successfully! Updating your portfolio...'
-      
+
       // Wait a bit then refresh data and close dialog
       await new Promise(resolve => setTimeout(resolve, 800))
-      
+
       // Refresh both wallet and transactions data
-      console.log('🔄 Refreshing wallet and transaction data...')
       await Promise.all([fetchWallet(), loadTransactions()])
-      
-      console.log('✅ Portfolio updated successfully')
+
       sellSuccess.value = '✅ Sale completed and portfolio updated!'
-      
+
       // Close the dialog after final success message
       await new Promise(resolve => setTimeout(resolve, 800))
       closeSellDialog()
-      
-    } catch (e: any) {
+
+    } catch (e) {
       console.error('❌ Error during sale:', e)
-      sellError.value = e?.message || 'Error during sale. Please try again.'
+      sellError.value = e instanceof Error ? e.message : 'Error during sale. Please try again.'
     } finally {
       isSelling.value = false
     }
@@ -358,7 +388,7 @@ export function useTransactionLogic(
   const resetFilters = () => {
     searchQuery.value = ''
     filterType.value = 'all'
-    dateRange.value = '30d'
+    dateRange.value = 'all'
     activeTab.value = 'all'
     currentPage.value = 1
   }
@@ -385,29 +415,29 @@ export function useTransactionLogic(
         'Date': formatFullDate(tx.date),
         'Status': 'Completed'
       }))
-      
+
       if (data.length === 0) {
         alert('No transactions to export')
         return
       }
-      
+
       const csv = [
         Object.keys(data[0]).join(','),
         ...data.map(row => Object.values(row).join(','))
       ].join('\n')
-      
+
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
-      
+
       link.setAttribute('href', url)
       link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`)
       link.style.visibility = 'hidden'
-      
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
+
     } catch (error) {
       console.error('Export error:', error)
       alert('Error exporting transactions')

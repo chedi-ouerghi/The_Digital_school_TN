@@ -187,20 +187,20 @@ function goToTransactionHistory() {
     <!-- Header with balance -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-[#38618C] mb-1">My Portfolio</h1>
+        <h1 class="text-3xl font-bold text-brand-dark mb-1">My Portfolio</h1>
         <p class="text-gray-500">Manage your cryptocurrency investments</p>
       </div>
       <div class="flex gap-3">
         <Button 
           variant="outline" 
           :disabled="loading"
-          class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white"
+          class="border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white"
           @click="refreshData"
         >
           🔄 Refresh
         </Button>
         <Button 
-          class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+          class="bg-brand-green hover:bg-brand-green/90 text-brand-dark font-semibold"
           @click="goToBuy"
         >
           + Buy Cryptos
@@ -211,10 +211,10 @@ function goToTransactionHistory() {
     <!-- Main statistics -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- Available balance -->
-      <Card class="border-gray-200 hover:border-[#01FF19] transition-colors bg-gradient-to-br from-[#01FF19]/10 to-transparent">
+      <Card class="border-gray-200 hover:border-brand-green transition-colors bg-gradient-to-br from-brand-green/10 to-transparent">
         <CardContent class="p-6">
           <div class="text-sm text-gray-500 mb-1">Available Balance</div>
-          <div class="text-3xl font-bold text-[#01FF19]">
+          <div class="text-3xl font-bold text-brand-green">
             {{ formatCurrency(userBalance) }}
           </div>
           <div class="text-xs text-gray-500 mt-2">Available for investment</div>
@@ -222,10 +222,10 @@ function goToTransactionHistory() {
       </Card>
 
       <!-- Total portfolio value -->
-      <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors bg-gradient-to-br from-[#35A7FF]/10 to-transparent">
+      <Card class="border-gray-200 hover:border-brand-blue transition-colors bg-gradient-to-br from-brand-blue/10 to-transparent">
         <CardContent class="p-6">
           <div class="text-sm text-gray-500 mb-1">Invested Amount</div>
-          <div class="text-3xl font-bold text-[#35A7FF]">
+          <div class="text-3xl font-bold text-brand-blue">
             {{ formatCurrency(totalValue) }}
           </div>
           <div class="text-xs text-gray-500 mt-2">{{ portfolio.length }} asset{{ portfolio.length > 1 ? 's' : '' }}</div>
@@ -235,18 +235,18 @@ function goToTransactionHistory() {
       <!-- Total profit/loss -->
       <Card 
         class="border-gray-200 transition-colors"
-        :class="totalProfit >= 0 ? 'hover:border-[#01FF19] bg-gradient-to-br from-[#01FF19]/10 to-transparent' : 'hover:border-[#FF5964] bg-gradient-to-br from-[#FF5964]/10 to-transparent'"
+        :class="totalProfit >= 0 ? 'hover:border-brand-green bg-gradient-to-br from-brand-green/10 to-transparent' : 'hover:border-brand-red bg-gradient-to-br from-brand-red/10 to-transparent'"
       >
         <CardContent class="p-6">
           <div class="text-sm text-gray-500 mb-1">Total Profit/Loss</div>
           <div 
             class="text-3xl font-bold"
-            :class="totalProfit >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+            :class="totalProfit >= 0 ? 'text-brand-green' : 'text-brand-red'"
           >
             23.578 €
           </div>
           <Badge 
-            :class="totalProfit >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+            :class="totalProfit >= 0 ? 'bg-brand-green' : 'bg-brand-red'"
             class="text-white mt-2"
           >
             23.45%
@@ -260,7 +260,7 @@ function goToTransactionHistory() {
       <CardContent class="p-6">
         <div class="flex items-center gap-2 mb-6">
           <span class="text-2xl">📊</span>
-          <h2 class="text-xl font-bold text-[#38618C]">Portfolio Distribution</h2>
+          <h2 class="text-xl font-bold text-brand-dark">Portfolio Distribution</h2>
         </div>
         
         <!-- Responsive table -->
@@ -268,11 +268,11 @@ function goToTransactionHistory() {
           <table class="w-full">
             <thead>
               <tr class="border-b-2 border-indigo-200">
-                <th class="text-left py-3 px-4 font-semibold text-[#38618C]">Asset</th>
-                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Quantity</th>
-                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Current Price</th>
-                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Value</th>
-                <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Portfolio %</th>
+                <th class="text-left py-3 px-4 font-semibold text-brand-dark">Asset</th>
+                <th class="text-right py-3 px-4 font-semibold text-brand-dark">Quantity</th>
+                <th class="text-right py-3 px-4 font-semibold text-brand-dark">Current Price</th>
+                <th class="text-right py-3 px-4 font-semibold text-brand-dark">Value</th>
+                <th class="text-right py-3 px-4 font-semibold text-brand-dark">Portfolio %</th>
               </tr>
             </thead>
             <tbody>
@@ -295,14 +295,14 @@ function goToTransactionHistory() {
                       <div v-if="!asset.image_url" class="text-sm">💎</div>
                     </div>
                     <div>
-                      <div class="font-semibold text-[#38618C]">{{ asset.name }}</div>
+                      <div class="font-semibold text-brand-dark">{{ asset.name }}</div>
                       <div class="text-xs text-gray-500">{{ String(asset.symbol || '').toUpperCase() }}</div>
                     </div>
                   </div>
                 </td>
                 <td class="text-right py-4 px-4 font-mono text-sm">{{ formatNumber(asset.quantity, 8) }}</td>
-                <td class="text-right py-4 px-4 font-semibold text-[#38618C]">{{ formatCurrency(asset.currentPrice) }}</td>
-                <td class="text-right py-4 px-4 font-bold text-[#35A7FF]">{{ formatCurrency(asset.currentValue) }}</td>
+                <td class="text-right py-4 px-4 font-semibold text-brand-dark">{{ formatCurrency(asset.currentPrice) }}</td>
+                <td class="text-right py-4 px-4 font-bold text-brand-blue">{{ formatCurrency(asset.currentValue) }}</td>
                 <td class="text-right py-4 px-4">
                   <Badge 
                     class="bg-indigo-100 text-indigo-900 font-semibold"
@@ -326,13 +326,13 @@ function goToTransactionHistory() {
             <Input
               v-model="searchQuery"
               placeholder="🔍 Search a crypto..."
-              class="pl-3 border-[#38618C] focus:border-[#35A7FF]"
+              class="pl-3 border-brand-dark focus:border-brand-blue"
             />
           </div>
 
           <!-- Filter -->
           <Select v-model="filterBy">
-            <SelectTrigger class="w-full sm:w-40 border-[#38618C]">
+            <SelectTrigger class="w-full sm:w-40 border-brand-dark">
               <SelectValue placeholder="Filter by" />
             </SelectTrigger>
             <SelectContent>
@@ -344,7 +344,7 @@ function goToTransactionHistory() {
 
           <!-- Sort -->
           <Select v-model="sortBy">
-            <SelectTrigger class="w-full sm:w-40 border-[#38618C]">
+            <SelectTrigger class="w-full sm:w-40 border-brand-dark">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
@@ -366,8 +366,8 @@ function goToTransactionHistory() {
     </Card>
     
     <!-- Error State -->
-    <Card v-else-if="error" class="border-[#FF5964]">
-      <CardContent class="p-8 text-center text-[#FF5964]">
+    <Card v-else-if="error" class="border-brand-red">
+      <CardContent class="p-8 text-center text-brand-red">
         <div class="text-2xl mb-2">❌</div>
         <div>{{ error }}</div>
       </CardContent>
@@ -377,7 +377,7 @@ function goToTransactionHistory() {
     <Card v-else-if="filteredAndSortedPortfolio.length === 0">
       <CardContent class="p-12 text-center">
         <div class="text-6xl mb-4">💼</div>
-        <h3 class="text-xl font-semibold text-[#38618C] mb-2">
+        <h3 class="text-xl font-semibold text-brand-dark mb-2">
           {{ searchQuery || filterBy !== 'all' ? 'No results' : 'Your portfolio is empty' }}
         </h3>
         <p class="text-gray-500 mb-6">
@@ -388,7 +388,7 @@ function goToTransactionHistory() {
         </p>
         <Button 
           v-if="!searchQuery && filterBy === 'all'"
-          class="bg-[#01FF19] hover:bg-[#01FF19]/90 text-[#38618C] font-semibold"
+          class="bg-brand-green hover:bg-brand-green/90 text-brand-dark font-semibold"
           @click="goToBuy"
         >
           🚀 Start Investing
@@ -411,7 +411,7 @@ function goToTransactionHistory() {
       <Card 
         v-for="p in filteredAndSortedPortfolio" 
         :key="p.assetId"
-        class="border-gray-200 hover:border-[#35A7FF] transition-all hover:shadow-lg cursor-pointer"
+        class="border-gray-200 hover:border-brand-blue transition-all hover:shadow-lg cursor-pointer"
         @click="goDetails(p)"
       >
         <CardContent class="p-6">
@@ -429,7 +429,7 @@ function goToTransactionHistory() {
                 <div v-if="!p.image_url" class="text-lg">💎</div>
               </div>
               <div>
-                <div class="text-lg font-bold text-[#38618C]">
+                <div class="text-lg font-bold text-brand-dark">
                   {{ p.name }}
                 </div>
                 <div class="text-sm text-gray-500 font-mono">
@@ -442,19 +442,19 @@ function goToTransactionHistory() {
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1">
               <div>
                 <div class="text-xs text-gray-500">Avg. Buy Price</div>
-                <div class="text-sm font-semibold text-[#38618C]">
+                <div class="text-sm font-semibold text-brand-dark">
                   {{ formatCurrency(p.avgBuyPrice) }}
                 </div>
               </div>
               <div>
                 <div class="text-xs text-gray-500">Current Price</div>
-                <div class="text-sm font-semibold text-[#38618C]">
+                <div class="text-sm font-semibold text-brand-dark">
                   {{ formatCurrency(p.currentPrice) }}
                 </div>
               </div>
               <div>
                 <div class="text-xs text-gray-500">Current Value ss</div>
-                <div class="text-sm font-bold text-[#35A7FF]">
+                <div class="text-sm font-bold text-brand-blue">
                   {{ formatCurrency(p.currentValue) }}
                 </div>
               </div>
@@ -462,12 +462,12 @@ function goToTransactionHistory() {
                 <div class="text-xs text-gray-500">Profit/Loss</div>
                 <div 
                   class="text-sm font-bold"
-                  :class="p.profitAmount >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+                  :class="p.profitAmount >= 0 ? 'text-brand-green' : 'text-brand-red'"
                 >
                   {{ p.profitAmount >= 0 ? '+' : '' }}{{ formatCurrency(p.profitAmount) }}
                 </div>
                 <Badge 
-                  :class="p.profitAmount >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+                  :class="p.profitAmount >= 0 ? 'bg-brand-green' : 'bg-brand-red'"
                   class="text-white text-xs mt-1"
                 >
                   {{ p.profitPercent >= 0 ? '+' : '' }}{{ p.profitPercent.toFixed(2) }}%
@@ -478,7 +478,7 @@ function goToTransactionHistory() {
             <!-- Details button -->
             <Button 
               variant="outline"
-              class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+              class="border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white"
               @click.stop="goDetails(p)"
             >
               View Details →
@@ -491,43 +491,43 @@ function goToTransactionHistory() {
 </template>
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
+:deep(.border-brand-dark) {
   border-color: #38618C;
 }
 
-:deep(.text-\[#38618C\]) {
+:deep(.text-brand-dark) {
   color: #38618C;
 }
 
-:deep(.bg-\[#01FF19\]) {
+:deep(.bg-brand-green) {
   background-color: #01FF19;
 }
 
-:deep(.bg-\[#35A7FF\]) {
+:deep(.bg-brand-blue) {
   background-color: #35A7FF;
 }
 
-:deep(.bg-\[#FF5964\]) {
+:deep(.bg-brand-red) {
   background-color: #FF5964;
 }
 
-:deep(.hover\:bg-\[#01FF19\]\/90:hover) {
+:deep(.hover\:bg-brand-green\/90:hover) {
   background-color: rgba(1, 255, 25, 0.9);
 }
 
-:deep(.hover\:bg-\[#38618C\]:hover) {
+:deep(.hover\:bg-brand-dark:hover) {
   background-color: #38618C;
 }
 
-:deep(.hover\:bg-\[#35A7FF\]:hover) {
+:deep(.hover\:bg-brand-blue:hover) {
   background-color: #35A7FF;
 }
 
-:deep(.hover\:border-\[#35A7FF\]:hover) {
+:deep(.hover\:border-brand-blue:hover) {
   border-color: #35A7FF;
 }
 
-:deep(.focus\:border-\[#35A7FF\]:focus) {
+:deep(.focus\:border-brand-blue:focus) {
   border-color: #35A7FF;
 }
 </style>

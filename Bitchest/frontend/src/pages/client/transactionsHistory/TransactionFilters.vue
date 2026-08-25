@@ -24,12 +24,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <Card class="border-[#E2E8F0]">
+  <Card class="border-slate-200">
     <CardContent class="p-5">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-[#0F172A]">Transaction Filters</h3>
-          <p class="text-sm text-[#64748B] mt-1">
+          <h3 class="text-lg font-semibold text-slate-900">Transaction Filters</h3>
+          <p class="text-sm text-slate-500 mt-1">
             {{ filteredCount }} transaction{{ filteredCount !== 1 ? 's' : '' }} found
           </p>
         </div>
@@ -48,7 +48,7 @@ const emit = defineEmits<{
           <Button
             variant="ghost"
             size="sm"
-            :disabled="searchQuery === '' && filterType === 'all' && dateRange === '30d'"
+            :disabled="searchQuery === '' && filterType === 'all' && dateRange === 'all'"
             @click="emit('reset')"
           >
             Clear All
@@ -58,22 +58,22 @@ const emit = defineEmits<{
 
       <!-- Search Bar -->
       <div class="relative mb-4">
-        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] w-4 h-4" />
+        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-4 h-4" />
         <Input
           :model-value="searchQuery"
           placeholder="Search by crypto name, symbol, or transaction ID..."
-          class="pl-10 border-[#E2E8F0] focus:border-[#35A7FF]"
+          class="pl-10 border-slate-200 focus:border-brand-blue"
           @update:model-value="emit('update:searchQuery', $event)"
         />
       </div>
 
       <!-- Advanced Filters -->
-      <div v-if="showAdvanced" class="space-y-4 pt-4 border-t border-[#E2E8F0]">
+      <div v-if="showAdvanced" class="space-y-4 pt-4 border-t border-slate-200">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
-            <Label class="text-sm font-medium text-[#64748B]">Transaction Type</Label>
+            <Label class="text-sm font-medium text-slate-500">Transaction Type</Label>
             <Select :model-value="filterType" @update:model-value="emit('update:filterType', $event)">
-              <SelectTrigger class="border-[#E2E8F0] focus:border-[#35A7FF]">
+              <SelectTrigger class="border-slate-200 focus:border-brand-blue">
                 <SelectValue placeholder="All transaction types" />
               </SelectTrigger>
               <SelectContent>
@@ -85,9 +85,9 @@ const emit = defineEmits<{
           </div>
           
           <div class="space-y-2">
-            <Label class="text-sm font-medium text-[#64748B]">Date Range</Label>
+            <Label class="text-sm font-medium text-slate-500">Date Range</Label>
             <Select :model-value="dateRange" @update:model-value="emit('update:dateRange', $event)">
-              <SelectTrigger class="border-[#E2E8F0] focus:border-[#35A7FF]">
+              <SelectTrigger class="border-slate-200 focus:border-brand-blue">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>

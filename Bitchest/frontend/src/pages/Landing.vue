@@ -1,208 +1,422 @@
 <script setup lang="ts">
 import Header from '@/components/landing/Header.vue';
 import { ref, onMounted, computed } from 'vue';
+import { colors, shadows, radius } from '@/config/designSystem';
+import {
+  TrendingUp,
+  ShieldCheck,
+  Users,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  BarChart3,
+  Layers,
+  Lock,
+  Zap
+} from 'lucide-vue-next';
 
-// Color palette from requirements
-const colors = {
-  primary: '#01FF19',    // Green accent
-  secondary: '#35A7FF',  // Blue accent  
-  accent: '#FF5964',     // Red accent (for borders)
-  textPrimary: '#38618C', // Dark blue text
-  textSecondary: '#5A6175', // Gray text
-  textTertiary: '#8C94A8', // Light gray text
-  background: '#FFFFFF',  // White background
-  surface: '#F8FAFF',    // Light blue background
-  border: '#E2E8F0',     // Light border
-  borderAccent: '#FF5964' // Red border accent
-}
-
-const dashboardItems = ref([
-  {
-    title: 'Active Users',
-    subtitle: 'Platform engagement',
-    value: '2,458',
-    trend: '+12% this month',
-    icon: '👥',
-    color: colors.primary,
+// Dashboard metrics
+const dashboardItems = [
+  { 
+    title: 'Utilisateurs Actifs', 
+    value: '2,458', 
+    trend: '+12%', 
+    icon: Users,
+    color: colors.primary[500],
+    bgColor: colors.primary[50]
   },
-  {
-    title: 'Total Volume',
-    subtitle: 'Trading activity',
-    value: '$4.2M',
-    trend: '+8.5% weekly',
-    icon: '📈',
-    color: colors.secondary,
+  { 
+    title: 'Volume Total', 
+    value: '$4.2M', 
+    trend: '+8.5%', 
+    icon: TrendingUp,
+    color: colors.secondary[500],
+    bgColor: colors.secondary[50]
   },
-  {
-    title: 'Security Score',
-    subtitle: 'Platform safety',
-    value: '99.8%',
-    trend: 'A+ rating',
-    icon: '🔒',
-    color: colors.accent,
+  { 
+    title: 'Score Sécurité', 
+    value: '99.8%', 
+    trend: 'A+', 
+    icon: ShieldCheck,
+    color: colors.text.primary,
+    bgColor: colors.slate[100]
   }
-]);
+];
 
-const features = ref([
+const features = [
   {
-    title: 'Enterprise-Grade Security',
-    description: 'Bank-level encryption and multi-signature wallets protect every transaction',
-    icon: '🔐'
+    title: 'Sécurité Enterprise',
+    description: 'Chiffrement bancaire, wallets multi-signatures et authentification 2FA pour une protection maximale.',
+    icon: ShieldCheck,
+    iconBg: colors.primary[100],
+    iconColor: colors.primary[600],
+    details: [
+      { text: 'Conforme aux normes OWASP', icon: CheckCircle2 },
+      { text: 'Chiffrement de bout en bout', icon: Lock },
+      { text: 'Multi-signature obligatoire', icon: Zap }
+    ]
   },
   {
-    title: 'White-Label Ready',
-    description: 'Seamlessly integrate into your ecosystem with full customization options',
-    icon: '🏷️'
+    title: 'Trading Avancé',
+    description: 'Des algorithmes optimisés pour l\'achat et la vente avec calcul automatique des plus-values.',
+    icon: BarChart3,
+    iconBg: colors.secondary[100],
+    iconColor: colors.secondary[600],
+    details: [
+      { text: 'Achat en 3 clics', icon: CheckCircle2 },
+      { text: 'Calcul en temps réel', icon: Clock },
+      { text: 'Historique complet', icon: Layers }
+    ]
   },
   {
-    title: 'Real-Time Analytics',
-    description: 'Deep insights into market trends and user behavior with instant reporting',
-    icon: '📊'
+    title: 'Analytics & Rapports',
+    description: 'Visualisez vos performances avec des graphiques interactifs et des rapports détaillés exportables.',
+    icon: TrendingUp,
+    iconBg: colors.primary[100],
+    iconColor: colors.primary[600],
+    details: [
+      { text: 'Graphiques de performance', icon: CheckCircle2 },
+      { text: 'Rapports PDF exportables', icon: Layers },
+      { text: 'Métriques clés en temps réel', icon: Zap }
+    ]
   }
-]);
+];
 
-const stats = ref([
-  { value: '99.8%', label: 'Uptime SLA', color: colors.primary },
-  { value: '$4.2M', label: 'Daily Volume', color: colors.secondary },
-  { value: '2.4K+', label: 'Active Users', color: colors.accent },
-]);
+const stats = [
+  { value: '99.8%', label: 'Disponibilité', icon: TrendingUp, color: colors.primary[500] },
+  { value: '< 0.1s', label: 'Exécution', icon: Zap, color: colors.secondary[500] },
+  { value: '100%', label: 'Sécurisé', icon: ShieldCheck, color: colors.primary[500] },
+];
 
 const isLoading = ref(true);
-const activeStat = ref(0);
+const animatedVolume = ref(0);
+const animatedUsers = ref(0);
+
+// Sample chart data
+const chartData = [65, 72, 68, 75, 82, 78, 85, 80, 88, 92, 87, 95];
+const chartMonths = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 onMounted(() => {
-  // Simulate data loading
   setTimeout(() => {
     isLoading.value = false;
-  }, 800);
+    startAnimations();
+  }, 600);
+});
+
+const startAnimations = () => {
+  const duration = 2000;
+  const steps = 60;
+  const volumeStep = 4200000 / steps;
+  const usersStep = 2458 / steps;
   
-  // Auto rotate stats
-  setInterval(() => {
-    activeStat.value = (activeStat.value + 1) % stats.value.length;
-  }, 3000);
+  let step = 0;
+  const timer = setInterval(() => {
+    step++;
+    animatedVolume.value = Math.min(volumeStep * step, 4200000);
+    animatedUsers.value = Math.min(usersStep * step, 2458);
+    
+    if (step >= steps) clearInterval(timer);
+  }, duration / steps);
+};
+
+const formatVolume = (value: number) => {
+  return `$${(value / 1000000).toFixed(1)}M`;
+};
+
+const formatUsers = (value: number) => {
+  return Math.round(value).toLocaleString();
+};
+
+// Chart SVG path
+const chartPath = computed(() => {
+  const max = Math.max(...chartData);
+  const min = Math.min(...chartData);
+  const range = max - min;
+  const height = 100;
+  const width = 500;
+  const padding = 10;
+  
+  const points = chartData.map((value, index) => {
+    const x = (index / (chartData.length - 1)) * (width - padding * 2) + padding;
+    const y = height - padding - ((value - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  });
+  
+  return `M ${points.join(' L ')}`;
+});
+
+const chartAreaPath = computed(() => {
+  const max = Math.max(...chartData);
+  const min = Math.min(...chartData);
+  const range = max - min;
+  const height = 100;
+  const width = 500;
+  const padding = 10;
+  
+  const points = chartData.map((value, index) => {
+    const x = (index / (chartData.length - 1)) * (width - padding * 2) + padding;
+    const y = height - padding - ((value - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  });
+  
+  return `M ${padding},${height - padding} L ${points.join(' L ')} L ${width - padding},${height - padding} Z`;
 });
 </script>
 
 <template>
-  <div class="min-h-screen overflow-hidden" :style="{ backgroundColor: colors.background }">
-    <!-- Header -->
+  <div class="min-h-screen bg-background font-sans antialiased">
     <Header />
     
-    <!-- Loading State -->
-    <div v-if="isLoading" class="fixed inset-0 z-50 flex items-center justify-center" :style="{ backgroundColor: colors.background }">
-      <div class="flex flex-col items-center gap-4">
-        <div class="relative">
-          <div class="w-16 h-16 rounded-full border-4" :style="{ borderColor: colors.border }"></div>
-          <div class="absolute inset-0 w-16 h-16 rounded-full border-4 border-t-transparent animate-spin" :style="{ borderColor: colors.primary }"></div>
-        </div>
-        <p class="text-sm font-medium" :style="{ color: colors.textSecondary }">Loading Platform...</p>
+    <!-- Loading -->
+    <div v-if="isLoading" class="fixed inset-0 z-[100] flex items-center justify-center bg-background">
+      <div class="text-center">
+        <div 
+          class="w-12 h-12 mx-auto mb-4 border-3 rounded-full animate-spin"
+          :style="{
+            borderColor: `${colors.primary[500]}30`,
+            borderTopColor: colors.primary[500]
+          }"
+        />
+        <p class="text-sm font-medium" :style="{ color: colors.text.secondary }">
+          Chargement...
+        </p>
       </div>
     </div>
 
     <!-- Hero Section -->
-    <section class="pt-32 md:pt-40 pb-20 md:pb-24 px-4 sm:px-6 container mx-auto relative">
-      <!-- Background accents -->
-      <div class="absolute top-20 -right-20 w-72 h-72 md:w-96 md:h-96 rounded-full opacity-5" 
-           :style="{ background: `radial-gradient(circle, ${colors.primary} 0%, transparent 70%)` }"></div>
-      <div class="absolute bottom-0 -left-20 w-64 h-64 md:w-80 md:h-80 rounded-full opacity-5" 
-           :style="{ background: `radial-gradient(circle, ${colors.secondary} 0%, transparent 70%)` }"></div>
-      
-      <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10 max-w-7xl mx-auto">
-        <!-- Left Content -->
-        <div class="space-y-6 md:space-y-8">
-          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-300 hover:scale-105"
-               :style="{ 
-                 backgroundColor: `${colors.primary}10`, 
-                 borderColor: `${colors.primary}30`,
-                 color: colors.primary,
-                 borderWidth: '1.5px'
-               }">
-            <span class="w-2 h-2 rounded-full animate-pulse" :style="{ backgroundColor: colors.primary }"></span>
-            <span class="text-xs font-bold tracking-wider">🚀 SECURE CRYPTO TRADING</span>
-          </div>
-
-          <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-tight" 
-              :style="{ color: colors.textPrimary }">
-            Secure Crypto Trading
-            <br>
-            <span class="relative inline-block">
-              <span :style="{ color: colors.primary }">Made Simple</span>
-              <div class="absolute -inset-2 rounded-lg opacity-20 blur-lg z-[-1]" 
-                   :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }"></div>
+    <section class="relative pt-32 md:pt-40 pb-20 md:pb-28 overflow-hidden">
+      <div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+        <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          
+          <!-- Left Content -->
+          <div class="space-y-8">
+            <!-- Badge -->
+            <span 
+              class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider border"
+              :style="{
+                backgroundColor: `${colors.primary[500]}10`,
+                borderColor: `${colors.primary[500]}30`,
+                color: colors.primary[600]
+              }"
+            >
+              <span 
+                class="w-1.5 h-1.5 rounded-full animate-pulse"
+                :style="{ backgroundColor: colors.primary[500] }"
+              />
+              PLATEFORME DE TRADING CRYPTO PREMIUM
             </span>
-          </h1>
-          
-          <p class="text-lg md:text-xl leading-relaxed max-w-2xl font-semibold opacity-80" 
-             :style="{ color: colors.textPrimary }">
-            BitChest is a white-label platform prototype for secure crypto buying/selling, designed to integrate cryptocurrency into existing financial ecosystems with enterprise-grade security.
-          </p>
-          
-          <div class="flex flex-col sm:flex-row gap-3 md:gap-4 pt-4">
-            <button class="group relative px-6 md:px-8 py-3 md:py-4 font-bold rounded-xl text-sm md:text-base transition-all duration-300 overflow-hidden hover:scale-105"
-                    :style="{ 
-                      background: `linear-gradient(135deg, ${colors.primary}, #00E617)`,
-                      color: colors.textPrimary,
-                      boxShadow: `0 10px 30px ${colors.primary}30`
-                    }">
-              <div class="absolute inset-0 opacity-0 group-hover:opacity-30 transition-all duration-300" 
-                   :style="{ backgroundColor: colors.primary, filter: 'blur(20px)' }"></div>
-              <span class="relative">Explore Demo</span>
-            </button>
             
-            <button class="px-6 md:px-8 py-3 md:py-4 font-bold rounded-xl text-sm md:text-base border-2 transition-all duration-300 group hover:scale-105"
-                    :style="{ 
-                      borderColor: colors.accent,
-                      color: colors.accent,
-                      backgroundColor: `${colors.accent}05`
-                    }">
-              <span class="relative">📚 Documentation</span>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Dashboard Card -->
-        <div class="relative group">
-          <div class="absolute -inset-1 rounded-3xl opacity-20 group-hover:opacity-30 transition-all duration-300 blur-lg"
-               :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }"></div>
-          
-          <div class="relative rounded-3xl p-6 md:p-8 transition-all duration-300 border hover:border-opacity-50"
-               :style="{ 
-                 backgroundColor: `${colors.background}80`,
-                 backdropFilter: 'blur(10px)',
-                 border: `1.5px solid ${colors.borderAccent}40`,
-                 color: colors.textPrimary
-               }">
+            <!-- Hero Title -->
+            <h1 
+              class="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight"
+              :style="{ color: colors.text.primary }"
+            >
+              Tradez vos 
+              <span 
+                class="relative inline-block"
+                :style="{ color: colors.primary[500] }"
+              >
+                Cryptos
+                <span 
+                  class="absolute bottom-0 left-0 w-full h-3 -mb-2 opacity-30 blur-lg"
+                  :style="{
+                    background: `linear-gradient(90deg, ${colors.primary[400]}, ${colors.primary[200]})`,
+                    borderRadius: radius.full
+                  }"
+                />
+              </span>
+              <br />
+              <span class="relative">
+                en Toute
+                <span class="text-gradient bg-gradient-to-r from-primary-400 to-primary-600">
+                  Sécurité
+                </span>
+              </span>
+            </h1>
             
-            <div class="flex justify-between items-center mb-6 md:mb-8">
-              <h3 class="text-xl md:text-2xl font-black" :style="{ color: colors.textPrimary }">Platform Dashboard</h3>
-              <div class="flex items-center gap-2 px-4 py-2 rounded-full animate-pulse"
-                   :style="{ backgroundColor: `${colors.primary}20`, color: colors.primary }">
-                <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: colors.primary }"></div>
-                <span class="text-sm font-bold">LIVE</span>
-              </div>
+            <!-- Subtitle -->
+            <p 
+              class="text-lg md:text-xl leading-relaxed max-w-lg"
+              :style="{ color: colors.text.secondary }"
+            >
+              BitChest est une plateforme complète de gestion et trading de cryptomonnaies. 
+              Achetez, vendez et suivez vos investissements avec des outils professionnels dignes des meilleurs standards SaaS.
+            </p>
+            
+            <!-- CTA Buttons -->
+            <div class="flex flex-wrap gap-4 pt-4">
+              <router-link
+                to="/signin"
+                class="inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-2xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
+                :style="{
+                  background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.primary[600]})`,
+                  color: colors.white,
+                  boxShadow: shadows.primary.md
+                }"
+              >
+                Commencer
+                <ArrowRight class="w-5 h-5" />
+              </router-link>
+              
+              <a
+                href="#features"
+                class="inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-2xl border-2 transition-all duration-200 hover:scale-[1.02] hover:bg-surface"
+                :style="{
+                  borderColor: colors.text.primary,
+                  color: colors.text.primary
+                }"
+              >
+                Découvrir les fonctionnalités
+              </a>
             </div>
             
-            <div class="space-y-4">
-              <div v-for="item in dashboardItems" :key="item.title" 
-                   class="flex items-center justify-between p-4 rounded-xl transition-all duration-300 hover:scale-102 hover:shadow-lg"
-                   :style="{ 
-                     backgroundColor: `${item.color}08`,
-                     border: `1.5px solid ${colors.border}`,
-                     borderLeft: `4px solid ${item.color}`
-                   }">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-                       :style="{ backgroundColor: `${item.color}20`, color: item.color }">
-                    {{ item.icon }}
-                  </div>
-                  <div>
-                    <h4 class="text-base font-bold" :style="{ color: colors.textPrimary }">{{ item.title }}</h4>
-                    <p class="text-sm" :style="{ color: colors.textSecondary }">{{ item.subtitle }}</p>
-                  </div>
+            <!-- Trust Indicators -->
+            <div class="flex items-center gap-8 pt-6">
+              <div class="flex -space-x-2">
+                <div 
+                  v-for="i in 5"
+                  :key="i"
+                  class="w-10 h-10 rounded-full border-2 border-background flex items-center justify-center text-xs font-bold ring-2 ring-background"
+                  :style="{
+                    backgroundColor: i % 2 === 0 ? colors.primary[100] : colors.secondary[100],
+                    color: i % 2 === 0 ? colors.primary[700] : colors.secondary[700]
+                  }"
+                >
+                  {{ ['JD', 'MK', 'AL', 'SF', 'RT'][i-1] }}
                 </div>
-                <div class="text-right">
-                  <div class="text-2xl font-black" :style="{ color: colors.textPrimary }">{{ item.value }}</div>
-                  <div class="text-sm font-bold" :style="{ color: item.color }">{{ item.trend }}</div>
+              </div>
+              
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-lg">✨</span>
+                  <span 
+                    class="text-sm font-bold"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    +2.4K
+                  </span>
+                </div>
+                <span 
+                  class="text-sm"
+                  :style="{ color: colors.text.tertiary }"
+                >
+                  utilisateurs actifs
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right - Dashboard Preview -->
+          <div class="relative">
+            <!-- Background Glow -->
+            <div 
+              class="absolute inset-0 rounded-3xl opacity-20 blur-3xl"
+              :style="{
+                background: `linear-gradient(135deg, ${colors.primary[400]}, ${colors.secondary[400]})`
+              }"
+            />
+            
+            <!-- Dashboard Card -->
+            <div 
+              class="relative rounded-3xl p-6 border backdrop-blur-sm"
+              :style="{
+                backgroundColor: `${colors.background}E6`,
+                borderColor: colors.border.light,
+                boxShadow: shadows.lg
+              }"
+            >
+              <div class="flex justify-between items-center mb-6">
+                <div>
+                  <h3 
+                    class="text-lg font-bold"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    Aperçu du Portefeuille
+                  </h3>
+                  <p 
+                    class="text-xs mt-1"
+                    :style="{ color: colors.text.tertiary }"
+                  >
+                    Données en temps réel
+                  </p>
+                </div>
+                <span 
+                  class="text-xs font-medium px-3 py-1.5 rounded-xl"
+                  :style="{
+                    backgroundColor: `${colors.primary[500]}15`,
+                    color: colors.primary[600]
+                  }"
+                >
+                  Démo
+                </span>
+              </div>
+              
+              <!-- Mini Chart -->
+              <div class="h-32 mb-6">
+                <svg viewBox="0 0 500 100" class="w-full h-full" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="heroGrad" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" :stop-color="colors.primary[500]" stop-opacity="0.25" />
+                      <stop offset="100%" :stop-color="colors.primary[500]" stop-opacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path :d="chartAreaPath" fill="url(#heroGrad)" />
+                  <path :d="chartPath" fill="none" :stroke="colors.primary[500]" stroke-width="2.5" stroke-linecap="round" />
+                </svg>
+              </div>
+              
+              <!-- Stats -->
+              <div class="grid grid-cols-3 gap-3">
+                <div 
+                  class="text-center p-4 rounded-2xl border"
+                  :style="{ borderColor: colors.border.light }"
+                >
+                  <p 
+                    class="text-xs font-medium mb-2"
+                    :style="{ color: colors.text.tertiary }"
+                  >
+                    Volume 24h
+                  </p>
+                  <p 
+                    class="text-xl font-bold"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    {{ formatVolume(animatedVolume) }}
+                  </p>
+                </div>
+                <div 
+                  class="text-center p-4 rounded-2xl border"
+                  :style="{ borderColor: colors.border.light }"
+                >
+                  <p 
+                    class="text-xs font-medium mb-2"
+                    :style="{ color: colors.text.tertiary }"
+                  >
+                    Utilisateurs
+                  </p>
+                  <p 
+                    class="text-xl font-bold"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    {{ formatUsers(animatedUsers) }}
+                  </p>
+                </div>
+                <div 
+                  class="text-center p-4 rounded-2xl border"
+                  :style="{ borderColor: colors.border.light }"
+                >
+                  <p 
+                    class="text-xs font-medium mb-2"
+                    :style="{ color: colors.text.tertiary }"
+                  >
+                    Sécurité
+                  </p>
+                  <p 
+                    class="text-xl font-bold"
+                    :style="{ color: colors.primary[600] }"
+                  >
+                    99.8%
+                  </p>
                 </div>
               </div>
             </div>
@@ -212,229 +426,546 @@ onMounted(() => {
     </section>
 
     <!-- Features Section -->
-    <section class="py-16 md:py-32 px-4 sm:px-6 relative" :style="{ backgroundColor: colors.surface }">
-      <div class="container mx-auto max-w-7xl">
-        <div class="text-center mb-16">
-          <h2 class="text-4xl md:text-5xl font-black mb-6" :style="{ color: colors.textPrimary }">
-            Why Choose <span :style="{ color: colors.primary }">BitChest</span>
+    <section 
+      id="features"
+      class="py-20 md:py-28"
+      :style="{ backgroundColor: colors.surface }"
+    >
+      <div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <span 
+            class="inline-block px-5 py-1.5 rounded-full text-xs font-bold tracking-wider mb-6"
+            :style="{
+              backgroundColor: `${colors.primary[500]}15`,
+              color: colors.primary[600]
+            }"
+          >
+            FONCTIONNALITÉS
+          </span>
+          
+          <h2 
+            class="text-4xl md:text-5xl font-extrabold leading-tight mb-5"
+            :style="{ color: colors.text.primary }"
+          >
+            Une Plateforme 
+            <span 
+              class="relative inline-block"
+              :style="{ color: colors.primary[500] }"
+            >
+              Complète
+              <span 
+                class="absolute bottom-0 left-0 w-full h-2 -mb-1 opacity-30 blur-lg"
+                :style="{
+                  background: `linear-gradient(90deg, ${colors.primary[400]}, ${colors.primary[200]})`,
+                  borderRadius: radius.full
+                }"
+              />
+            </span>
           </h2>
-          <p class="text-xl max-w-3xl mx-auto opacity-80" :style="{ color: colors.textPrimary }">
-            Engineered for performance, built for scale, trusted by thousands
+          
+          <p 
+            class="text-lg md:text-xl"
+            :style="{ color: colors.text.secondary }"
+          >
+            Tout ce dont vous avez besoin pour gérer vos cryptomonnaies de manière professionnelle et sécurisée.
           </p>
         </div>
-
-        <div class="grid md:grid-cols-3 gap-8 mb-20">
-          <div v-for="(feature, index) in features" :key="index"
-               class="group p-8 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer"
-               :style="{ 
-                 backgroundColor: colors.background,
-                 border: `2px solid ${colors.border}`,
-                 boxShadow: `0 20px 40px ${colors.border}20`
-               }">
-            <div class="w-16 h-16 rounded-xl flex items-center justify-center text-2xl mb-6 transition-all duration-300 group-hover:scale-110"
-                 :style="{ backgroundColor: `${colors.primary}15`, color: colors.primary }">
-              {{ feature.icon }}
+        
+        <div class="grid md:grid-cols-3 gap-6">
+          <div 
+            v-for="feature in features"
+            :key="feature.title"
+            class="group p-8 rounded-3xl transition-all duration-300 hover:-translate-y-2 hover:shadow-xl bg-background border"
+            :style="{
+              borderColor: colors.border.light,
+              boxShadow: shadows.glass.sm
+            }"
+          >
+            <!-- Feature Icon -->
+            <div 
+              class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-6 transition-all duration-300 group-hover:scale-110"
+              :style="{
+                backgroundColor: feature.iconBg,
+                color: feature.iconColor
+              }"
+            >
+              <component :is="feature.icon" class="w-7 h-7" />
             </div>
-            <h3 class="text-xl font-bold mb-4" :style="{ color: colors.textPrimary }">{{ feature.title }}</h3>
-            <p class="opacity-80" :style="{ color: colors.textSecondary }">{{ feature.description }}</p>
+            
+            <!-- Feature Title -->
+            <h3 
+              class="text-xl font-bold mb-4"
+              :style="{ color: colors.text.primary }"
+            >
+              {{ feature.title }}
+            </h3>
+            
+            <!-- Feature Description -->
+            <p 
+              class="mb-6 text-sm leading-relaxed"
+              :style="{ color: colors.text.secondary }"
+            >
+              {{ feature.description }}
+            </p>
+            
+            <!-- Feature Details -->
+            <ul class="space-y-3">
+              <li 
+                v-for="detail in feature.details"
+                :key="detail.text"
+                class="flex items-center gap-3 text-sm font-medium"
+                :style="{ color: colors.text.tertiary }"
+              >
+                <component 
+                  :is="detail.icon" 
+                  class="w-4 h-4"
+                  :style="{ color: colors.primary[500] }"
+                />
+                <span>{{ detail.text }}</span>
+              </li>
+            </ul>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Stats Section -->
+    <!-- Analytics Section -->
+    <section id="analytics" class="py-20 md:py-28 bg-background">
+      <div class="container mx-auto px-4 sm:px-6 max-w-7xl">
         <div class="grid lg:grid-cols-2 gap-12 items-center">
-          <!-- Left - Visual -->
-          <div class="relative">
-            <div class="relative w-full max-w-lg mx-auto">
-              <!-- Trading Interface Mockup -->
-              <div class="aspect-video rounded-2xl p-6 relative overflow-hidden"
-                   :style="{ 
-                     backgroundColor: colors.background,
-                     border: `2px solid ${colors.borderAccent}`,
-                     boxShadow: `0 25px 50px ${colors.borderAccent}15`
-                   }">
-                <!-- Chart -->
-                <div class="h-32 mb-6 rounded-lg" 
-                     :style="{ background: `linear-gradient(90deg, ${colors.primary}20, ${colors.secondary}20)` }"></div>
-                
-                <!-- Stats Indicators -->
-                <div class="grid grid-cols-3 gap-4">
-                  <div v-for="stat in stats" :key="stat.label"
-                       class="text-center p-4 rounded-lg transition-all duration-300"
-                       :class="{ 'scale-110': stat.value === stats[activeStat]?.value }"
-                       :style="{ 
-                         backgroundColor: stat.color === colors.accent ? `${stat.color}10` : `${stat.color}08`,
-                         border: `1.5px solid ${stat.color === colors.accent ? colors.borderAccent : colors.border}`
-                       }">
-                    <div class="text-2xl font-bold mb-1" :style="{ color: stat.color }">{{ stat.value }}</div>
-                    <div class="text-sm font-medium" :style="{ color: colors.textSecondary }">{{ stat.label }}</div>
+          
+          <!-- Left - Chart -->
+          <div>
+            <div 
+              class="rounded-3xl p-6 border"
+              :style="{
+                borderColor: colors.border.light,
+                backgroundColor: colors.surface
+              }"
+            >
+              <div class="flex items-center justify-between mb-6">
+                <div>
+                  <h4 
+                    class="font-bold"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    Performance du Portefeuille
+                  </h4>
+                  <p 
+                    class="text-xs mt-1"
+                    :style="{ color: colors.text.tertiary }"
+                  >
+                    Derniers 12 mois
+                  </p>
+                </div>
+                <span 
+                  class="text-xs font-medium px-3 py-1.5 rounded-xl"
+                  :style="{
+                    backgroundColor: `${colors.secondary[500]}15`,
+                    color: colors.secondary[600]
+                  }"
+                >
+                  +24.5% Total
+                </span>
+              </div>
+              
+              <!-- Main Chart -->
+              <div class="h-48 mb-6">
+                <svg viewBox="0 0 500 120" class="w-full h-full" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="analyticsGrad" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" :stop-color="colors.secondary[500]" stop-opacity="0.2" />
+                      <stop offset="100%" :stop-color="colors.secondary[500]" stop-opacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L 360,40 L 400,25 L 440,30 L 480,20 L 500,15 L 500,120 L 0,120 Z" 
+                        fill="url(#analyticsGrad)" />
+                  <path
+d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L 360,40 L 400,25 L 440,30 L 480,20 L 500,15" 
+                        fill="none" :stroke="colors.secondary[500]" stroke-width="2.5" stroke-linecap="round" />
+                </svg>
+              </div>
+              
+              <!-- Months -->
+              <div class="flex justify-between text-xs font-medium mb-6" :style="{ color: colors.text.tertiary }">
+                <span v-for="month in chartMonths.slice(0, 6)" :key="month">{{ month }}</span>
+              </div>
+              
+              <!-- Asset Distribution -->
+              <div class="space-y-4">
+                <h5 
+                  class="text-sm font-bold mb-4"
+                  :style="{ color: colors.text.primary }"
+                >
+                  Répartition des Actifs
+                </h5>
+                <div 
+                  v-for="asset in [
+                    { name: 'Bitcoin (BTC)', percent: 45, color: colors.primary[500] },
+                    { name: 'Ethereum (ETH)', percent: 30, color: colors.secondary[500] },
+                    { name: 'Autres', percent: 25, color: colors.slate[600] }
+                  ]" 
+                  :key="asset.name" 
+                  class="flex items-center gap-4"
+                >
+                  <span 
+                    class="text-sm font-medium w-28"
+                    :style="{ color: colors.text.secondary }"
+                  >
+                    {{ asset.name }}
+                  </span>
+                  <div 
+                    class="flex-1 h-2 rounded-full"
+                    :style="{ backgroundColor: colors.border.light }"
+                  >
+                    <div 
+                      class="h-2 rounded-full transition-all duration-1000"
+                      :style="{
+                        width: `${asset.percent}%`,
+                        backgroundColor: asset.color
+                      }"
+                    />
                   </div>
+                  <span 
+                    class="text-sm font-bold w-12 text-right"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    {{ asset.percent }}%
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-
+          
           <!-- Right - Content -->
           <div class="space-y-8">
-            <h2 class="text-4xl md:text-5xl font-black leading-tight" :style="{ color: colors.textPrimary }">
-              Real-Time 
-              <span class="bg-gradient-to-r bg-clip-text text-transparent"
-                    :style="{ backgroundImage: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }">
-                Analytics
+            <span 
+              class="inline-block px-5 py-1.5 rounded-full text-xs font-bold tracking-wider"
+              :style="{
+                backgroundColor: `${colors.secondary[500]}15`,
+                color: colors.secondary[600]
+              }"
+            >
+              ANALYTIQUES AVANCÉES
+            </span>
+            
+            <h2 
+              class="text-4xl md:text-5xl font-extrabold leading-tight"
+              :style="{ color: colors.text.primary }"
+            >
+              Analytics & 
+              <span 
+                class="relative inline-block"
+                :style="{ color: colors.secondary[500] }"
+              >
+                Rapports
+                <span 
+                  class="absolute bottom-0 left-0 w-full h-2 -mb-1 opacity-30 blur-lg"
+                  :style="{
+                    background: `linear-gradient(90deg, ${colors.secondary[400]}, ${colors.secondary[200]})`,
+                    borderRadius: radius.full
+                  }"
+                />
               </span>
-              Dashboard
             </h2>
-
-            <p class="text-lg md:text-xl leading-relaxed opacity-80" :style="{ color: colors.textPrimary }">
-              Monitor your trading performance with precision. Our advanced analytics dashboard provides real-time insights into market trends, portfolio performance, and user behavior.
+            
+            <p 
+              class="text-lg leading-relaxed"
+              :style="{ color: colors.text.secondary }"
+            >
+              Suivez vos performances avec des graphiques détaillés. Analysez vos investissements, 
+              visualisez l'évolution de votre portefeuille et exportez vos rapports.
             </p>
-
-            <div class="space-y-6">
-              <div v-for="stat in stats" :key="stat.label" 
-                   class="flex items-center justify-between p-4 rounded-xl transition-all duration-300 hover:bg-white"
-                   :style="{ 
-                     backgroundColor: `${colors.background}80`,
-                     border: `1.5px solid ${colors.border}`,
-                     borderLeft: `4px solid ${stat.color}`
-                   }">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold"
-                       :style="{ backgroundColor: `${stat.color}15`, color: stat.color }">
-                    {{ stat.label === 'Uptime SLA' ? '⚡' : stat.label === 'Daily Volume' ? '💰' : '👥' }}
+            
+            <!-- Metrics -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+              <div 
+                v-for="item in dashboardItems"
+                :key="item.title"
+                class="p-5 rounded-2xl border"
+                :style="{
+                  borderColor: colors.border.light,
+                  borderLeftWidth: '4px',
+                  borderLeftColor: item.color
+                }"
+              >
+                <div class="flex items-center gap-4 mb-3">
+                  <div 
+                    class="w-10 h-10 rounded-xl flex items-center justify-center"
+                    :style="{ backgroundColor: item.bgColor }"
+                  >
+                    <component :is="item.icon" class="w-5 h-5" :style="{ color: item.color }" />
                   </div>
-                  <div>
-                    <h4 class="font-bold" :style="{ color: colors.textPrimary }">{{ stat.label }}</h4>
-                    <p class="text-sm" :style="{ color: colors.textSecondary }">Live tracking and monitoring</p>
-                  </div>
+                  <span 
+                    class="text-sm font-medium"
+                    :style="{ color: colors.text.secondary }"
+                  >
+                    {{ item.title }}
+                  </span>
                 </div>
-                <div class="text-2xl font-black" :style="{ color: stat.color }">{{ stat.value }}</div>
+                <div class="flex items-end justify-between">
+                  <span 
+                    class="text-2xl font-black"
+                    :style="{ color: colors.text.primary }"
+                  >
+                    {{ item.value }}
+                  </span>
+                  <span 
+                    class="text-sm font-bold"
+                    :style="{ color: item.color }"
+                  >
+                    {{ item.trend }}
+                  </span>
+                </div>
               </div>
             </div>
-
-            <button class="group px-8 py-4 font-bold rounded-xl text-lg border-2 transition-all duration-300 hover:scale-105"
-                    :style="{ 
-                      borderColor: colors.borderAccent,
-                      color: colors.borderAccent,
-                      backgroundColor: `${colors.borderAccent}05`
-                    }">
-              <span class="relative">View All Metrics →</span>
-            </button>
+            
+            <!-- Performance Stats -->
+            <div class="grid grid-cols-3 gap-3 pt-4">
+              <div 
+                v-for="stat in stats" 
+                :key="stat.label"
+                class="text-center p-4 rounded-2xl border"
+                :style="{ borderColor: colors.border.light }"
+              >
+                <div class="flex justify-center mb-2">
+                  <component 
+                    :is="stat.icon" 
+                    class="w-6 h-6"
+                    :style="{ color: stat.color }"
+                  />
+                </div>
+                <div 
+                  class="text-xl font-bold"
+                  :style="{ color: colors.text.primary }"
+                >
+                  {{ stat.value }}
+                </div>
+                <div 
+                  class="text-xs font-medium mt-1"
+                  :style="{ color: colors.text.tertiary }"
+                >
+                  {{ stat.label }}
+                </div>
+              </div>
+            </div>
+            
+            <!-- CTA Button -->
+            <router-link
+              to="/signin"
+              class="inline-flex items-center gap-2 px-6 py-3.5 font-semibold rounded-xl transition-all duration-200 hover:scale-[1.02]"
+              :style="{
+                border: `2px solid ${colors.border.light}`,
+                color: colors.text.primary
+              }"
+            >
+              Voir les Rapports Complets
+              <ArrowRight class="w-4 h-4" />
+            </router-link>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20 px-4 sm:px-6 relative overflow-hidden">
-      <div class="absolute inset-0 opacity-5"
-           :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }"></div>
-      
-      <div class="container mx-auto max-w-4xl text-center relative z-10">
-        <div class="inline-block px-6 py-3 rounded-full mb-8" 
-             :style="{ backgroundColor: `${colors.primary}15`, color: colors.primary }">
-          <span class="font-bold">🚀 READY TO START</span>
-        </div>
+    <section 
+      id="get-started"
+      class="py-20 md:py-28"
+      :style="{ backgroundColor: colors.surface }"
+    >
+      <div class="container mx-auto px-4 sm:px-6 max-w-4xl text-center">
+        <span 
+          class="inline-block px-5 py-1.5 rounded-full text-xs font-bold tracking-wider mb-8"
+          :style="{
+            backgroundColor: `${colors.primary[500]}15`,
+            color: colors.primary[600]
+          }"
+        >
+          PRÊT À COMMENCER ?
+        </span>
         
-        <h2 class="text-4xl md:text-5xl font-black mb-6" :style="{ color: colors.textPrimary }">
-          Start Trading with 
-          <span :style="{ color: colors.primary }">Confidence</span>
+        <h2 
+          class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight"
+          :style="{ color: colors.text.primary }"
+        >
+          Tradez avec 
+          <span 
+            class="relative inline-block"
+            :style="{ color: colors.primary[500] }"
+          >
+            Confiance
+            <span 
+              class="absolute bottom-0 left-0 w-full h-3 -mb-2 opacity-30 blur-lg"
+              :style="{
+                background: `linear-gradient(90deg, ${colors.primary[400]}, ${colors.primary[200]})`,
+                borderRadius: radius.full
+              }"
+            />
+          </span>
         </h2>
         
-        <p class="text-xl mb-10 max-w-2xl mx-auto opacity-80" :style="{ color: colors.textPrimary }">
-          Join thousands of traders who trust BitChest for secure, reliable, and professional crypto trading.
+        <p 
+          class="text-lg mb-10 max-w-2xl mx-auto"
+          :style="{ color: colors.text.secondary }"
+        >
+          Rejoignez des milliers d'utilisateurs qui font confiance à BitChest pour leurs investissements crypto.
         </p>
         
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <button class="px-8 py-4 font-bold rounded-xl text-lg transition-all duration-300 hover:scale-105"
-                  :style="{ 
-                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
-                    color: colors.background,
-                    boxShadow: `0 20px 40px ${colors.primary}30`
-                  }">
-            Get Started Free
-          </button>
+        <div class="flex flex-wrap gap-4 justify-center">
+          <router-link
+            to="/signin"
+            class="inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-2xl transition-all duration-200 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
+            :style="{
+              background: `linear-gradient(135deg, ${colors.primary[500]}, ${colors.primary[600]})`,
+              color: colors.white,
+              boxShadow: shadows.primary.md
+            }"
+          >
+            Créer un Compte
+            <ArrowRight class="w-5 h-5" />
+          </router-link>
           
-          <button class="px-8 py-4 font-bold rounded-xl text-lg border-2 transition-all duration-300 hover:scale-105"
-                  :style="{ 
-                    borderColor: colors.textPrimary,
-                    color: colors.textPrimary,
-                    backgroundColor: `${colors.textPrimary}05`
-                  }">
-            Schedule a Demo
-          </button>
+          <router-link
+            to="/signin"
+            class="inline-flex items-center gap-2 px-8 py-4 font-semibold rounded-2xl border-2 transition-all duration-200 hover:scale-[1.02] hover:bg-surface"
+            :style="{
+              borderColor: colors.text.primary,
+              color: colors.text.primary
+            }"
+          >
+            Se connecter
+          </router-link>
         </div>
       </div>
     </section>
 
     <!-- Footer -->
-    <footer class="py-12 md:py-16 px-4 sm:px-6 border-t" :style="{ borderColor: colors.borderAccent }">
-      <div class="container mx-auto max-w-7xl">
-        <!-- Main Footer Content -->
-        <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-8 md:gap-12 mb-12">
+    <footer class="py-16 border-t" :style="{ borderColor: colors.border.light }">
+      <div class="container mx-auto px-4 sm:px-6 max-w-7xl">
+        <div class="grid md:grid-cols-4 gap-12 mb-12">
           <!-- Brand -->
-          <div class="lg:col-span-2">
-            <div class="flex items-center gap-3 mb-6">
-              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-                   :style="{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`, color: colors.background }">
-                ⚡
-              </div>
-              <div>
-                <h2 class="text-2xl font-black" :style="{ color: colors.textPrimary }">
-                  Bit<span :style="{ color: colors.primary }">CHEST</span>
-                </h2>
-                <p class="text-sm font-semibold opacity-70" :style="{ color: colors.textSecondary }">
-                  White-label crypto trading platform
-                </p>
-              </div>
-            </div>
-            <p class="max-w-xs opacity-80" :style="{ color: colors.textSecondary }">
-              Secure, scalable, and professional crypto trading solutions for the modern financial ecosystem.
+          <div>
+            <router-link to="/" class="flex items-center gap-3 mb-6 group">
+            
+                             <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
+            </router-link>
+            
+            <p 
+              class="text-sm leading-relaxed"
+              :style="{ color: colors.text.secondary }"
+            >
+              Plateforme de trading crypto sécurisée. Simple, rapide et professionnelle. Conçue pour les investisseurs exigeants.
             </p>
+            
+            <!-- Social Links -->
+            <div class="flex gap-4 mt-6">
+              <a 
+                href="#"
+                class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-surface"
+                :style="{ border: `1px solid ${colors.border.light}` }"
+              >
+                <span :style="{ color: colors.text.tertiary }">𝕏</span>
+              </a>
+              <a 
+                href="#"
+                class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-surface"
+                :style="{ border: `1px solid ${colors.border.light}` }"
+              >
+                <span :style="{ color: colors.text.tertiary }">f</span>
+              </a>
+              <a 
+                href="#"
+                class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-surface"
+                :style="{ border: `1px solid ${colors.border.light}` }"
+              >
+                <span :style="{ color: colors.text.tertiary }">in</span>
+              </a>
+            </div>
           </div>
-
-          <!-- Links -->
-          <div v-for="section in [
-            { title: 'PRODUCT', links: ['Features', 'Pricing', 'Security', 'API Docs'] },
-            { title: 'COMPANY', links: ['About', 'Careers', 'Contact'] },
-            { title: 'LEGAL', links: ['Privacy', 'Terms', 'Compliance', 'Cookies'] }
-          ]" :key="section.title">
-            <h3 class="text-xs font-bold tracking-widest mb-6 opacity-70" :style="{ color: colors.primary }">
+          
+          <!-- Navigation Links -->
+          <div 
+            v-for="section in [
+              { 
+                title: 'Produit', 
+                links: [
+                  { label: 'Fonctionnalités', href: '#features' },
+                  { label: 'Sécurité', href: '#security' },
+                  { label: 'Tarifs', href: '#pricing' },
+                  { label: 'Intégrations', href: '#integrations' }
+                ]
+              },
+              { 
+                title: 'Société', 
+                links: [
+                  { label: 'À propos', href: '#about' },
+                  { label: 'Blog', href: '#blog' },
+                  { label: 'Contact', href: '#contact' },
+                  { label: 'Carrières', href: '#careers' }
+                ]
+              },
+              { 
+                title: 'Légal', 
+                links: [
+                  { label: 'Confidentialité', href: '#privacy' },
+                  { label: 'Conditions', href: '#terms' },
+                  { label: 'Conformité', href: '#compliance' },
+                  { label: 'Sécurité', href: '#security-policy' }
+                ]
+              }
+            ]" 
+            :key="section.title"
+          >
+            <h4 
+              class="text-xs font-bold tracking-wider mb-5"
+              :style="{ color: colors.primary[600], letterSpacing: '0.1em' }"
+            >
               {{ section.title }}
-            </h3>
+            </h4>
             <ul class="space-y-3">
-              <li v-for="link in section.links" :key="link">
-                <a href="#" class="text-sm font-medium transition-all duration-300 hover:translate-x-2 inline-block"
-                   :style="{ color: colors.textPrimary }">
-                  {{ link }}
+              <li v-for="link in section.links" :key="link.label">
+                <a
+                  :href="link.href"
+                  class="text-sm transition-all duration-200 hover:text-primary-500"
+                  :style="{ color: colors.text.secondary }"
+                >
+                  {{ link.label }}
                 </a>
               </li>
             </ul>
           </div>
         </div>
-
-        <!-- Bottom Section -->
-        <div class="pt-8 border-t" :style="{ borderColor: `${colors.border}80` }">
-          <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-            <p class="text-sm font-medium opacity-70" :style="{ color: colors.textSecondary }">
-              © 2024 BitChest. All rights reserved.
-            </p>
-            
-            <div class="flex gap-6">
-              <a v-for="(social, index) in [
-                { icon: '𝕏', color: colors.primary },
-                { icon: 'f', color: colors.secondary },
-                { icon: '▶', color: colors.accent },
-                { icon: '✈️', color: colors.textPrimary }
-              ]" :key="index" href="#" 
-                 class="text-lg transition-all duration-300 hover:scale-125 hover:rotate-12"
-                 :style="{ color: social.color }">
-                {{ social.icon }}
-              </a>
-            </div>
-            
-            <p class="text-xs font-medium opacity-50" :style="{ color: colors.textSecondary }">
-              Prototype for educational purposes
-            </p>
+        
+        <!-- Footer Bottom -->
+        <div 
+          class="pt-10 border-t flex flex-wrap justify-between items-center gap-6 text-sm"
+          :style="{ borderColor: colors.border.light }"
+        >
+          <span :style="{ color: colors.text.tertiary }">
+            © 2025 BitChest. Tous droits réservés.
+          </span>
+          
+          <div class="flex gap-6">
+            <a
+              href="#privacy"
+              class="transition-all duration-200 hover:text-primary-500"
+              :style="{ color: colors.text.tertiary }"
+            >
+              Politique de confidentialité
+            </a>
+            <a
+              href="#terms"
+              class="transition-all duration-200 hover:text-primary-500"
+              :style="{ color: colors.text.tertiary }"
+            >
+              Conditions d'utilisation
+            </a>
           </div>
+          
+          <span :style="{ color: colors.text.tertiary }">
+            Prototype v1.0
+          </span>
         </div>
       </div>
     </footer>
@@ -442,79 +973,37 @@ onMounted(() => {
 </template>
 
 <style scoped>
-* {
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+.animate-spin {
+  animation: spin 0.8s linear infinite;
 }
 
-html {
-  scroll-behavior: smooth;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.hover\:scale-102:hover {
-  transform: scale(1.02);
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeInUp {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: #F8FAFF;
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #E2E8F0;
-  border-radius: 5px;
-  border: 2px solid #F8FAFF;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #01FF19;
-}
-
-/* Performance optimizations */
-img {
-  content-visibility: auto;
-}
-
-/* Smooth transitions */
+/* Smooth appearance for animated numbers */
 .transition-all {
   transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
 }
 
-/* Responsive utilities */
-@media (max-width: 768px) {
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  
-  h1 {
-    font-size: 2.5rem;
-  }
-  
-  h2 {
-    font-size: 2rem;
-  }
+/* Gradient text utility */
+.bg-gradient-to-r {
+  background: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+.from-primary-400 {
+  --tw-gradient-from: v-bind('colors.primary[400]');
+}
+
+.to-primary-600 {
+  --tw-gradient-to: v-bind('colors.primary[600]');
+}
+
+.from-secondary-400 {
+  --tw-gradient-from: v-bind('colors.secondary[400]');
+}
+
+.to-secondary-600 {
+  --tw-gradient-to: v-bind('colors.secondary[600]');
 }
 </style>

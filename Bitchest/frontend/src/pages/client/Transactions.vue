@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
@@ -170,14 +169,10 @@ const loadTransactions = async () => {
   loading.value = true
   error.value = null
   try {
-    console.log('🔄 Loading transactions with filterType:', filterType.value)
-    
     // Always fetch ALL transactions first (don't filter at API level)
     // The tabs will handle local filtering
     const response = await api.wallet.getTransactionsHistory()
     const transactionsData = response?.transactions || []
-    
-    console.log('✅ Fetched transactions:', transactionsData.length)
     
     if (!transactionsData || transactionsData.length === 0) {
       console.warn('⚠️ No transactions received from API')
@@ -205,8 +200,6 @@ const loadTransactions = async () => {
         current_price: 0 // Will be populated from wallet data
       }
     })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    
-    console.log('✅ Processed transactions:', transactions.value.length)
     
     // Merge with wallet data for current prices
     if (wallet.value?.cryptoWalletAssets) {
@@ -518,8 +511,6 @@ const filteredTransactions = computed(() => {
     filtered = filtered.filter(t => new Date(t.date) >= cutoff)
   }
 
-  console.log(`📊 Filtered transactions: ${filtered.length} (tab: ${activeTab.value}, type: ${filterType.value}, search: ${searchQuery.value})`)
-  
   return filtered
 })
 
@@ -637,28 +628,24 @@ const navigateToPage = (page: number) => {
 // LIFECYCLE & WATCHERS
 // ============================================================================
 onMounted(async () => {
-  console.log('🚀 Component mounted, fetching initial data...')
   await refreshData()
 })
 
 // Watcher for active tab - reset pagination and reload
-watch(activeTab, (newTab, oldTab) => {
-  console.log(`📑 Tab changed from "${oldTab}" to "${newTab}"`)
+watch(activeTab, () => {
   currentPage.value = 1
   // Don't reload from API, just filter locally
   // The filteredTransactions computed property will handle the filtering
 })
 
 // Watcher for filter type and date range - reload transactions
-watch([filterType, dateRange], (newValues, oldValues) => {
-  console.log(`🔍 Filters changed:`, { filterType: newValues[0], dateRange: newValues[1] })
+watch([filterType, dateRange], () => {
   currentPage.value = 1
   loadTransactions()
 })
 
 // Watcher for search query - reset pagination
 watch(searchQuery, () => {
-  console.log(`🔎 Search query changed: "${searchQuery.value}"`)
   currentPage.value = 1
 })
 </script>
@@ -669,24 +656,24 @@ watch(searchQuery, () => {
       <!-- Header Section -->
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">
+          <h1 class="text-3xl font-bold text-slate-900 tracking-tight">
             Transaction History
           </h1>
-          <p class="text-[#64748B] mt-2">
+          <p class="text-slate-500 mt-2">
             Track, analyze, and manage all your trading activities
           </p>
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
-          <TooltipProvider>
+          <!-- <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E2E8F0] rounded-lg">
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg">
                   <Switch
                     v-model:checked="showValueInEur"
-                    class="data-[state=checked]:bg-[#35A7FF]"
+                    class="data-[state=checked]:bg-brand-blue"
                   />
-                  <Label class="text-sm text-[#64748B] cursor-pointer">
+                  <Label class="text-sm text-slate-500 cursor-pointer">
                     {{ showValueInEur ? 'Show EUR' : 'Show Crypto' }}
                   </Label>
                 </div>
@@ -695,11 +682,11 @@ watch(searchQuery, () => {
                 <p>Toggle between EUR and crypto values</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </TooltipProvider> -->
           
           <Button
             variant="outline"
-            class="gap-2 border-[#E2E8F0] text-[#64748B] hover:bg-[#35A7FF]/5 hover:text-[#35A7FF]"
+            class="gap-2 border-slate-200 text-slate-500 hover:bg-brand-blue/5 hover:text-brand-blue"
             :disabled="isRefreshing"
             @click="refreshData"
           >
@@ -708,7 +695,7 @@ watch(searchQuery, () => {
           </Button>
           
           <Button 
-            class="gap-2 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+            class="gap-2 bg-brand-blue hover:bg-brand-blue/90 text-white"
             :disabled="filteredTransactions.length === 0"
             @click="exportTransactions"
           >
@@ -721,7 +708,7 @@ watch(searchQuery, () => {
       <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <template v-if="loading && !wallet">
-          <Card v-for="i in 4" :key="i" class="border-[#E2E8F0]">
+          <Card v-for="i in 4" :key="i" class="border-slate-200">
             <CardContent class="p-5">
               <Skeleton class="h-8 w-32 mb-3" />
               <Skeleton class="h-4 w-24" />
@@ -733,7 +720,7 @@ watch(searchQuery, () => {
           <Card
             v-for="(stat, index) in statsCards"
             :key="index"
-            class="group relative overflow-hidden border-[#E2E8F0] hover:border-[#35A7FF]/30 hover:shadow-lg transition-all duration-300"
+            class="group relative overflow-hidden border-slate-200 hover:border-brand-blue/30 hover:shadow-lg transition-all duration-300"
           >
             <div
 class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" 
@@ -741,10 +728,10 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
             <CardContent class="p-5 relative">
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                  <div class="p-2.5 rounded-xl border border-[#E2E8F0]" :style="{ backgroundColor: `${stat.color}10` }">
+                  <div class="p-2.5 rounded-xl border border-slate-200" :style="{ backgroundColor: `${stat.color}10` }">
                     <component :is="stat.icon" :style="{ color: stat.color }" class="w-5 h-5" />
                   </div>
-                  <span class="text-sm font-medium text-[#64748B]">{{ stat.title }}</span>
+                  <span class="text-sm font-medium text-slate-500">{{ stat.title }}</span>
                 </div>
                 <Badge
                   v-if="stat.title !== 'Available Balance'"
@@ -758,8 +745,8 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                   {{ stat.change }}
                 </Badge>
               </div>
-              <div class="text-2xl font-bold text-[#0F172A] mb-1">{{ stat.value }}</div>
-              <div class="text-sm text-[#64748B]">{{ stat.description }}</div>
+              <div class="text-2xl font-bold text-slate-900 mb-1">{{ stat.value }}</div>
+              <div class="text-sm text-slate-500">{{ stat.description }}</div>
             </CardContent>
           </Card>
         </template>
@@ -770,12 +757,12 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
         <!-- Left Column - Transactions List -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Filters Card -->
-          <Card class="border-[#E2E8F0]">
+          <Card class="border-slate-200">
             <CardContent class="p-5">
               <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                 <div>
-                  <h3 class="text-lg font-semibold text-[#0F172A]">Transaction Filters</h3>
-                  <p class="text-sm text-[#64748B] mt-1">
+                  <h3 class="text-lg font-semibold text-slate-900">Transaction Filters</h3>
+                  <p class="text-sm text-slate-500 mt-1">
                     {{ filteredTransactions.length }} transaction{{ filteredTransactions.length !== 1 ? 's' : '' }} found
                   </p>
                 </div>
@@ -804,21 +791,21 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
 
               <!-- Search Bar -->
               <div class="relative mb-4">
-                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#64748B] w-4 h-4" />
+                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-4 h-4" />
                 <Input
                   v-model="searchQuery"
                   placeholder="Search by crypto name, symbol, or transaction ID..."
-                  class="pl-10 border-[#E2E8F0] focus:border-[#35A7FF]"
+                  class="pl-10 border-slate-200 focus:border-brand-blue"
                 />
               </div>
 
               <!-- Advanced Filters -->
-              <div v-if="showAdvancedFilters" class="space-y-4 pt-4 border-t border-[#E2E8F0]">
+              <div v-if="showAdvancedFilters" class="space-y-4 pt-4 border-t border-slate-200">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div class="space-y-2">
-                    <Label class="text-sm font-medium text-[#64748B]">Transaction Type</Label>
+                    <Label class="text-sm font-medium text-slate-500">Transaction Type</Label>
                     <Select v-model="filterType">
-                      <SelectTrigger class="border-[#E2E8F0] focus:border-[#35A7FF]">
+                      <SelectTrigger class="border-slate-200 focus:border-brand-blue">
                         <SelectValue placeholder="All transaction types" />
                       </SelectTrigger>
                       <SelectContent>
@@ -830,9 +817,9 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                   </div>
                   
                   <div class="space-y-2">
-                    <Label class="text-sm font-medium text-[#64748B]">Date Range</Label>
+                    <Label class="text-sm font-medium text-slate-500">Date Range</Label>
                     <Select v-model="dateRange">
-                      <SelectTrigger class="border-[#E2E8F0] focus:border-[#35A7FF]">
+                      <SelectTrigger class="border-slate-200 focus:border-brand-blue">
                         <SelectValue placeholder="Select period" />
                       </SelectTrigger>
                       <SelectContent>
@@ -851,22 +838,22 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
 
           <!-- Tabs Navigation -->
           <Tabs v-model="activeTab" class="w-full">
-            <TabsList class="grid grid-cols-3 w-full max-w-md bg-white border border-[#E2E8F0] p-1 rounded-xl">
+            <TabsList class="grid grid-cols-3 w-full max-w-md bg-white border border-slate-200 p-1 rounded-xl">
               <TabsTrigger 
                 value="all"
-                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#35A7FF] data-[state=active]:to-[#38618C] data-[state=active]:text-white rounded-lg"
+                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue data-[state=active]:to-brand-dark data-[state=active]:text-white rounded-lg"
               >
                 All Transactions
               </TabsTrigger>
               <TabsTrigger 
                 value="buy"
-                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#01FF19] data-[state=active]:to-[#35A7FF] data-[state=active]:text-white rounded-lg"
+                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-green data-[state=active]:to-brand-blue data-[state=active]:text-white rounded-lg"
               >
                 Purchases
               </TabsTrigger>
               <TabsTrigger 
                 value="sell"
-                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#FF5964] data-[state=active]:to-[#FF8B94] data-[state=active]:text-white rounded-lg"
+                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-red data-[state=active]:to-brand-red-light data-[state=active]:text-white rounded-lg"
               >
                 Sales
               </TabsTrigger>
@@ -877,7 +864,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
           <div class="transactions-list">
             <!-- Loading State -->
             <div v-if="loading" class="space-y-4">
-              <Card v-for="i in 3" :key="i" class="border-[#E2E8F0]">
+              <Card v-for="i in 3" :key="i" class="border-slate-200">
                 <CardContent class="p-5">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -894,27 +881,27 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
             </div>
 
             <!-- Error State -->
-            <Alert v-else-if="error" variant="destructive" class="border-[#FF5964] bg-[#FF5964]/10">
-              <AlertCircle class="w-4 h-4 text-[#FF5964]" />
-              <AlertDescription class="text-[#FF5964]">
+            <Alert v-else-if="error" variant="destructive" class="border-brand-red bg-brand-red/10">
+              <AlertCircle class="w-4 h-4 text-brand-red" />
+              <AlertDescription class="text-brand-red">
                 {{ error }}
               </AlertDescription>
             </Alert>
 
             <!-- Empty State -->
             <div v-else-if="filteredTransactions.length === 0" class="text-center py-12">
-              <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#35A7FF]/10 to-[#38618C]/10 flex items-center justify-center">
-                <Receipt class="w-10 h-10 text-[#35A7FF]" />
+              <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-brand-blue/10 to-brand-dark/10 flex items-center justify-center">
+                <Receipt class="w-10 h-10 text-brand-blue" />
               </div>
-              <h3 class="text-lg font-semibold text-[#0F172A] mb-2">No transactions found</h3>
-              <p class="text-[#64748B] max-w-md mx-auto mb-6">
+              <h3 class="text-lg font-semibold text-slate-900 mb-2">No transactions found</h3>
+              <p class="text-slate-500 max-w-md mx-auto mb-6">
                 {{ searchQuery || filterType !== 'all' || dateRange !== '30d' 
                   ? 'Try adjusting your filters or search query'
                   : 'You haven\'t made any transactions yet' }}
               </p>
               <Button 
                 v-if="!searchQuery && filterType === 'all' && dateRange === '30d'"
-                class="bg-gradient-to-r from-[#35A7FF] to-[#38618C] text-white hover:opacity-90"
+                class="bg-gradient-to-r from-brand-blue to-brand-dark text-white hover:opacity-90"
                 @click="router.push('/dashboard/cryptos')"
               >
                 Start Trading
@@ -933,7 +920,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
               <Card
                 v-for="transaction in paginatedTransactions"
                 :key="transaction.id"
-                class="group border-[#E2E8F0] hover:border-[#35A7FF]/30 hover:shadow-sm transition-all duration-200"
+                class="group border-slate-200 hover:border-brand-blue/30 hover:shadow-sm transition-all duration-200"
               >
                 <CardContent class="p-5">
                   <div class="flex items-start justify-between">
@@ -968,14 +955,14 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                       <!-- Transaction Details -->
                       <div class="space-y-2">
                         <div class="flex items-center gap-2">
-                          <h4 class="font-semibold text-[#0F172A]">
+                          <h4 class="font-semibold text-slate-900">
                             {{ transaction.crypto.name }}
                           </h4>
                           <Badge variant="outline" class="text-xs font-mono">
                             {{ transaction.crypto.symbol }}
                           </Badge>
-                          <span class="text-xs text-[#64748B]">•</span>
-                          <span class="text-xs text-[#64748B] flex items-center gap-1">
+                          <span class="text-xs text-slate-500">•</span>
+                          <span class="text-xs text-slate-500 flex items-center gap-1">
                             <Hash class="w-3 h-3" />
                             {{ transaction.id.slice(0, 8) }}...
                           </span>
@@ -983,26 +970,26 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
 
                         <div class="flex flex-wrap items-center gap-4 text-sm">
                           <div class="flex items-center gap-1.5">
-                            <Coins class="w-3.5 h-3.5 text-[#64748B]" />
-                            <span class="font-medium text-[#0F172A]">
+                            <Coins class="w-3.5 h-3.5 text-slate-500" />
+                            <span class="font-medium text-slate-900">
                               {{ formatNumber(transaction.quantity, 8) }}
                             </span>
-                            <span class="text-[#64748B]">
+                            <span class="text-slate-500">
                               {{ transaction.crypto.symbol }}
                             </span>
                           </div>
                           
                           <div class="flex items-center gap-1.5">
-                            <DollarSign class="w-3.5 h-3.5 text-[#64748B]" />
-                            <span class="font-medium text-[#0F172A]">
+                            <DollarSign class="w-3.5 h-3.5 text-slate-500" />
+                            <span class="font-medium text-slate-900">
                               {{ showValueInEur ? formatCurrency(transaction.unitPrice) : formatNumber(transaction.unitPrice) }}
                             </span>
-                            <span class="text-[#64748B]">per unit</span>
+                            <span class="text-slate-500">per unit</span>
                           </div>
                           
                           <div class="flex items-center gap-1.5">
-                            <Clock class="w-3.5 h-3.5 text-[#64748B]" />
-                            <span class="text-[#64748B]">
+                            <Clock class="w-3.5 h-3.5 text-slate-500" />
+                            <span class="text-slate-500">
                               {{ formatRelativeDate(transaction.date) }}
                             </span>
                           </div>
@@ -1013,10 +1000,10 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                     <!-- Right Side: Amount & Actions -->
                     <div class="text-right">
                       <div class="mb-2">
-                        <div class="text-2xl font-bold text-[#0F172A]">
+                        <div class="text-2xl font-bold text-slate-900">
                           {{ showValueInEur ? formatCurrency(transaction.total) : formatNumber(transaction.total) }}
                         </div>
-                        <div class="text-xs text-[#64748B]">
+                        <div class="text-xs text-slate-500">
                           Total {{ showValueInEur ? 'EUR' : 'Crypto' }}
                         </div>
                       </div>
@@ -1028,7 +1015,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                class="gap-1 text-[#64748B] hover:text-[#35A7FF]"
+                                class="gap-1 text-slate-500 hover:text-brand-blue"
                                 @click="router.push(`/dashboard/cryptos/${transaction.crypto.id}`)"
                               >
                                 <Eye class="w-3.5 h-3.5" />
@@ -1045,7 +1032,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                           v-if="canSell(transaction)"
                           variant="outline"
                           size="sm"
-                          class="gap-1 border-[#FF5964] text-[#FF5964] hover:bg-[#FF5964]/10"
+                          class="gap-1 border-brand-red text-brand-red hover:bg-brand-red/10"
                           @click="openSellDialog(transaction)"
                         >
                           Sell
@@ -1055,12 +1042,12 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                   </div>
 
                   <!-- Additional Info -->
-                  <div class="mt-4 pt-4 border-t border-[#E2E8F0]">
+                  <div class="mt-4 pt-4 border-t border-slate-200">
                     <div class="flex items-center justify-between text-sm">
                       <div class="flex items-center gap-4">
                         <div class="flex items-center gap-1.5">
-                          <Calendar class="w-3.5 h-3.5 text-[#64748B]" />
-                          <span class="text-[#64748B]">
+                          <Calendar class="w-3.5 h-3.5 text-slate-500" />
+                          <span class="text-slate-500">
                             {{ formatFullDate(transaction.date) }}
                           </span>
                         </div>
@@ -1068,7 +1055,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                         <div 
                           v-if="transaction.crypto.current_price"
                           class="flex items-center gap-1.5"
-                          :class="transaction.crypto.current_price >= transaction.unitPrice ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+                          :class="transaction.crypto.current_price >= transaction.unitPrice ? 'text-brand-green' : 'text-brand-red'"
                         >
                           <component 
                             :is="transaction.crypto.current_price >= transaction.unitPrice ? TrendingUp : TrendingDown"
@@ -1077,7 +1064,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                           <span class="font-medium">
                             {{ formatCurrency(transaction.crypto.current_price) }}
                           </span>
-                          <span class="text-[#64748B]">current price</span>
+                          <span class="text-slate-500">current price</span>
                         </div>
                       </div>
                       
@@ -1099,8 +1086,8 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
             </div>
 
             <!-- Pagination -->
-            <div v-if="totalPages > 1 && !loading" class="flex items-center justify-between pt-6 border-t border-[#E2E8F0]">
-              <div class="text-sm text-[#64748B]">
+            <div v-if="totalPages > 1 && !loading" class="flex items-center justify-between pt-6 border-t border-slate-200">
+              <div class="text-sm text-slate-500">
                 Showing {{ Math.min((currentPage - 1) * itemsPerPage + 1, filteredTransactions.length) }} 
                 to {{ Math.min(currentPage * itemsPerPage, filteredTransactions.length) }} 
                 of {{ filteredTransactions.length }} transactions
@@ -1108,7 +1095,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
               
               <div class="flex items-center gap-2">
                 <Select v-model="itemsPerPage">
-                  <SelectTrigger class="w-28 border-[#E2E8F0]">
+                  <SelectTrigger class="w-28 border-slate-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1137,7 +1124,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                       variant="outline"
                       size="sm"
                       class="h-9 w-9"
-                      :class="page === currentPage ? 'bg-[#35A7FF] text-white border-[#35A7FF]' : 'border-[#E2E8F0]'"
+                      :class="page === currentPage ? 'bg-brand-blue text-white border-brand-blue' : 'border-slate-200'"
                       @click="navigateToPage(page)"
                     >
                       {{ page }}
@@ -1162,9 +1149,9 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
         <!-- Right Column - Stats & Insights -->
         <div class="space-y-6">
           <!-- Transaction Summary -->
-          <Card class="border-[#E2E8F0]">
+          <Card class="border-slate-200">
             <CardHeader>
-              <CardTitle class="text-lg font-semibold text-[#0F172A]">
+              <CardTitle class="text-lg font-semibold text-slate-900">
                 Transaction Summary
               </CardTitle>
             </CardHeader>
@@ -1172,33 +1159,33 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
               <div
                 v-for="summary in transactionTypeSummary"
                 :key="summary.type"
-                class="flex items-center justify-between p-3 rounded-lg hover:bg-[#F8FAFC] transition-colors"
+                class="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 <div class="flex items-center gap-3">
                   <div class="p-2 rounded-lg" :style="{ backgroundColor: summary.bgColor }">
                     <component :is="summary.icon" :style="{ color: summary.color }" class="w-4 h-4" />
                   </div>
                   <div>
-                    <div class="font-medium text-[#0F172A]">{{ summary.label }}</div>
-                    <div class="text-xs text-[#64748B]">{{ summary.count }} transactions</div>
+                    <div class="font-medium text-slate-900">{{ summary.label }}</div>
+                    <div class="text-xs text-slate-500">{{ summary.count }} transactions</div>
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="font-semibold text-[#0F172A]">
+                  <div class="font-semibold text-slate-900">
                     {{ formatCompactCurrency(summary.total) }}
                   </div>
-                  <div class="text-xs text-[#64748B]">
+                  <div class="text-xs text-slate-500">
                     {{ summary.type === 'ACHAT' ? 'Invested' : 'Received' }}
                   </div>
                 </div>
               </div>
               
-              <div class="pt-3 border-t border-[#E2E8F0]">
+              <div class="pt-3 border-t border-slate-200">
                 <div class="flex justify-between items-center">
-                  <span class="text-sm font-medium text-[#0F172A]">Net Flow</span>
+                  <span class="text-sm font-medium text-slate-900">Net Flow</span>
                   <span 
                     class="text-sm font-bold"
-                    :class="transactionStats.netFlow >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+                    :class="transactionStats.netFlow >= 0 ? 'text-brand-green' : 'text-brand-red'"
                   >
                     {{ transactionStats.netFlow >= 0 ? '+' : '' }}{{ formatCompactCurrency(transactionStats.netFlow) }}
                   </span>
@@ -1208,30 +1195,30 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
           </Card>
 
           <!-- Quick Insights -->
-          <Card class="border-[#E2E8F0]">
+          <Card class="border-slate-200">
             <CardHeader>
-              <CardTitle class="text-lg font-semibold text-[#0F172A]">
+              <CardTitle class="text-lg font-semibold text-slate-900">
                 Quick Insights
               </CardTitle>
             </CardHeader>
             <CardContent class="space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-sm text-[#64748B]">Recent Activity</span>
-                <Badge class="bg-[#35A7FF]/10 text-[#35A7FF] border-[#35A7FF]/20">
+                <span class="text-sm text-slate-500">Recent Activity</span>
+                <Badge class="bg-brand-blue/10 text-brand-blue border-brand-blue/20">
                   {{ transactionStats.recentActivity }} this week
                 </Badge>
               </div>
               
               <div class="flex items-center justify-between">
-                <span class="text-sm text-[#64748B]">Avg. Transaction</span>
-                <span class="text-sm font-medium text-[#0F172A]">
+                <span class="text-sm text-slate-500">Avg. Transaction</span>
+                <span class="text-sm font-medium text-slate-900">
                   {{ formatCompactCurrency(transactionStats.avgTransactionSize) }}
                 </span>
               </div>
               
               <div class="flex items-center justify-between">
-                <span class="text-sm text-[#64748B]">Total Volume</span>
-                <span class="text-sm font-medium text-[#0F172A]">
+                <span class="text-sm text-slate-500">Total Volume</span>
+                <span class="text-sm font-medium text-slate-900">
                   {{ formatCompactCurrency(transactionStats.totalBuyAmount + transactionStats.totalSellAmount) }}
                 </span>
               </div>
@@ -1239,15 +1226,15 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
           </Card>
 
           <!-- Actions -->
-          <Card class="border-[#E2E8F0]">
+          <Card class="border-slate-200">
             <CardHeader>
-              <CardTitle class="text-lg font-semibold text-[#0F172A]">
+              <CardTitle class="text-lg font-semibold text-slate-900">
                 Quick Actions
               </CardTitle>
             </CardHeader>
             <CardContent class="space-y-3">
               <Button
-                class="w-full justify-start h-12 bg-gradient-to-r from-[#35A7FF] to-[#38618C] text-white hover:opacity-90"
+                class="w-full justify-start h-12 bg-gradient-to-r from-brand-blue to-brand-dark text-white hover:opacity-90"
                 @click="router.push('/dashboard/cryptos')"
               >
                 <Zap class="w-5 h-5 mr-3" />
@@ -1255,33 +1242,33 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
               </Button>
               <Button
                 variant="outline"
-                class="w-full justify-start h-12 border-[#E2E8F0] text-[#0F172A] hover:border-[#01FF19] hover:bg-[#01FF19]/5"
+                class="w-full justify-start h-12 border-slate-200 text-slate-900 hover:border-brand-green hover:bg-brand-green/5"
                 @click="router.push('/dashboard/portfolio')"
               >
-                <TrendingUp class="w-5 h-5 mr-3 text-[#01FF19]" />
+                <TrendingUp class="w-5 h-5 mr-3 text-brand-green" />
                 View Portfolio
               </Button>
               <Button
                 variant="outline"
-                class="w-full justify-start h-12 border-[#E2E8F0] text-[#0F172A] hover:border-[#FF5964] hover:bg-[#FF5964]/5"
+                class="w-full justify-start h-12 border-slate-200 text-slate-900 hover:border-brand-red hover:bg-brand-red/5"
                 @click="router.push('/dashboard/analytics')"
               >
-                <FileText class="w-5 h-5 mr-3 text-[#FF5964]" />
+                <FileText class="w-5 h-5 mr-3 text-brand-red" />
                 Analytics
               </Button>
             </CardContent>
           </Card>
 
           <!-- Security Badge -->
-          <Card class="border-[#E2E8F0] bg-gradient-to-br from-[#35A7FF]/5 to-transparent">
+          <Card class="border-slate-200 bg-gradient-to-br from-brand-blue/5 to-transparent">
             <CardContent class="p-5">
               <div class="flex items-center gap-3">
-                <div class="p-2 rounded-lg bg-gradient-to-r from-[#35A7FF] to-[#38618C]">
+                <div class="p-2 rounded-lg bg-gradient-to-r from-brand-blue to-brand-dark">
                   <Shield class="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h4 class="font-semibold text-[#0F172A]">Secure Transactions</h4>
-                  <p class="text-xs text-[#64748B] mt-1">
+                  <h4 class="font-semibold text-slate-900">Secure Transactions</h4>
+                  <p class="text-xs text-slate-500 mt-1">
                     All transactions are encrypted and secured
                   </p>
                 </div>
@@ -1294,11 +1281,11 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
 
     <!-- Sell Dialog -->
     <Dialog :open="showSellDialog" @update:open="closeSellDialog">
-      <DialogContent class="max-w-md bg-white border border-[#FF5964]/20 shadow-xl rounded-xl">
-        <DialogHeader class="pb-4 border-b border-[#E2E8F0]">
+      <DialogContent class="max-w-md bg-white border border-brand-red/20 shadow-xl rounded-xl">
+        <DialogHeader class="pb-4 border-b border-slate-200">
           <div class="flex items-center justify-between">
-            <DialogTitle class="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <div class="p-2 rounded-lg bg-gradient-to-r from-[#FF5964] to-[#FF8B94]">
+            <DialogTitle class="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <div class="p-2 rounded-lg bg-gradient-to-r from-brand-red to-brand-red-light">
                 <ArrowUpRight class="w-5 h-5 text-white" />
               </div>
               Sell {{ selectedAsset?.crypto?.symbol }}
@@ -1312,41 +1299,41 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
               <X class="w-4 h-4" />
             </Button>
           </div>
-          <DialogDescription class="text-[#64748B]">
+          <DialogDescription class="text-slate-500">
             Sell your {{ selectedAsset?.crypto?.name }} holdings
           </DialogDescription>
         </DialogHeader>
 
         <div class="space-y-4 py-4">
           <!-- Asset Info -->
-          <div class="p-4 rounded-lg border border-[#E2E8F0] bg-gradient-to-br from-[#FF5964]/5 to-transparent">
+          <div class="p-4 rounded-lg border border-slate-200 bg-gradient-to-br from-brand-red/5 to-transparent">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-[#FF5964] to-[#FF8B94] flex items-center justify-center">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-brand-red to-brand-red-light flex items-center justify-center">
                   <span class="font-bold text-white">
                     {{ selectedAsset?.crypto?.symbol?.charAt(0) }}
                   </span>
                 </div>
                 <div>
-                  <h4 class="font-semibold text-[#0F172A]">{{ selectedAsset?.crypto?.name }}</h4>
-                  <p class="text-sm text-[#64748B]">{{ selectedAsset?.crypto?.symbol }}</p>
+                  <h4 class="font-semibold text-slate-900">{{ selectedAsset?.crypto?.name }}</h4>
+                  <p class="text-sm text-slate-500">{{ selectedAsset?.crypto?.symbol }}</p>
                 </div>
               </div>
-              <Badge class="bg-[#FF5964] text-white">
+              <Badge class="bg-brand-red text-white">
                 Available: {{ formatNumber(getAvailableQuantity(selectedAsset?.crypto?.symbol), 8) }}
               </Badge>
             </div>
             
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p class="text-[#64748B]">Current Price</p>
-                <p class="font-semibold text-[#0F172A]">
+                <p class="text-slate-500">Current Price</p>
+                <p class="font-semibold text-slate-900">
                   {{ formatCurrency(selectedAsset?.crypto?.current_price || selectedAsset?.unitPrice || 0) }}
                 </p>
               </div>
               <div>
-                <p class="text-[#64748B]">Purchase Price</p>
-                <p class="font-semibold text-[#0F172A]">
+                <p class="text-slate-500">Purchase Price</p>
+                <p class="font-semibold text-slate-900">
                   {{ formatCurrency(selectedAsset?.unitPrice || 0) }}
                 </p>
               </div>
@@ -1355,9 +1342,9 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
 
           <!-- Quantity Input -->
           <div class="space-y-3">
-            <Label for="sellQuantity" class="text-sm font-medium text-[#0F172A]">
+            <Label for="sellQuantity" class="text-sm font-medium text-slate-900">
               Quantity to Sell
-              <span class="text-[#64748B] font-normal ml-1">
+              <span class="text-slate-500 font-normal ml-1">
                 (Max: {{ formatNumber(getAvailableQuantity(selectedAsset?.crypto?.symbol), 8) }})
               </span>
             </Label>
@@ -1371,12 +1358,12 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                 :max="getAvailableQuantity(selectedAsset?.crypto?.symbol)"
                 min="0.00000001"
                 placeholder="0.00000000"
-                class="pl-4 pr-24 py-3 text-lg font-medium border-[#FF5964]/30 focus:border-[#FF5964] focus:ring-[#FF5964]/20"
+                class="pl-4 pr-24 py-3 text-lg font-medium border-brand-red/30 focus:border-brand-red focus:ring-brand-red/20"
                 :disabled="isSelling"
                 @input="validateSellQuantity"
               />
               <div class="absolute right-2 top-1/2 -translate-y-1/2">
-                <Badge class="bg-[#FF5964] text-white">
+                <Badge class="bg-brand-red text-white">
                   {{ selectedAsset?.crypto?.symbol }}
                 </Badge>
               </div>
@@ -1389,7 +1376,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                 :key="percent"
                 variant="outline"
                 size="sm"
-                class="text-xs hover:bg-[#FF5964]/10 hover:border-[#FF5964]"
+                class="text-xs hover:bg-brand-red/10 hover:border-brand-red"
                 :disabled="isSelling"
                 @click="setSellPercentage(percent)"
               >
@@ -1399,38 +1386,38 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
           </div>
 
           <!-- Sell Summary -->
-          <div class="p-4 rounded-lg border border-[#E2E8F0] space-y-3">
-            <h5 class="font-semibold text-[#0F172A]">Sale Summary</h5>
+          <div class="p-4 rounded-lg border border-slate-200 space-y-3">
+            <h5 class="font-semibold text-slate-900">Sale Summary</h5>
             
             <div class="space-y-2">
               <div class="flex justify-between items-center">
-                <span class="text-sm text-[#64748B]">Quantity</span>
-                <span class="text-sm font-medium text-[#0F172A]">
+                <span class="text-sm text-slate-500">Quantity</span>
+                <span class="text-sm font-medium text-slate-900">
                   {{ sellQuantity || '0.00000000' }} {{ selectedAsset?.crypto?.symbol }}
                 </span>
               </div>
               
               <div class="flex justify-between items-center">
-                <span class="text-sm text-[#64748B]">Current Price</span>
-                <span class="text-sm font-medium text-[#0F172A]">
+                <span class="text-sm text-slate-500">Current Price</span>
+                <span class="text-sm font-medium text-slate-900">
                   {{ formatCurrency(selectedAsset?.crypto?.current_price || selectedAsset?.unitPrice || 0) }}
                 </span>
               </div>
               
-              <div class="flex justify-between items-center pt-2 border-t border-[#E2E8F0]">
-                <span class="text-sm font-semibold text-[#0F172A]">Total Amount</span>
-                <span class="text-lg font-bold text-[#FF5964]">
+              <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span class="text-sm font-semibold text-slate-900">Total Amount</span>
+                <span class="text-lg font-bold text-brand-red">
                   {{ formatCurrency(calculateSellAmount()) }}
                 </span>
               </div>
 
               <!-- Profit/Loss -->
-              <div v-if="selectedAsset?.unitPrice && parseFloat(sellQuantity || 0) > 0" class="pt-2 border-t border-[#E2E8F0]">
+              <div v-if="selectedAsset?.unitPrice && parseFloat(sellQuantity || 0) > 0" class="pt-2 border-t border-slate-200">
                 <div class="flex justify-between items-center">
-                  <span class="text-sm text-[#64748B]">Profit/Loss</span>
+                  <span class="text-sm text-slate-500">Profit/Loss</span>
                   <span 
                     class="text-sm font-bold"
-                    :class="calculateProfitLoss() >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+                    :class="calculateProfitLoss() >= 0 ? 'text-brand-green' : 'text-brand-red'"
                   >
                     {{ formatCurrency(calculateProfitLoss()) }}
                     <span class="ml-1">
@@ -1441,10 +1428,10 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
               </div>
 
               <!-- After Sale -->
-              <div v-if="parseFloat(sellQuantity || 0) > 0" class="pt-2 border-t border-[#E2E8F0]">
+              <div v-if="parseFloat(sellQuantity || 0) > 0" class="pt-2 border-t border-slate-200">
                 <div class="flex justify-between items-center">
-                  <span class="text-sm text-[#64748B]">Remaining</span>
-                  <span class="text-sm font-medium text-[#0F172A]">
+                  <span class="text-sm text-slate-500">Remaining</span>
+                  <span class="text-sm font-medium text-slate-900">
                     {{ formatNumber(Math.max(0, getAvailableQuantity(selectedAsset?.crypto?.symbol) - parseFloat(sellQuantity || 0)), 8) }}
                     {{ selectedAsset?.crypto?.symbol }}
                   </span>
@@ -1452,29 +1439,29 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
                 
                 <Progress 
                   :value="((parseFloat(sellQuantity || 0) / getAvailableQuantity(selectedAsset?.crypto?.symbol)) * 100) || 0"
-                  class="h-2 mt-2 bg-[#FF5964]/20 [&>div]:bg-gradient-to-r [&>div]:from-[#FF5964] [&>div]:to-[#FF8B94]"
+                  class="h-2 mt-2 bg-brand-red/20 [&>div]:bg-gradient-to-r [&>div]:from-brand-red [&>div]:to-brand-red-light"
                 />
               </div>
             </div>
           </div>
 
           <!-- Alerts -->
-          <Alert v-if="sellError" variant="destructive" class="border-[#FF5964] bg-[#FF5964]/10">
-            <AlertCircle class="w-4 h-4 text-[#FF5964]" />
-            <AlertDescription class="text-[#FF5964]">
+          <Alert v-if="sellError" variant="destructive" class="border-brand-red bg-brand-red/10">
+            <AlertCircle class="w-4 h-4 text-brand-red" />
+            <AlertDescription class="text-brand-red">
               {{ sellError }}
             </AlertDescription>
           </Alert>
 
-          <Alert v-if="sellSuccess" class="border-[#01FF19] bg-[#01FF19]/10">
-            <CheckCircle2 class="w-4 h-4 text-[#01FF19]" />
-            <AlertDescription class="text-[#01FF19]">
+          <Alert v-if="sellSuccess" class="border-brand-green bg-brand-green/10">
+            <CheckCircle2 class="w-4 h-4 text-brand-green" />
+            <AlertDescription class="text-brand-green">
               {{ sellSuccess }}
             </AlertDescription>
           </Alert>
         </div>
 
-        <DialogFooter class="pt-4 border-t border-[#E2E8F0]">
+        <DialogFooter class="pt-4 border-t border-slate-200">
           <Button
             variant="outline"
             class="flex-1"
@@ -1484,7 +1471,7 @@ class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transi
             Cancel
           </Button>
           <Button
-            class="flex-1 bg-gradient-to-r from-[#FF5964] to-[#FF8B94] text-white hover:opacity-90"
+            class="flex-1 bg-gradient-to-r from-brand-red to-brand-red-light text-white hover:opacity-90"
             :disabled="isSelling || !sellQuantity || parseFloat(sellQuantity) <= 0 || parseFloat(sellQuantity) > getAvailableQuantity(selectedAsset?.crypto?.symbol)"
             @click="confirmSell"
           >

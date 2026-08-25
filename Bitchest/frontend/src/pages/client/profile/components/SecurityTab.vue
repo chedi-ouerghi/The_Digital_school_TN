@@ -58,7 +58,7 @@ const changePassword = async () => {
 <template>
   <Card class="border-gray-200 shadow-lg">
     <CardHeader>
-      <CardTitle class="text-[#38618C]">Change Password</CardTitle>
+      <CardTitle class="text-brand-dark">Change Password</CardTitle>
     </CardHeader>
     <CardContent>
       <form class="space-y-4" @submit.prevent="changePassword">
@@ -71,7 +71,7 @@ const changePassword = async () => {
               :type="showCurrentPassword ? 'text' : 'password'"
               placeholder="••••••••"
               required
-              class="pr-10 transition-colors focus:border-[#35A7FF]"
+              class="pr-10 transition-colors focus:border-brand-blue"
             />
             <button
               type="button"
@@ -93,7 +93,7 @@ const changePassword = async () => {
               :type="showNewPassword ? 'text' : 'password'"
               placeholder="••••••••"
               required
-              class="pr-10 transition-colors focus:border-[#35A7FF]"
+              class="pr-10 transition-colors focus:border-brand-blue"
             />
             <button
               type="button"
@@ -115,7 +115,7 @@ const changePassword = async () => {
               :type="showConfirmPassword ? 'text' : 'password'"
               placeholder="••••••••"
               required
-              class="pr-10 transition-colors focus:border-[#35A7FF]"
+              class="pr-10 transition-colors focus:border-brand-blue"
             />
             <button
               type="button"
@@ -131,7 +131,7 @@ const changePassword = async () => {
         <Button 
           type="submit" 
           :disabled="changingPassword"
-          class="w-full bg-[#FF5964] hover:bg-[#E63946] text-white transition-colors"
+          class="w-full bg-brand-red hover:bg-[#E63946] text-white transition-colors"
         >
           {{ changingPassword ? 'Changing...' : 'Change Password' }}
         </Button>

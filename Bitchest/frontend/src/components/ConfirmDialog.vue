@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
 } from '@/components/ui/dialog';
-import { defineEmits, defineProps } from 'vue';
+import { defineProps } from 'vue';
 
 const props = defineProps<{ 
   open: boolean
@@ -15,14 +15,13 @@ const props = defineProps<{
   message?: string 
 }>()
 
-const _props = props // Suppress unused variable warning
 </script>
 
 <template>
   <Dialog :open="open" @update:open="emits('close')">
-    <DialogContent class="sm:max-w-md border-[#38618C]">
+    <DialogContent class="sm:max-w-md border-brand-dark bg-white shadow-lg">
       <DialogHeader>
-        <DialogTitle class="text-[#38618C]">{{ title || 'Confirmation' }}</DialogTitle>
+        <DialogTitle class="text-brand-dark">{{ title || 'Confirmation' }}</DialogTitle>
         <DialogDescription class="text-gray-600">
           {{ message || 'Êtes-vous sûr ?' }}
         </DialogDescription>
@@ -30,13 +29,13 @@ const _props = props // Suppress unused variable warning
       <div class="flex justify-end gap-3 mt-6">
         <Button
           variant="outline"
-          class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white"
+          class="border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white"
           @click="emits('close')"
         >
           Annuler
         </Button>
         <Button
-          class="bg-[#FF5964] hover:bg-[#FF5964]/90 text-white"
+          class="bg-brand-red hover:bg-brand-red/90 text-white"
           @click="emits('confirm')"
         >
           Confirmer
@@ -47,7 +46,7 @@ const _props = props // Suppress unused variable warning
 </template>
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
+:deep(.border-brand-dark) {
   border-color: #38618C;
 }
 </style>

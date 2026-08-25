@@ -252,7 +252,8 @@ const handleImageError = (event: Event) => {
               class="group flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
             >
               <div class="flex items-center gap-3">
-                <div :class="[
+                <div
+:class="[
                   'w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm',
                   getRankColor(index)
                 ]">

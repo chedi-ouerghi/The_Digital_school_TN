@@ -1,14 +1,12 @@
 import type {
-    AccountRequest,
-    ApiResponse,
-    CryptoHistory,
-    Cryptomoney,
-    Notification,
-    PaginatedResponse,
-    Transaction,
-    UpdateUserInput,
-    User,
-    Wallet
+  AccountRequest,
+  ApiResponse, CryptoHistory, Cryptomoney,
+  Notification,
+  PaginatedResponse,
+  Transaction,
+  UpdateUserInput,
+  User,
+  Wallet
 } from '@/types';
 import type { PortfolioResponse } from '../types';
 
@@ -21,7 +19,7 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 // Generic API response type
 interface ApiError {
   message?: string;
-  error?: string | Record<string, any>;
+  error?: string | Record<string, unknown>;
 }
 
 /**
@@ -56,19 +54,12 @@ async function initializeCsrfToken(): Promise<void> {
       }
     });
 
-    console.log('🔐 CSRF Cookie Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      cookies: document.cookie
-    });
-
     // Attendre un peu pour s'assurer que le cookie est défini
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    const token = getXsrfToken();
-    console.log('✅ CSRF token initialized', {
-      token: token ? `${token.substring(0, 20)}...` : 'NOT FOUND'
-    });
+    if (response.ok) {
+      getXsrfToken();
+    }
   } catch (error) {
     console.warn('⚠️ Failed to initialize CSRF token:', error);
   }
@@ -91,10 +82,10 @@ function getXsrfToken(): string | null {
   return null;
 }
 
-async function request<T = any>(
+async function request<T = unknown>(
   path: string,
   method: HttpMethod = 'GET',
-  body?: any
+  body?: unknown
 ): Promise<T> {
   try {
     const headers: Record<string, string> = {
@@ -104,17 +95,6 @@ async function request<T = any>(
     // Only set Content-Type for non-FormData requests
     if (body && !(body instanceof FormData)) {
       headers['Content-Type'] = 'application/json';
-    } else if (body instanceof FormData) {
-      // 🔥 FormData: Log what we're sending
-      console.log(`📤 FormData request to ${method} ${path}`, {
-        method,
-        path,
-        isFormData: true,
-        entries: Array.from((body as FormData).entries()).map(([k, v]) => ({
-          key: k,
-          value: v instanceof File ? `File(${v.name}, ${v.size} bytes, ${v.type})` : v
-        }))
-      });
     }
 
     // 🔥 CRITICAL : Ajouter le header X-XSRF-TOKEN pour la protection CSRF
@@ -135,7 +115,6 @@ async function request<T = any>(
     if ((method === 'PUT' || method === 'PATCH') && body instanceof FormData) {
       finalMethod = 'POST';
       finalBody.append('_method', method);
-      console.log(`🔄 Spoofing ${method} request as POST with _method field.`);
     }
 
     const res = await fetch(`${API_BASE}${path}`, {
@@ -145,7 +124,7 @@ async function request<T = any>(
       credentials: 'include',
       body: finalBody && !(finalBody instanceof FormData)
         ? JSON.stringify(finalBody)
-        : (finalBody as any) || undefined,
+        : (finalBody as unknown as BodyInit) || undefined,
       signal: controller.signal,
     });
 
@@ -157,16 +136,7 @@ async function request<T = any>(
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
-      data = text as any;
-    }
-
-    // 🔥 Log response for file uploads
-    if (body instanceof FormData) {
-      console.log(`📥 Response ${res.status} from ${method} ${path}`, {
-        status: res.status,
-        statusText: res.statusText,
-        data: data
-      });
+      data = text as unknown as T;
     }
 
     if (!res.ok) {
@@ -193,8 +163,8 @@ async function request<T = any>(
     }
 
     return data as T;
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('La requête a expiré (timeout).');
     }
     console.error('Erreur API:', error);
@@ -210,7 +180,7 @@ async function request<T = any>(
  * L'authentification utilise maintenant les cookies HttpOnly gérés par Sanctum
  * Le token ne doit JAMAIS être stocké en localStorage
  */
-export function setToken(token: string): void {
+export function setToken(_token: string): void {
   // DEPRECATED: Ne pas utiliser
   console.warn('[DEPRECATED] setToken() is no longer needed. Use cookie-based auth.');
 }
@@ -269,9 +239,9 @@ export const authApi = {
     return await request<ApiResponse<User>>('/request-account', 'POST', payload);
   },
 
-  async verifyEmail(payload: { token: string }): Promise<ApiResponse<any>> {
+  async verifyEmail(payload: { token: string }): Promise<ApiResponse<{ message: string; user?: User }>> {
     await initializeCsrfToken();
-    return await request<ApiResponse<any>>('/verify-email', 'POST', payload);
+    return await request<ApiResponse<{ message: string; user?: User }>>('/verify-email', 'POST', payload);
   },
 
   async logout(): Promise<void> {
@@ -342,6 +312,13 @@ export interface CryptoListParams {
   category?: string;
 }
 
+export interface CryptoHistoryPayload {
+  history: CryptoHistory[];
+  name: string;
+  symbol: string;
+  count: number;
+}
+
 export const cryptoApi = {
   async list(params: CryptoListParams = {}): Promise<PaginatedResponse<Cryptomoney>> {
     const queryParams = new URLSearchParams();
@@ -357,14 +334,8 @@ export const cryptoApi = {
     return await request<Cryptomoney>(`/cryptos/${id}`, 'GET');
   },
 
-  async history(id: string, days: number = 30): Promise<any> {
-    try {
-      return await request<any>(`/cryptos/${id}/history?days=${days}`, 'GET');
-    } catch (error) {
-      // Silently handle errors for historical data - backend will provide synthetic data
-      console.debug('Historical data fetch:', error instanceof Error ? error.message : 'Unknown error');
-      throw error;
-    }
+  async history(id: string, days: number = 30): Promise<CryptoHistoryPayload> {
+    return await request<CryptoHistoryPayload>(`/cryptos/${id}/history?days=${days}`, 'GET');
   },
 
   // ✅ Synchroniser l'historique de toutes les cryptos (24h, 7j, 30j)
@@ -379,7 +350,7 @@ export const cryptoApi = {
 
 export interface TransactionRequest {
   symbol: string;
-  type: 'BUY' | 'SELL';
+  type: 'ACHAT' | 'VENTE';
   quantity: number;
 }
 
@@ -591,7 +562,15 @@ export const notificationsApi = {
   },
 
   async markAsRead(id: string): Promise<ApiResponse<Notification>> {
-    return await request<ApiResponse<Notification>>(`/notifications/${id}/read`, 'PUT');
+    return await request<ApiResponse<Notification>>(`/notifications/${id}/read`, 'PATCH');
+  },
+
+  async markAllAsRead(): Promise<ApiResponse<{ updated: number }>> {
+    return await request<ApiResponse<{ updated: number }>>('/notifications/read-all', 'PATCH');
+  },
+
+  async unreadCount(): Promise<{ unread_count: number }> {
+    return await request<{ unread_count: number }>('/notifications/unread-count', 'GET');
   },
 
 

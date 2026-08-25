@@ -15,7 +15,7 @@ const activeTab = ref('overview')
     <!-- Header -->
     <div class="flex items-center justify-between flex-wrap gap-4">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-[#38618C] mb-1">My Profile & Portfolio</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark mb-1">My Profile & Portfolio</h1>
         <p class="text-sm sm:text-base text-gray-500">Manage your account and investments</p>
       </div>
     </div>
@@ -25,28 +25,28 @@ const activeTab = ref('overview')
       <TabsList class="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
         <TabsTrigger 
           value="overview" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <Wallet class="w-4 h-4 mr-2" />
           Portfolio
         </TabsTrigger>
         <TabsTrigger 
           value="profile" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <User class="w-4 h-4 mr-2" />
           Profile
         </TabsTrigger>
         <TabsTrigger 
           value="media" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <Eye class="w-4 h-4 mr-2" />
           Media
         </TabsTrigger>
         <TabsTrigger 
           value="security" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <Lock class="w-4 h-4 mr-2" />
           Security

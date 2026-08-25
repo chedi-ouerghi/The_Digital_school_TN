@@ -3,29 +3,38 @@
 import { ArrowDownRight, ArrowUpRight, Coins, DollarSign, Package, TrendingUp } from "lucide-vue-next"
 import type { Ref } from "vue"
 import { computed } from "vue"
+import type { TransactionItem, WalletData } from './useTransactionLogic'
+
+type ColorPalette = {
+  primary: string
+  success: string
+  danger: string
+  dark: string
+  neutral: string
+}
 
 export function useTransactionStats(
-  wallet: Ref<any>,
-  transactions: Ref<any[]>,
+  wallet: Ref<WalletData>,
+  transactions: Ref<TransactionItem[]>,
   activeTab: Ref<string>,
   filterType: Ref<'all' | 'ACHAT' | 'VENTE'>,
   searchQuery: Ref<string>,
   dateRange: Ref<string>,
   currentPage: Ref<number>,
   itemsPerPage: Ref<number>,
-  colors: any
+  colors: ColorPalette
 ) {
   const portfolioStats = computed(() => {
     if (!wallet.value) return null
-    
-    const totalValue = wallet.value.totalValue || 0
-    const totalInvestment = wallet.value.totalInvestment || 0
-    const totalPlusValue = wallet.value.totalPlusValue || 0
-    const totalPlusValuePercent = wallet.value.totalPlusValuePercent || 0
-    const balance = wallet.value.balance_eur || 0
+
+    const totalValue = Number(wallet.value.totalValue || 0)
+    const totalInvestment = Number(wallet.value.totalInvestment || 0)
+    const totalPlusValue = Number(wallet.value.totalPlusValue || 0)
+    const totalPlusValuePercent = Number(wallet.value.totalPlusValuePercent || 0)
+    const balance = Number(wallet.value.balance_eur || 0)
     const assets = wallet.value.assets || []
     const buyCount = wallet.value.buyCount || 0
-    
+
     return {
       totalValue,
       totalInvestment,
@@ -35,15 +44,15 @@ export function useTransactionStats(
       assets,
       buyCount,
       assetCount: assets.length,
-      totalUnits: wallet.value.totalUnits || 0
+      totalUnits: Number(wallet.value.totalUnits || 0)
     }
   })
 
   const statsCards = computed(() => {
     if (!portfolioStats.value) return []
-    
+
     const stats = portfolioStats.value
-    
+
     return [
       {
         title: 'Portfolio Value',
@@ -88,15 +97,15 @@ export function useTransactionStats(
     const allTransactions = transactions.value
     const buyTransactions = allTransactions.filter(t => t.originalType === 'ACHAT')
     const sellTransactions = allTransactions.filter(t => t.originalType === 'VENTE')
-    
+
     const totalBuyAmount = buyTransactions.reduce((sum, t) => sum + t.total, 0)
     const totalSellAmount = sellTransactions.reduce((sum, t) => sum + t.total, 0)
     const totalTransactions = allTransactions.length
-    
+
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
     const recentTransactions = allTransactions.filter(t => new Date(t.date) >= weekAgo)
-    
+
     return {
       totalTransactions,
       buyCount: buyTransactions.length,
@@ -117,7 +126,7 @@ export function useTransactionStats(
     } else if (activeTab.value === 'sell') {
       filtered = filtered.filter(t => t.originalType === 'VENTE')
     }
-    
+
     if (filterType.value !== 'all' && activeTab.value === 'all') {
       filtered = filtered.filter(t => t.originalType === filterType.value)
     }
@@ -134,19 +143,17 @@ export function useTransactionStats(
     if (dateRange.value !== 'all') {
       const now = new Date()
       const cutoff = new Date()
-      
+
       switch (dateRange.value) {
         case '7d': cutoff.setDate(now.getDate() - 7); break
         case '30d': cutoff.setDate(now.getDate() - 30); break
         case '90d': cutoff.setDate(now.getDate() - 90); break
         case '1y': cutoff.setFullYear(now.getFullYear() - 1); break
       }
-      
+
       filtered = filtered.filter(t => new Date(t.date) >= cutoff)
     }
 
-    console.log(`📊 Filtered transactions: ${filtered.length}`)
-    
     return filtered
   })
 
@@ -181,21 +188,21 @@ export function useTransactionStats(
     }
   ])
 
-  const formatCurrency = (value: any) => {
+  const formatCurrency = (value: unknown) => {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '€0.00'
-    return n.toLocaleString('en-US', { 
-      style: 'currency', 
-      currency: 'EUR', 
+    return n.toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'EUR',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })
   }
 
-  const formatCompactCurrency = (value: any) => {
+  const formatCompactCurrency = (value: unknown) => {
     const n = Number(value ?? 0)
     if (!isFinite(n) || isNaN(n)) return '€0'
-    
+
     if (n >= 1000000) return `€${(n / 1000000).toFixed(2)}M`
     if (n >= 1000) return `€${(n / 1000).toFixed(1)}K`
     return formatCurrency(n)

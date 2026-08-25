@@ -15,6 +15,7 @@ import type { ChartData, ChartOptions } from 'chart.js'
 import { Chart, registerables } from 'chart.js'
 import { Line } from 'vue-chartjs'
 Chart.register(...registerables)
+import CryptoCandlestickChart from '@/components/charts/CryptoCandlestickChart.vue'
 
 // ============================================================================
 // INTERFACES
@@ -112,6 +113,7 @@ const history = ref<HistoryEntry[]>([])
 const walletTransactions = ref<Transaction[]>([])
 const historyLoading = ref(false)
 const timeRange = ref('30d')
+const chartMode = ref<'line' | 'candle'>('candle')
 const chartRenderKey = ref(0)
 
 // ============================================================================
@@ -233,7 +235,6 @@ async function fetchHistoricalData() {
     }
     
     const days = dayMap[timeRange.value] || 30
-    console.log(`📊 Fetching ${timeRange.value} (${days} days) for ${crypto.value.symbol}...`)
     
     try {
       const response = await api.crypto.history(crypto.value.id, days)
@@ -241,7 +242,6 @@ async function fetchHistoricalData() {
       
       if (data.history && Array.isArray(data.history)) {
         history.value = data.history
-        console.log(`✅ Loaded ${history.value.length} data points`)
         // Force chart re-render by updating the key
         chartRenderKey.value++
       } else {
@@ -250,13 +250,11 @@ async function fetchHistoricalData() {
         chartRenderKey.value++
       }
     } catch (apiError: any) {
-      console.debug(`API returned error (expected fallback): ${apiError.message}`)
       // API error is handled - history.value remains as is or becomes empty
       history.value = []
       chartRenderKey.value++
     }
   } catch (e: any) {
-    console.debug('Chart data fetch failed:', e instanceof Error ? e.message : 'Unknown error')
     history.value = []
     chartRenderKey.value++
   } finally {
@@ -283,14 +281,8 @@ watch(() => route.params.id as string, loadAllData)
 
 // Watch timeRange changes to fetch new data
 watch(timeRange, async () => {
-  console.log(`📊 Time range changed to ${timeRange.value}`)
   await fetchHistoricalData()
 }, { immediate: false })
-
-// Watch for history changes to trigger chart re-render
-watch(history, () => {
-  console.log(`📈 History updated: ${history.value.length} points`)
-}, { deep: true })
 
 // ============================================================================
 // COMPUTED PROPERTIES
@@ -550,7 +542,6 @@ function shareCrypto() {
 
 function exportData() {
   // Implementation for data export
-  console.log('Export data')
 }
 
 function viewAllTransactions() {
@@ -701,53 +692,87 @@ function viewAllTransactions() {
         <Card class="border-gray-200 dark:border-gray-700">
           <CardContent class="p-6">
             <!-- Chart Header -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Price Chart</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  Price Chart
+                  <span v-if="chartMode==='candle'" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-bold tracking-wide">JAPANESE CANDLES</span>
+                </h3>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
                   {{ crypto.symbol.toUpperCase() }}/EUR 
                   <span v-if="filteredHistory.length > 0">
                     • {{ filteredHistory.length }} data points
                   </span>
+                  <span class="hidden sm:inline"> • {{ chartMode==='candle' ? 'OHLC + Volume' : 'Line' }}</span>
                 </div>
               </div>
-              <div class="flex gap-2 flex-wrap">
-                <Button
-                  v-for="range in ['1d', '7d', '30d', '60d']"
-                  :key="range"
-                  size="sm"
-                  :variant="timeRange === range ? 'default' : 'outline'"
-                  class="text-xs font-medium"
-                  :disabled="historyLoading"
-                  @click="() => {
-                    timeRange = range
-                  }"
-                >
-                  {{ range === '1d' ? '24 Hours' : range === '7d' ? '1 Week' : range === '30d' ? '1 Month' : '2 Months' }}
-                </Button>
+              <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <!-- Time range -->
+                <div class="flex gap-1.5 flex-wrap">
+                  <Button
+                    v-for="range in ['1d', '7d', '30d', '60d']"
+                    :key="range"
+                    size="sm"
+                    :variant="timeRange === range ? 'default' : 'outline'"
+                    class="text-xs font-medium h-8 px-3"
+                    :disabled="historyLoading"
+                    @click="() => {
+                      timeRange = range
+                    }"
+                  >
+                    {{ range === '1d' ? '24H' : range === '7d' ? '1W' : range === '30d' ? '1M' : '2M' }}
+                  </Button>
+                </div>
+                <!-- Chart type toggle -->
+                <div class="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <button
+                    class="px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5"
+                    :class="chartMode==='line' ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+                    @click="chartMode='line'"
+                  >
+                    <TrendingUp class="w-3.5 h-3.5" /> Line
+                  </button>
+                  <button
+                    class="px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5"
+                    :class="chartMode==='candle' ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+                    @click="chartMode='candle'"
+                  >
+                    <span class="w-3 h-3 rounded-sm bg-gradient-to-b from-green-400 to-red-400 border border-gray-300"></span> Candles
+                  </button>
+                </div>
               </div>
             </div>
 
             <!-- Chart -->
-            <div class="h-[350px]">
-              <div v-if="historyLoading" class="h-full flex items-center justify-center">
+            <div :class="chartMode==='candle' ? 'min-h-[480px]' : 'h-[350px]'">
+              <div v-if="historyLoading" class="h-[350px] flex items-center justify-center">
                 <div class="text-center">
                   <div class="w-12 h-12 border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-gray-300 rounded-full animate-spin mx-auto mb-4"></div>
                   <p class="text-gray-500 dark:text-gray-400">Loading chart...</p>
                 </div>
               </div>
-              <div v-else-if="!chartData.datasets.length || !history.length" class="h-full flex items-center justify-center">
+              <div v-else-if="!history.length" class="h-[350px] flex items-center justify-center">
                 <div class="text-center text-gray-500 dark:text-gray-400">
                   <div class="text-4xl mb-4">📊</div>
                   <p>No historical data available</p>
                 </div>
               </div>
-              <Line 
-                v-else 
-                :key="`chart-${chartRenderKey}`"
-                :data="chartData"
-                :options="chartOptions"
-              />
+              <template v-else>
+                <CryptoCandlestickChart
+                  v-if="chartMode==='candle'"
+                  :history="filteredHistory"
+                  :symbol="crypto.symbol"
+                  :height="360"
+                  :volume-height="118"
+                  :show-volume="true"
+                />
+                <Line 
+                  v-else
+                  :key="`chart-${chartRenderKey}`"
+                  :data="chartData"
+                  :options="chartOptions"
+                />
+              </template>
             </div>
           </CardContent>
         </Card>
