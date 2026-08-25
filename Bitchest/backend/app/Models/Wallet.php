@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\DecimalMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -48,17 +49,22 @@ class Wallet extends Model
 
     /* ===================== CALCULS ===================== */
 
-    public function getTotalValue(): float
+    public function getTotalValue(): string
     {
-        return $this->cryptoWalletAssets->sum(
-            fn ($asset) => $asset->getCurrentValue()
+        return $this->cryptoWalletAssets->reduce(
+            fn (string $total, $asset) => DecimalMath::add($total, $asset->getCurrentValue()),
+            '0'
         );
     }
 
-    public function getTotalPlusValue(): float
+    public function getTotalPlusValue(): string
     {
-        return $this->cryptoWalletAssets->sum(
-            fn ($asset) => $asset->getCurrentValue() - ($asset->quantity * $asset->average_buy_price)
+        return $this->cryptoWalletAssets->reduce(
+            fn (string $total, $asset) => DecimalMath::add(
+                $total,
+                DecimalMath::subtract($asset->getCurrentValue(), $asset->getTotalInvested())
+            ),
+            '0'
         );
     }
 
@@ -71,7 +77,7 @@ class Wallet extends Model
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
         });
     }

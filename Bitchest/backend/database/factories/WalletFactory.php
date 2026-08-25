@@ -16,7 +16,7 @@ class WalletFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => strtoupper(\Illuminate\Support\Str::random(14)),
+            'id' => (string) \Illuminate\Support\Str::uuid(),
             'user_id' => User::factory(),
             'balance_eur' => fake()->randomFloat(2, 0, 10000),
         ];

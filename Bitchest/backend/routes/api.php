@@ -108,6 +108,8 @@ Route::prefix('v1')
         Route::get('wallets/history', [PortefeuilleController::class, 'history']);
         Route::get('wallets/{id}/history', [PortefeuilleController::class, 'history']);
         Route::get('wallets/{id}', [PortefeuilleController::class, 'show']);
+        // SECURITE - Etape 1 : auth:sanctum garantit qu'un utilisateur authentifie
+        // est necessaire avant d'atteindre le traitement d'une transaction.
         Route::post('wallets/transaction', [PortefeuilleController::class, 'transact']);
 
         /*
@@ -116,7 +118,10 @@ Route::prefix('v1')
         |--------------------------------------------------------------------------
         */
         Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::put('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     });
 
     /*

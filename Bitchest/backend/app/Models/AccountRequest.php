@@ -56,7 +56,7 @@ class AccountRequest extends Model
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
             if (empty($model->token)) {
                 $model->token = strtoupper(Str::random(32));

@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Transaction extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -17,6 +18,7 @@ class Transaction extends Model
 
     protected $fillable = [
         'crypto_wallet_asset_id',
+        'cryptomoney_id',
         'type',
         'quantity',
         'price',
@@ -28,9 +30,9 @@ class Transaction extends Model
 
     protected $casts = [
         'type' => 'string',
-        'quantity' => 'decimal:18',
-        'price' => 'decimal:18',
-        'total_eur' => 'decimal:18',
+        'quantity' => 'decimal:8',
+        'price' => 'decimal:8',
+        'total_eur' => 'decimal:8',
         'admin_operation' => 'boolean',
         'cancelled_at' => 'datetime',
     ];
@@ -47,9 +49,13 @@ class Transaction extends Model
         );
     }
 
+    public function cryptomoney()
+    {
+        return $this->belongsTo(Cryptomoney::class, 'cryptomoney_id');
+    }
+
     /**
      * Accès indirect au wallet via crypto_wallet_assets
-     * (plus simple et plus fiable que hasOneThrough ici)
      */
     public function wallet()
     {
@@ -64,7 +70,7 @@ class Transaction extends Model
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
         });
     }

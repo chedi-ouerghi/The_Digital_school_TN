@@ -421,7 +421,7 @@ if (
 
                 // Créer une notification interne
                 try {
-                    \App\Models\Notification::create([
+                    app(\App\Services\NotificationService::class)->create([
                         'user_id' => $admin->id,
                         'title' => 'New account request',
                         'message' => "Request from {$accountRequest->name} ({$accountRequest->email})",

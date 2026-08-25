@@ -17,11 +17,12 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => strtoupper(Str::random(14)),
+            'id' => (string) Str::uuid(),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
+            'password_changed_at' => now(),
             'role' => 'CLIENT',
             'remember_token' => Str::random(60),
         ];

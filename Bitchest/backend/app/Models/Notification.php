@@ -22,16 +22,27 @@ class Notification extends Model
         'message',
         'type',
         'is_read',
+        'read_at',
+        'action_url',
+        'entity_id',
+        'entity_type',
+        'metadata',
+        'dedupe_key',
     ];
 
     protected $casts = [
         'is_read' => 'boolean',
+        'read_at' => 'datetime',
+        'metadata' => 'array',
     ];
 
     // Types constants
     public const TYPE_ACCOUNT_REQUEST = 'account_request';
     public const TYPE_TRANSACTION = 'transaction';
     public const TYPE_PRICE_UPDATE = 'price_update';
+    public const TYPE_PRICE_CHANGE = 'price_change';
+    public const TYPE_ROLE_SYNC = 'role_sync';
+    public const TYPE_SYSTEM = 'system';
     public const TYPE_ADMIN_ACTION = 'admin_action';
     public const TYPE_WELCOME = 'welcome';
 
@@ -92,7 +103,7 @@ class Notification extends Model
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
         });
     }

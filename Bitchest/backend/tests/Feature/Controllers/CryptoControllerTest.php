@@ -67,10 +67,13 @@ public function test_get_crypto_history()
 {
     $crypto = Cryptomoney::factory()->create();
     
-    // Create some history records
-    CryptoHistory::factory()->count(5)->create([
-        'cryptomoney_id' => $crypto->id
-    ]);
+    // Create some history records with distinct dates to respect UNIQUE(cryptomoney_id, recorded_at)
+    for ($i = 0; $i < 5; $i++) {
+        CryptoHistory::factory()->create([
+            'cryptomoney_id' => $crypto->id,
+            'recorded_at' => now()->subDays($i)->toDateString(),
+        ]);
+    }
 
     $response = $this->getJson("/api/v1/cryptos/{$crypto->id}/history");
 

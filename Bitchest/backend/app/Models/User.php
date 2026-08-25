@@ -80,7 +80,7 @@ class User extends Authenticatable
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
             if (empty($model->remember_token)) {
                 $model->remember_token = Str::random(60);

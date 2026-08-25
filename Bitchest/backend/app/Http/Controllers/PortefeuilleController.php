@@ -49,7 +49,7 @@ class PortefeuilleController extends Controller
 
             $portfolioDetails = $this->walletService->getPortfolioDetails($wallet->id);
 
-            return response()->json(array_merge($portfolioDetails, ['balance_eur' => (float) $wallet->balance_eur]));
+            return response()->json(array_merge($portfolioDetails, ['balance_eur' => (string) $wallet->balance_eur]));
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Error retrieving wallet',
@@ -84,7 +84,8 @@ class PortefeuilleController extends Controller
         try {
             $user = Auth::user();
 
-            // 🔐 SECURITY: Vérifier que l'utilisateur a changé son mot de passe
+            // SECURITE - Etape 2 : une session authentifiee ne suffit pas pour
+            // trader. Le mot de passe temporaire doit d'abord avoir ete change.
             if (is_null($user->password_changed_at)) {
                 return response()->json([
                     'error' => 'You must change your password before making transactions.',
@@ -94,6 +95,8 @@ class PortefeuilleController extends Controller
 
             DB::beginTransaction();
 
+            // VERIFIER - Etape 3 : Laravel refuse les donnees incompletes,
+            // un type inconnu et une quantite nulle ou negative.
             $validated = $request->validate([
                 'symbol' => 'required|string|exists:cryptomoney,symbol',
                 'type' => 'required|in:ACHAT,VENTE',
@@ -102,11 +105,13 @@ class PortefeuilleController extends Controller
 
             $crypto = Cryptomoney::where('symbol', $validated['symbol'])->firstOrFail();
             
+            // SECURISER - Etape 4 : le service effectue les controles metier
+            // sous transaction SQL et verrouille les lignes avant modification.
             $result = $this->transactionService->handleTransaction(
                 $user,
                 $validated['symbol'],
                 $validated['type'],
-                (float) $validated['quantity']
+                (string) $validated['quantity']
             );
 
             DB::commit();
@@ -121,13 +126,13 @@ class PortefeuilleController extends Controller
             return response()->json([
                 'message' => $result,
                 'success' => true,
-                'new_balance' => (float) ($newWallet?->balance_eur ?? 0),
+                'new_balance' => (string) ($newWallet?->balance_eur ?? '0'),
                 'transaction_details' => [
                     'type' => $validated['type'],
-                    'quantity' => (float) $validated['quantity'],
+                    'quantity' => (string) $validated['quantity'],
                     'crypto' => $crypto->symbol,
-                    'price' => (float) $crypto->price_eur,
-                    'total' => (float) ($validated['quantity'] * $crypto->price_eur)
+                    'price' => (string) $crypto->price_eur,
+                    'total' => bcmul((string)$validated['quantity'], (string)$crypto->price_eur, 18)
                 ]
             ]);
 

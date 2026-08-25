@@ -12,6 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
         // For MySQL, we need to use raw SQL to modify the enum
         DB::statement("ALTER TABLE notifications MODIFY COLUMN type ENUM('account_request', 'transaction', 'price_update', 'admin_action', 'welcome')");
     }
@@ -21,6 +24,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
         // Revert the enum back to original values
         DB::statement("ALTER TABLE notifications MODIFY COLUMN type ENUM('account_request', 'transaction', 'price_update', 'admin_action')");
     }

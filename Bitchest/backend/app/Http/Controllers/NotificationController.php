@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
+use App\Services\NotificationService;
 
 class NotificationController extends Controller
 {
@@ -14,7 +14,7 @@ class NotificationController extends Controller
      * List notifications for the authenticated user
      * Only show notifications for verified accounts
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, NotificationService $notificationService): JsonResponse
     {
         $user = Auth::user();
 
@@ -27,33 +27,30 @@ class NotificationController extends Controller
             ]);
         }
 
-        // Cache Redis pour les notifications - 1 minute TTL
-        $cacheKey = 'notifications:user_' . $user->id . ':page_' . ($request->query('page', 1));
-        $ttl = 60; // 1 minute
-        
-        $notifications = Cache::remember($cacheKey, $ttl, function () use ($user) {
-            return Notification::where('user_id', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
-        });
-
-        return response()->json($notifications);
+        $read = $request->has('read') ? filter_var($request->query('read'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+        $notifications = $notificationService->getUserNotifications($user, (int) $request->query('per_page', 20), $read);
+        return response()->json([
+            'data' => $notifications->items(),
+            'current_page' => $notifications->currentPage(),
+            'last_page' => $notifications->lastPage(),
+            'per_page' => $notifications->perPage(),
+            'total' => $notifications->total(),
+            'unread_count' => $notificationService->getUnreadCount($user),
+        ]);
     }
 
     /**
      * Mark a notification as read for the authenticated user
      */
-    public function markAsRead($id): JsonResponse
+    public function unreadCount(NotificationService $notificationService): JsonResponse
     {
         $user = Auth::user();
-        $notification = Notification::findOrFail($id);
+        return response()->json(['unread_count' => $notificationService->getUnreadCount($user)]);
+    }
 
-        if ($notification->user_id !== $user->id) {
-            return response()->json(['error' => 'Access denied.'], 403);
-        }
-
-        $notification->is_read = true;
-        $notification->save();
+    public function markAsRead($id, NotificationService $notificationService): JsonResponse
+    {
+        $notification = $notificationService->markAsRead(Auth::user(), $id);
 
         return response()->json([
             'message' => 'Notification marked as read.',
@@ -64,16 +61,13 @@ class NotificationController extends Controller
     /**
      * Mark all notifications as read for the authenticated user
      */
-    public function markAllAsRead(Request $request): JsonResponse
+    public function markAllAsRead(NotificationService $notificationService): JsonResponse
     {
-        $user = Auth::user();
-
-        Notification::where('user_id', $user->id)
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
+        $updated = $notificationService->markAllAsRead(Auth::user());
 
         return response()->json([
-            'message' => 'All notifications marked as read.'
+            'message' => 'All notifications marked as read.',
+            'updated' => $updated,
         ]);
     }
 }
