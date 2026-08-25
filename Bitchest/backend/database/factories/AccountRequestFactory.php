@@ -15,7 +15,7 @@ class AccountRequestFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => strtoupper(\Illuminate\Support\Str::random(14)),
+            'id' => (string) \Illuminate\Support\Str::uuid(),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'status' => 'pending',

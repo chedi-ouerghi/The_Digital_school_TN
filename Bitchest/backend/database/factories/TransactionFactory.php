@@ -19,16 +19,27 @@ class TransactionFactory extends Factory
     {
         $types = ['ACHAT', 'VENTE'];
         $type = fake()->randomElement($types);
-        $quantity = fake()->randomFloat(8, 0.00000001, 10);
-        $price = fake()->randomFloat(2, 0.01, 100000);
-        $total = $quantity * $price;
+        $quantity = fake()->randomFloat(8, 0.001, 5);
+        $price = fake()->randomFloat(8, 0.01, 5000);
+        $total = bcmul((string) $quantity, (string) $price, 8);
 
         return [
             'crypto_wallet_asset_id' => CryptoWalletAsset::factory(),
+            'cryptomoney_id' => null,
             'type' => $type,
             'quantity' => $quantity,
             'price' => $price,
             'total_eur' => $total,
         ];
+    }
+
+    public function achat(): static
+    {
+        return $this->state(fn () => ['type' => 'ACHAT']);
+    }
+
+    public function vente(): static
+    {
+        return $this->state(fn () => ['type' => 'VENTE']);
     }
 }

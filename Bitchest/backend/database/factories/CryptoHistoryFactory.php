@@ -14,9 +14,17 @@ class CryptoHistoryFactory extends Factory
     {
         return [
             'cryptomoney_id' => Cryptomoney::factory(),
-            'price' => $this->faker->randomFloat(8, 1000, 100000),
-            'volume' => $this->faker->randomFloat(8, 100000000, 10000000000),
-            'recorded_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
+            'price' => $this->faker->randomFloat(10, 0.01, 50000),
+            'volume' => $this->faker->randomFloat(2, 100000, 2000000),
+            'recorded_at' => $this->faker->dateTimeBetween('-39 days', 'now')->format('Y-m-d'),
         ];
+    }
+
+    /**
+     * Forcer une date précise (utile pour tests d'unicité).
+     */
+    public function forDate(string $date): static
+    {
+        return $this->state(fn () => ['recorded_at' => $date]);
     }
 }

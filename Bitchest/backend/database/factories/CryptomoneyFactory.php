@@ -15,7 +15,7 @@ class CryptomoneyFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => strtoupper(\Illuminate\Support\Str::random(14)),
+            'id' => (string) \Illuminate\Support\Str::uuid(),
             'name' => fake()->word(),
             'symbol' => fake()->unique()->regexify('[A-Z]{3,5}'),
             'price_eur' => fake()->randomFloat(2, 0.01, 100000),
