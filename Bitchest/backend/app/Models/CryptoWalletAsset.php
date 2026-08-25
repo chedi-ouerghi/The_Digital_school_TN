@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\DecimalMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Str;
@@ -23,8 +24,8 @@ class CryptoWalletAsset extends Pivot
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:18',
-        'average_buy_price' => 'decimal:18',
+        'quantity' => 'decimal:8',
+        'average_buy_price' => 'decimal:8',
     ];
 
     /* ===================== RELATIONS ===================== */
@@ -46,15 +47,15 @@ class CryptoWalletAsset extends Pivot
 
     /* ===================== CALCULS ===================== */
 
-    public function getTotalInvested(): float
+    public function getTotalInvested(): string
     {
-        return (float) $this->quantity * (float) $this->average_buy_price;
+        return DecimalMath::multiply((string)$this->quantity, (string)$this->average_buy_price);
     }
 
-    public function getCurrentValue(): float
+    public function getCurrentValue(): string
     {
-        $price = (float) ($this->cryptomoney?->price_eur ?? 0);
-        return (float) $this->quantity * $price;
+        $price = (string) ($this->cryptomoney?->price_eur ?? '0');
+        return DecimalMath::multiply((string)$this->quantity, $price);
     }
 
 
@@ -67,7 +68,7 @@ class CryptoWalletAsset extends Pivot
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
         });
     }

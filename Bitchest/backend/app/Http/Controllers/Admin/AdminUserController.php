@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TempPasswordMail;
 use App\Services\TransactionService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -143,7 +144,7 @@ public function show($id): JsonResponse
     /**
      * Créer un compte client (génère mot de passe temporaire et solde 500 par défaut)
      */
-    public function store(AdminCreateClientRequest $request, TransactionService $transactionService): JsonResponse
+    public function store(AdminCreateClientRequest $request, TransactionService $transactionService, NotificationService $notificationService): JsonResponse
     {
         $data = $request->validated();
         $data['role'] = $data['role'] ?? 'CLIENT';
@@ -159,7 +160,8 @@ public function show($id): JsonResponse
             // Crédit initial via service (centralisé)
             if ($data['role'] === 'CLIENT') {
                 $initial = $data['balance_eur'] ?? 500.00;
-                $transactionService->creditInitialBalance($user, (float)$initial);
+                $transactionService->creditInitialBalance($user, (string)$initial);
+                $notificationService->createWelcome($user);
             }
             // Envoi du mot de passe temporaire par mail (ne pas bloquer la création si le mail échoue)
             try {
@@ -179,13 +181,14 @@ public function show($id): JsonResponse
     /**
      * Mettre à jour un client (admin)
      */
-    public function update(AdminUpdateClientRequest $request, $id): JsonResponse
+    public function update(AdminUpdateClientRequest $request, $id, NotificationService $notificationService): JsonResponse
     {
         $user = User::find($id);
         if (!$user) {
             return response()->json(['error' => 'Utilisateur non trouvé'], 404);
         }
         $data = $request->validated();
+        $oldRole = strtoupper((string) $user->role);
         // Si password est présent et confirmé, appliquer
         if (!empty($data['password'])) {
             $user->password = $data['password'];
@@ -195,6 +198,10 @@ public function show($id): JsonResponse
         if (isset($data['role'])) $user->role = $data['role'];
         if (isset($data['balance_eur'])) $user->solde = $data['balance_eur'];
         $user->save();
+        $newRole = strtoupper((string) $user->role);
+        if (isset($data['role']) && $oldRole !== $newRole) {
+            $notificationService->createRoleSync($user, $oldRole, $newRole);
+        }
         return response()->json($user);
     }
 
@@ -284,7 +291,7 @@ public function show($id): JsonResponse
     /**
      * Un visiteur soumet une demande d'ouverture de compte.
      */
-    public function requestAccount(Request $request)
+    public function requestAccount(Request $request, NotificationService $notificationService)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -303,7 +310,7 @@ public function show($id): JsonResponse
             try {
                 Mail::to($admin->email)->send(new \App\Mail\NewAccountRequestMail($accountRequest));
 
-                Notification::create([
+                $notificationService->create([
                     'user_id' => $admin->id,
                     'title' => 'New account request',
                     'message' => "Request submitted by {$accountRequest->name} ({$accountRequest->email})",
@@ -323,7 +330,7 @@ public function show($id): JsonResponse
      * Approuver une demande de compte
      * Accepte un mot de passe temporaire fourni par l'admin
      */
-    public function approveRequest(Request $request, $id, TransactionService $transactionService): JsonResponse
+    public function approveRequest(Request $request, $id, TransactionService $transactionService, NotificationService $notificationService): JsonResponse
     {
         try {
             // Valider les données reçues
@@ -362,14 +369,7 @@ public function show($id): JsonResponse
                 'processed_by' => Auth::id()
             ]);
 
-            // Créer la notification de bienvenue
-            \App\Models\Notification::create([
-                'user_id' => $user->id,
-                'type' => \App\Models\Notification::TYPE_WELCOME,
-                'title' => '🎉 Welcome to Bitchest!',
-                'message' => 'Welcome to Bitchest! You\'ve been credited with €500 to explore and start your crypto journey. This is your time to discover the opportunities and build your portfolio. Start trading, learn, and grow your wealth with us!',
-                'is_read' => false
-            ]);
+            $notificationService->createWelcome($user);
 
             // Envoyer l'email
             try {

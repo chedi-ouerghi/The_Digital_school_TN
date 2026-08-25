@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\TransactionService;
 use App\Models\Notification;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -90,7 +91,7 @@ class AdminTransactionController extends Controller
     /**
      * Annuler une transaction
      */
-public function cancel(Request $request, $id): JsonResponse
+public function cancel(Request $request, $id, NotificationService $notificationService): JsonResponse
 {
     try {
         $transaction = Transaction::with([
@@ -131,7 +132,7 @@ public function cancel(Request $request, $id): JsonResponse
                      . "has been cancelled by an administrator.\n"
                      . "Raison: " . ($request->reason ?? 'Administrative cancellation');
 
-            Notification::create([
+            $notificationService->create([
                 'user_id' => $client->id,
                 'title' => $title,
                 'message' => $message,

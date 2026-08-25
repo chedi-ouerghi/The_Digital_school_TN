@@ -31,7 +31,7 @@ class CryptoHistory extends Model
         'cryptomoney_id' => 'string',
         'price' => 'decimal:10',
         'volume' => 'decimal:2',
-        'recorded_at' => 'immutable_datetime',
+        'recorded_at' => 'immutable_date',
         'created_at' => 'immutable_datetime',
         'updated_at' => 'immutable_datetime',
     ];
@@ -42,14 +42,14 @@ class CryptoHistory extends Model
         return $this->belongsTo(Cryptomoney::class, 'cryptomoney_id');
     }
 
-    // ✅ Génération automatique de l'ID
+    // ✅ Génération automatique de l'ID (UUID harmonisé)
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($model) {
             if (empty($model->id)) {
-                $model->id = strtoupper(Str::random(14));
+                $model->id = (string) Str::uuid();
             }
         });
     }

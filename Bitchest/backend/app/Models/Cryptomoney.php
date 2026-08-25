@@ -30,9 +30,9 @@ class Cryptomoney extends Model
     protected $appends = ['image_url', 'price', 'change_24h'];
 
     protected $casts = [
-        'price_eur' => 'decimal:18',
-        'market_cap' => 'decimal:18',
-        'change_24h_pct' => 'decimal:18',
+        'price_eur' => 'decimal:10',
+        'market_cap' => 'decimal:2',
+        'change_24h_pct' => 'decimal:2',
     ];
 
     public function getPriceAttribute()
@@ -83,7 +83,7 @@ class Cryptomoney extends Model
 
         static::creating(function ($model) {
             if (empty($model->{$model->getKeyName()})) {
-                $model->{$model->getKeyName()} = Str::uuid();
+                $model->{$model->getKeyName()} = (string) Str::uuid();
             }
         });
     }

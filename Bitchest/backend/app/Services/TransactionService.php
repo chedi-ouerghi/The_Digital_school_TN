@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\DecimalMath;
 use App\Models\User;
 use App\Models\Cryptomoney;
 use App\Models\Wallet;
@@ -20,89 +21,108 @@ class TransactionService
         User $user,
         string $symbol,
         string $type,
-        float $quantity
+        string $quantity
     ): string {
+        // SECURISER - Etape 5 : toutes les modifications (solde, quantite et
+        // historique) sont atomiques. En cas d'erreur, DB annule tout.
         return DB::transaction(function () use ($user, $symbol, $type, $quantity) {
-            // CORRECTION: Validations complètes dès le départ
-            if ($quantity <= 0) {
+            // VERIFIER - Etape 6 : la quantite et le prix doivent etre positifs
+            // avant tout calcul financier.
+            if (DecimalMath::compare($quantity, '0') <= 0) {
                 throw new \Exception('Quantity must be positive');
             }
 
             $crypto = Cryptomoney::where('symbol', $symbol)->firstOrFail();
 
-            $wallet = $user->wallets()->first();
+            // SECURISER - Etape 7 : le verrou empeche deux transactions
+            // simultanees de lire puis depenser le meme solde.
+            $wallet = $user->wallets()->lockForUpdate()->first();
             if (!$wallet) {
                 $wallet = Wallet::create([
                     'user_id' => $user->id,
-                    'balance_eur' => 0,
+                    'balance_eur' => '0',
                 ]);
             }
 
-            $currentPrice = (float)$crypto->price_eur;
-            // CORRECTION: Validation du prix
-            if ($currentPrice <= 0) {
+            $currentPrice = (string)$crypto->price_eur;
+            //  Validation du prix
+            if (DecimalMath::compare($currentPrice, '0') <= 0) {
                 throw new \Exception('Invalid crypto price');
             }
             
-            $totalAmount = (float)$quantity * $currentPrice;
+            $totalAmount = DecimalMath::multiply($quantity, $currentPrice);
 
-            $asset = CryptoWalletAsset::firstOrNew([
-                'wallet_id' => $wallet->id,
-                'cryptomoney_id' => $crypto->id,
-            ]);
+            $assetQuery = CryptoWalletAsset::where('wallet_id', $wallet->id)
+                ->where('cryptomoney_id', $crypto->id);
+
+            $asset = $type === 'VENTE'
+                ? $assetQuery->lockForUpdate()->first()
+                : $assetQuery->firstOrNew([
+                    'wallet_id' => $wallet->id,
+                    'cryptomoney_id' => $crypto->id,
+                ]);
 
             if ($type === 'ACHAT') {
-                if ((float)$wallet->balance_eur < $totalAmount) {
+                // VERIFIER - Etape 8 : un achat n'est autorise que si le solde
+                // EUR couvre le montant total de l'operation.
+                if (DecimalMath::compare((string)$wallet->balance_eur, $totalAmount) < 0) {
                     throw new \Exception('Insufficient balance for this transaction');
                 }
 
-                $wallet->balance_eur = (float)$wallet->balance_eur - $totalAmount;
+                $wallet->balance_eur = DecimalMath::subtract((string)$wallet->balance_eur, $totalAmount, 2);
                 $wallet->save();
 
-                $oldQuantity = (float)($asset->quantity ?? 0);
-                $oldPrice = (float)($asset->average_buy_price ?? 0);
-                $newQuantity = $oldQuantity + (float)$quantity;
+                $oldQuantity = (string)($asset->quantity ?? '0');
+                $oldPrice = (string)($asset->average_buy_price ?? '0');
+                $newQuantity = DecimalMath::add($oldQuantity, $quantity);
 
                 $asset->quantity = $newQuantity;
-                $asset->average_buy_price = $newQuantity > 0
-                    ? (($oldQuantity * $oldPrice) + ((float)$quantity * $currentPrice)) / $newQuantity
-                    : 0;
+                $weightedOldValue = DecimalMath::multiply($oldQuantity, $oldPrice);
+                $weightedNewValue = DecimalMath::multiply($quantity, $currentPrice);
+                $asset->average_buy_price = DecimalMath::divide(
+                    DecimalMath::add($weightedOldValue, $weightedNewValue),
+                    $newQuantity
+                );
                 $asset->save();
 
             } elseif ($type === 'VENTE') {
-                if (!$asset->exists || (float)$asset->quantity < (float)$quantity) {
+                // VERIFIER - Etape 9 : une vente n'est autorisee que si le
+                // portefeuille contient la quantite demandee.
+                if (!$asset->exists || DecimalMath::compare((string)$asset->quantity, $quantity) < 0) {
                     throw new \Exception('Insufficient quantity for this sale');
                 }
                 
                 // Validate EUR balance after sale (to prevent negative balance)
-                $newBalance = (float)$wallet->balance_eur + $totalAmount;
-                if ($newBalance < 0) {
+                $newBalance = DecimalMath::add((string)$wallet->balance_eur, $totalAmount, 2);
+                if (DecimalMath::compare($newBalance, '0', 2) < 0) {
                     throw new \Exception('Invalid EUR balance after this sale');
                 }
 
                 $wallet->balance_eur = $newBalance;
                 $wallet->save();
 
-                $newQuantity = (float)$asset->quantity - (float)$quantity;
+                $newQuantity = DecimalMath::subtract((string)$asset->quantity, $quantity);
                 // Conserver l'asset même à 0 pour l'historique des transactions
-                $asset->quantity = max(0, $newQuantity);
+                $asset->quantity = DecimalMath::compare($newQuantity, '0') > 0 ? $newQuantity : '0';
                 
                 // Recalculate average buy price after a sale
                 // The average price remains unchanged for partial sales, as it represents the cost of remaining assets.
                 // If quantity becomes zero, average buy price is set to zero.
-                if ($newQuantity <= 0) {
-                    $asset->average_buy_price = 0;
+                if (DecimalMath::compare($newQuantity, '0') <= 0) {
+                    $asset->average_buy_price = '0';
                 }
                 // For partial sales, average_buy_price remains the same (cost of remaining assets)
                 
                 $asset->save();
             }
 
+            // TRACER - Etape 10 : conserver le type, la quantite, le prix et
+            // le total permet de reconstituer l'operation dans l'historique.
             Transaction::create([
                 'crypto_wallet_asset_id' => $asset->id,
                 'cryptomoney_id' => $crypto->id,
                 'type' => $type,
-                'quantity' => (float)$quantity,
+                'quantity' => $quantity,
                 'price' => $currentPrice,
                 'total_eur' => $totalAmount,
             ]);
@@ -115,17 +135,17 @@ class TransactionService
      * Créditer le solde initial (ou ajouter un crédit) à un utilisateur.
      * Si aucun wallet n'existe, en créer un.
      */
-    public function creditInitialBalance(User $user, float $amount): void
+    public function creditInitialBalance(User $user, string $amount): void
     {
         DB::transaction(function () use ($user, $amount) {
             $wallet = $user->wallets()->first();
             if (!$wallet) {
                 $wallet = Wallet::create([
                     'user_id' => $user->id,
-                    'balance_eur' => 0,
+                    'balance_eur' => '0',
                 ]);
             }
-            $wallet->balance_eur = (float)$amount;
+            $wallet->balance_eur = $amount;
             $wallet->save();
         });
     }
@@ -145,23 +165,23 @@ class TransactionService
 
             if ($transaction->type === 'ACHAT') {
                 // Rendre l'argent et retirer les cryptos
-                $wallet->balance_eur = (float)$wallet->balance_eur + (float)$transaction->total_eur;
+                $wallet->balance_eur = DecimalMath::add((string)$wallet->balance_eur, (string)$transaction->total_eur, 2);
                 $wallet->save();
 
                 if ($asset && $asset->exists) {
-                    $newQuantity = (float)$asset->quantity - (float)$transaction->quantity;
-                    $asset->quantity = max(0, $newQuantity);
+                    $newQuantity = DecimalMath::subtract((string)$asset->quantity, (string)$transaction->quantity);
+                    $asset->quantity = DecimalMath::compare($newQuantity, '0') > 0 ? $newQuantity : '0';
                     $asset->save();
                 }
             } else { // VENTE: retirer l'argent et rendre les cryptos
-                $wallet->balance_eur = (float)$wallet->balance_eur - (float)$transaction->total_eur;
+                $wallet->balance_eur = DecimalMath::subtract((string)$wallet->balance_eur, (string)$transaction->total_eur, 2);
                 $wallet->save();
 
                 if ($asset) {
-                    $asset->quantity = (float)$asset->quantity + (float)$transaction->quantity;
+                    $asset->quantity = DecimalMath::add((string)$asset->quantity, (string)$transaction->quantity);
                     // si pas d'avg, fixer à prix de la transaction
                     if (!$asset->average_buy_price) {
-                        $asset->average_buy_price = (float)$transaction->price;
+                        $asset->average_buy_price = (string)$transaction->price;
                     }
                     $asset->save();
                 } else {
@@ -169,8 +189,8 @@ class TransactionService
                     $asset = CryptoWalletAsset::create([
                         'wallet_id' => $wallet->id,
                         'cryptomoney_id' => $transaction->cryptomoney_id,
-                        'quantity' => (float)$transaction->quantity,
-                        'average_buy_price' => (float)$transaction->price,
+                        'quantity' => (string)$transaction->quantity,
+                        'average_buy_price' => (string)$transaction->price,
                     ]);
                 }
             }
@@ -184,7 +204,7 @@ class TransactionService
 
             return [
                 'wallet_id' => $wallet->id,
-                'new_balance' => (float)$wallet->balance_eur,
+                'new_balance' => (string)$wallet->balance_eur,
                 'cancelled_transaction' => $transaction->id,
             ];
         });
