@@ -445,8 +445,8 @@ function viewClientDetails(id: string) {
                 variant="outline"
                 size="sm"
                 class="gap-2"
-                @click="fetchClients(currentPage)"
                 :disabled="loading"
+                @click="fetchClients(currentPage)"
               >
                 <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
                 Refresh
@@ -565,8 +565,8 @@ function viewClientDetails(id: string) {
               size="sm"
               variant="ghost"
               class="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              @click.stop="openEditDialog(client)"
               title="Edit Client"
+              @click.stop="openEditDialog(client)"
             >
               <Edit class="h-4 w-4" />
             </Button>
@@ -617,8 +617,8 @@ function viewClientDetails(id: string) {
               size="sm"
               variant="outline"
               class="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
-              @click.stop="confirmDelete(client)"
               title="Delete Client"
+              @click.stop="confirmDelete(client)"
             >
               <Trash2 class="h-4 w-4" />
             </Button>
@@ -718,8 +718,8 @@ function viewClientDetails(id: string) {
                     size="sm"
                     variant="ghost"
                     class="h-8 w-8 p-0"
-                    @click.stop="viewClientDetails(client.id)"
                     title="View Details"
+                    @click.stop="viewClientDetails(client.id)"
                   >
                     <ExternalLink class="h-4 w-4" />
                   </Button>
@@ -727,8 +727,8 @@ function viewClientDetails(id: string) {
                     size="sm"
                     variant="ghost"
                     class="h-8 w-8 p-0"
-                    @click.stop="openEditDialog(client)"
                     title="Edit Client"
+                    @click.stop="openEditDialog(client)"
                   >
                     <Edit class="h-4 w-4" />
                   </Button>
@@ -736,8 +736,8 @@ function viewClientDetails(id: string) {
                     size="sm"
                     variant="ghost"
                     class="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    @click.stop="confirmDelete(client)"
                     title="Delete Client"
+                    @click.stop="confirmDelete(client)"
                   >
                     <Trash2 class="h-4 w-4" />
                   </Button>

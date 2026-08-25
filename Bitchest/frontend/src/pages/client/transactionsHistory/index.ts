@@ -3,7 +3,7 @@ export { colors, useTransactionLogic } from './useTransactionLogic'
 export { useTransactionStats } from './useTransactionStats'
 
 // Helper functions for formatting and styling
-export function formatCurrency(value: any): string {
+export function formatCurrency(value: unknown): string {
   const n = Number(value ?? 0)
   if (!isFinite(n) || isNaN(n)) return '€0.00'
   return n.toLocaleString('en-US', { 
@@ -14,7 +14,7 @@ export function formatCurrency(value: any): string {
   })
 }
 
-export function formatNumber(value: any, decimals = 8): string {
+export function formatNumber(value: unknown, decimals = 8): string {
   const n = Number(value ?? 0)
   if (!isFinite(n) || isNaN(n)) return '0'
   const formatted = n.toFixed(decimals)

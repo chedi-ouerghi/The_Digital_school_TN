@@ -168,8 +168,8 @@ async function confirmChangeId() {
                 variant="ghost"
                 size="sm"
                 class="h-7 w-7 p-0"
-                @click="copyCurrentId"
                 :title="copied ? 'Copied!' : 'Copy ID'"
+                @click="copyCurrentId"
               >
                 <component :is="copied ? Check : Copy" class="h-4 w-4" />
               </Button>

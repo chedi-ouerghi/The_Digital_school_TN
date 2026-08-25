@@ -512,13 +512,13 @@ const profitTrend = computed(() => {
     <!-- Header -->
     <div class="flex items-center justify-between flex-wrap gap-4">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-[#38618C] mb-1">My Profile & Portfolio</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark mb-1">My Profile & Portfolio</h1>
         <p class="text-sm sm:text-base text-gray-500">Manage your account and investments</p>
       </div>
       <Button 
         variant="outline" 
         :disabled="loading"
-        class="border-[#35A7FF] text-[#35A7FF] hover:bg-[#35A7FF] hover:text-white transition-colors"
+        class="border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white transition-colors"
         @click="fetchPortfolioStats"
       >
         <RefreshCw class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
@@ -527,16 +527,16 @@ const profitTrend = computed(() => {
     </div>
 
     <!-- Alertes -->
-    <Alert v-if="message" class="border-[#01FF19] bg-[#01FF19]/10 rounded-xl">
-      <CheckCircle2 class="h-4 w-4 text-[#01FF19]" />
-      <AlertDescription class="text-[#01FF19] font-medium">
+    <Alert v-if="message" class="border-brand-green bg-brand-green/10 rounded-xl">
+      <CheckCircle2 class="h-4 w-4 text-brand-green" />
+      <AlertDescription class="text-brand-green font-medium">
         {{ message }}
       </AlertDescription>
     </Alert>
 
-    <Alert v-if="error" class="border-[#FF5964] bg-[#FF5964]/10 rounded-xl">
-      <AlertCircle class="h-4 w-4 text-[#FF5964]" />
-      <AlertDescription class="text-[#FF5964] font-medium">
+    <Alert v-if="error" class="border-brand-red bg-brand-red/10 rounded-xl">
+      <AlertCircle class="h-4 w-4 text-brand-red" />
+      <AlertDescription class="text-brand-red font-medium">
         {{ error }}
       </AlertDescription>
     </Alert>
@@ -546,28 +546,28 @@ const profitTrend = computed(() => {
       <TabsList class="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
         <TabsTrigger 
           value="overview" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <Wallet class="w-4 h-4 mr-2" />
           Portfolio
         </TabsTrigger>
         <TabsTrigger 
           value="profile" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <User class="w-4 h-4 mr-2" />
           Profile
         </TabsTrigger>
         <TabsTrigger 
           value="media" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <Eye class="w-4 h-4 mr-2" />
           Media
         </TabsTrigger>
         <TabsTrigger 
           value="security" 
-          class="data-[state=active]:bg-[#35A7FF] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
+          class="data-[state=active]:bg-brand-blue data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md transition-all"
         >
           <Lock class="w-4 h-4 mr-2" />
           Security
@@ -578,20 +578,20 @@ const profitTrend = computed(() => {
       <TabsContent value="overview" class="space-y-6 mt-6">
         <!-- Statistiques principales -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card class="border-gray-200 hover:border-[#35A7FF] transition-all duration-300 bg-gradient-to-br from-[#35A7FF]/5 to-transparent hover-lift">
+          <Card class="border-gray-200 hover:border-brand-blue transition-all duration-300 bg-gradient-to-br from-brand-blue/5 to-transparent hover-lift">
             <CardContent class="p-4 sm:p-6">
               <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Invested</div>
-              <div class="text-xl sm:text-2xl font-bold text-[#38618C]">
+              <div class="text-xl sm:text-2xl font-bold text-brand-dark">
                 {{ loading ? '...' : formatCurrency(stats?.total_invested || 0) }}
               </div>
               <div class="text-xs text-gray-400 mt-1">Amount invested</div>
             </CardContent>
           </Card>
 
-          <Card class="border-gray-200 hover:border-[#01FF19] transition-all duration-300 bg-gradient-to-br from-[#01FF19]/5 to-transparent hover-lift">
+          <Card class="border-gray-200 hover:border-brand-green transition-all duration-300 bg-gradient-to-br from-brand-green/5 to-transparent hover-lift">
             <CardContent class="p-4 sm:p-6">
               <div class="text-xs sm:text-sm text-gray-500 mb-1">Available Balance</div>
-              <div class="text-xl sm:text-2xl font-bold text-[#01FF19]">
+              <div class="text-xl sm:text-2xl font-bold text-brand-green">
                 {{ loading ? '...' : formatCurrency(userBalance || 0) }}
               </div>
               <div class="text-xs text-gray-400 mt-1">Available for investment</div>
@@ -600,12 +600,12 @@ const profitTrend = computed(() => {
 
           <Card
 class="border-gray-200 transition-all duration-300 bg-gradient-to-br hover-lift" 
-                :class="profitTrend === 'up' ? 'hover:border-[#01FF19] from-[#01FF19]/5' : 'hover:border-[#FF5964] from-[#FF5964]/5'">
+                :class="profitTrend === 'up' ? 'hover:border-brand-green from-brand-green/5' : 'hover:border-brand-red from-brand-red/5'">
             <CardContent class="p-4 sm:p-6">
               <div class="text-xs sm:text-sm text-gray-500 mb-1">Total Profit</div>
               <div
 class="text-xl sm:text-2xl font-bold flex items-center gap-1" 
-                   :class="profitTrend === 'up' ? 'text-[#01FF19]' : 'text-[#FF5964]'">
+                   :class="profitTrend === 'up' ? 'text-brand-green' : 'text-brand-red'">
                 {{ loading ? '...' : formatCurrency(stats?.total_profit || 0) }}
                 <TrendingUp v-if="profitTrend === 'up'" class="w-5 h-5" />
                 <TrendingDown v-else class="w-5 h-5" />
@@ -616,10 +616,10 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
             </CardContent>
           </Card>
 
-          <Card class="border-gray-200 hover:border-[#38618C] transition-all duration-300 bg-gradient-to-br from-[#38618C]/5 to-transparent hover-lift">
+          <Card class="border-gray-200 hover:border-brand-dark transition-all duration-300 bg-gradient-to-br from-brand-dark/5 to-transparent hover-lift">
             <CardContent class="p-4 sm:p-6">
               <div class="text-xs sm:text-sm text-gray-500 mb-1">Transactions</div>
-              <div class="text-xl sm:text-2xl font-bold text-[#38618C]">
+              <div class="text-xl sm:text-2xl font-bold text-brand-dark">
                 {{ loading ? '...' : stats?.total_transactions || 0 }}
               </div>
               <div class="text-xs text-gray-400 mt-1">Operations performed</div>
@@ -632,7 +632,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
           <!-- Graphique de croissance -->
           <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
             <CardHeader class="pb-4">
-              <CardTitle class="text-[#38618C] flex items-center gap-2">
+              <CardTitle class="text-brand-dark flex items-center gap-2">
                 <TrendingUp class="w-5 h-5" />
                 Portfolio Evolution
               </CardTitle>
@@ -653,7 +653,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
           <!-- Graphique de distribution -->
           <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
             <CardHeader class="pb-4">
-              <CardTitle class="text-[#38618C] flex items-center gap-2">
+              <CardTitle class="text-brand-dark flex items-center gap-2">
                 💰 Portfolio Distribution
               </CardTitle>
             </CardHeader>
@@ -674,7 +674,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
         <!-- Détails de distribution - Tableau moderne -->
         <Card v-if="distributionData.length > 0 && !loading" class="border-gray-200 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg hover-lift transition-all duration-300">
           <CardHeader>
-            <CardTitle class="text-[#38618C] flex items-center gap-2">
+            <CardTitle class="text-brand-dark flex items-center gap-2">
               <span>📊</span>
               Portfolio Distribution Details
             </CardTitle>
@@ -684,10 +684,10 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
               <table class="w-full">
                 <thead>
                   <tr class="border-b-2 border-indigo-200">
-                    <th class="text-left py-3 px-4 font-semibold text-[#38618C]">Asset</th>
-                    <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Quantity</th>
-                    <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Value</th>
-                    <th class="text-right py-3 px-4 font-semibold text-[#38618C]">Distribution %</th>
+                    <th class="text-left py-3 px-4 font-semibold text-brand-dark">Asset</th>
+                    <th class="text-right py-3 px-4 font-semibold text-brand-dark">Quantity</th>
+                    <th class="text-right py-3 px-4 font-semibold text-brand-dark">Value</th>
+                    <th class="text-right py-3 px-4 font-semibold text-brand-dark">Distribution %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -698,12 +698,12 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                   >
                     <td class="py-4 px-4">
                       <div>
-                        <div class="font-semibold text-[#38618C]">{{ item.crypto_name }}</div>
+                        <div class="font-semibold text-brand-dark">{{ item.crypto_name }}</div>
                         <div class="text-xs text-gray-500">{{ item.crypto_symbol }}</div>
                       </div>
                     </td>
                     <td class="text-right py-4 px-4 font-mono text-sm">{{ formatNumber(parseFloat(item.quantity), 8) }}</td>
-                    <td class="text-right py-4 px-4 font-bold text-[#35A7FF]">{{ formatCurrency(item.value) }}</td>
+                    <td class="text-right py-4 px-4 font-bold text-brand-blue">{{ formatCurrency(item.value) }}</td>
                     <td class="text-right py-4 px-4">
                       <Badge class="bg-indigo-100 text-indigo-900 font-semibold">
                         {{ formatNumber(item.percentage) }}%
@@ -731,7 +731,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
       <TabsContent value="profile" class="space-y-6 mt-6">
         <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
           <CardHeader>
-            <CardTitle class="text-[#38618C]">Profile Information</CardTitle>
+            <CardTitle class="text-brand-dark">Profile Information</CardTitle>
           </CardHeader>
           <CardContent>
             <form class="space-y-4" @submit.prevent="updateProfile">
@@ -743,7 +743,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                   type="text"
                   placeholder="Your name"
                   required
-                  class="transition-colors focus:border-[#35A7FF]"
+                  class="transition-colors focus:border-brand-blue"
                 />
               </div>
 
@@ -755,7 +755,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                   type="email"
                   placeholder="your@email.com"
                   required
-                  class="transition-colors focus:border-[#35A7FF]"
+                  class="transition-colors focus:border-brand-blue"
                 />
               </div>
 
@@ -766,7 +766,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600">Account status:</span>
-                  <Badge :class="profile.email_verified_at ? 'bg-[#01FF19]/20 text-[#01FF19]' : 'bg-[#FF5964]/20 text-[#FF5964]'">
+                  <Badge :class="profile.email_verified_at ? 'bg-brand-green/20 text-brand-green' : 'bg-brand-red/20 text-brand-red'">
                     {{ profile.email_verified_at ? '✓ Verified' : '⚠ Not verified' }}
                   </Badge>
                 </div>
@@ -775,7 +775,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
               <Button 
                 type="submit" 
                 :disabled="updatingProfile"
-                class="w-full bg-[#35A7FF] hover:bg-[#38618C] text-white transition-colors"
+                class="w-full bg-brand-blue hover:bg-brand-dark text-white transition-colors"
               >
                 {{ updatingProfile ? 'Updating...' : 'Update Profile' }}
               </Button>
@@ -788,7 +788,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
       <TabsContent value="media" class="space-y-6 mt-6">
         <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
           <CardHeader>
-            <CardTitle class="text-[#38618C]">Media</CardTitle>
+            <CardTitle class="text-brand-dark">Media</CardTitle>
           </CardHeader>
           <CardContent>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -836,7 +836,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
       <TabsContent value="security" class="space-y-6 mt-6">
         <Card class="border-gray-200 shadow-lg hover-lift transition-all duration-300">
           <CardHeader>
-            <CardTitle class="text-[#38618C]">Change Password</CardTitle>
+            <CardTitle class="text-brand-dark">Change Password</CardTitle>
           </CardHeader>
           <CardContent>
             <form class="space-y-4" @submit.prevent="changePassword">
@@ -849,7 +849,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                     :type="showCurrentPassword ? 'text' : 'password'"
                     placeholder="••••••••"
                     required
-                    class="pr-10 transition-colors focus:border-[#35A7FF]"
+                    class="pr-10 transition-colors focus:border-brand-blue"
                   />
                   <button
                     type="button"
@@ -871,7 +871,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                     :type="showNewPassword ? 'text' : 'password'"
                     placeholder="••••••••"
                     required
-                    class="pr-10 transition-colors focus:border-[#35A7FF]"
+                    class="pr-10 transition-colors focus:border-brand-blue"
                   />
                   <button
                     type="button"
@@ -893,7 +893,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
                     :type="showConfirmPassword ? 'text' : 'password'"
                     placeholder="••••••••"
                     required
-                    class="pr-10 transition-colors focus:border-[#35A7FF]"
+                    class="pr-10 transition-colors focus:border-brand-blue"
                   />
                   <button
                     type="button"
@@ -909,7 +909,7 @@ class="text-xl sm:text-2xl font-bold flex items-center gap-1"
               <Button 
                 type="submit" 
                 :disabled="changingPassword"
-                class="w-full bg-[#FF5964] hover:bg-[#E63946] text-white transition-colors"
+                class="w-full bg-brand-red hover:bg-[#E63946] text-white transition-colors"
               >
                 {{ changingPassword ? 'Changing...' : 'Change Password' }}
               </Button>

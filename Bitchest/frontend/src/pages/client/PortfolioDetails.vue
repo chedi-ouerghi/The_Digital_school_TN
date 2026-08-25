@@ -220,19 +220,19 @@ function goToTrade() {
       <div class="flex items-center gap-4">
         <Button 
           variant="outline"
-          class="border-[#38618C] text-[#38618C] hover:bg-[#38618C] hover:text-white"
+          class="border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white"
           @click="goBack"
         >
           ← Back
         </Button>
         <div v-if="position">
-          <h1 class="text-3xl font-bold text-[#38618C]">{{ position.crypto?.name }}</h1>
+          <h1 class="text-3xl font-bold text-brand-dark">{{ position.crypto?.name }}</h1>
           <p class="text-gray-500">Position details</p>
         </div>
       </div>
       <Button 
         v-if="position"
-        class="bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white font-semibold"
+        class="bg-brand-blue hover:bg-brand-blue/90 text-white font-semibold"
         @click="goToTrade"
       >
         💱 Trade
@@ -247,8 +247,8 @@ function goToTrade() {
     </Card>
 
     <!-- Error State -->
-    <Card v-else-if="error" class="border-[#FF5964]">
-      <CardContent class="p-8 text-center text-[#FF5964]">
+    <Card v-else-if="error" class="border-brand-red">
+      <CardContent class="p-8 text-center text-brand-red">
         <div class="text-2xl mb-2">❌</div>
         <div>{{ error }}</div>
         <Button class="mt-4" @click="goBack">← Back to wallet</Button>
@@ -259,7 +259,7 @@ function goToTrade() {
     <Card v-else-if="!position">
       <CardContent class="p-8 text-center">
         <div class="text-6xl mb-4">🔍</div>
-        <h3 class="text-xl font-semibold text-[#38618C] mb-2">Position not found</h3>
+        <h3 class="text-xl font-semibold text-brand-dark mb-2">Position not found</h3>
         <Button class="mt-4" @click="goBack">← Back to wallet</Button>
       </CardContent>
     </Card>
@@ -267,10 +267,10 @@ function goToTrade() {
     <!-- Main Content -->
     <div v-else class="space-y-6">
       <!-- Header with image and info -->
-      <Card class="border-[#35A7FF]">
+      <Card class="border-brand-blue">
         <CardContent class="p-6">
           <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div class="h-20 w-20 rounded-full border-4 border-[#35A7FF] bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <div class="h-20 w-20 rounded-full border-4 border-brand-blue bg-gray-100 flex items-center justify-center flex-shrink-0">
               <img 
                 v-if="position.crypto?.image_url"
                 :src="position.crypto.image_url" 
@@ -282,20 +282,20 @@ function goToTrade() {
             </div>
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
-                <h2 class="text-2xl font-bold text-[#38618C]">
+                <h2 class="text-2xl font-bold text-brand-dark">
                   {{ position.crypto?.name }}
                 </h2>
-                <Badge class="bg-[#38618C] text-white">
+                <Badge class="bg-brand-dark text-white">
                   {{ String(position.crypto?.symbol || '').toUpperCase() }}
                 </Badge>
                 <Badge 
-                  :class="change24h >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+                  :class="change24h >= 0 ? 'bg-brand-green' : 'bg-brand-red'"
                   class="text-white"
                 >
                   {{ change24h >= 0 ? '+' : '' }}{{ change24h.toFixed(2) }}% (24h)
                 </Badge>
               </div>
-              <div class="text-3xl font-bold text-[#35A7FF]">
+              <div class="text-3xl font-bold text-brand-blue">
                 {{ formatCurrency(currentPrice) }}
               </div>
               <div class="text-sm text-gray-500 mt-1">Current Price</div>
@@ -306,10 +306,10 @@ function goToTrade() {
 
       <!-- Main Statistics -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
+        <Card class="border-gray-200 hover:border-brand-blue transition-colors">
           <CardContent class="p-4">
             <div class="text-xs text-gray-500 mb-1">Quantity Held</div>
-            <div class="text-xl font-bold text-[#38618C] font-mono">
+            <div class="text-xl font-bold text-brand-dark font-mono">
               {{ formatNumber(quantity, 8) }}
             </div>
             <div class="text-xs text-gray-500 mt-1">
@@ -318,30 +318,30 @@ function goToTrade() {
           </CardContent>
         </Card>
 
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
+        <Card class="border-gray-200 hover:border-brand-blue transition-colors">
           <CardContent class="p-4">
             <div class="text-xs text-gray-500 mb-1">Average Buy Price</div>
-            <div class="text-xl font-bold text-[#38618C]">
+            <div class="text-xl font-bold text-brand-dark">
               {{ formatCurrency(avgBuyPrice) }}
             </div>
             <div class="text-xs text-gray-500 mt-1">Per unit</div>
           </CardContent>
         </Card>
 
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
+        <Card class="border-gray-200 hover:border-brand-blue transition-colors">
           <CardContent class="p-4">
             <div class="text-xs text-gray-500 mb-1">Invested Value</div>
-            <div class="text-xl font-bold text-[#38618C]">
+            <div class="text-xl font-bold text-brand-dark">
               {{ formatCurrency(investedValue) }}
             </div>
             <div class="text-xs text-gray-500 mt-1">Total Invested</div>
           </CardContent>
         </Card>
 
-        <Card class="border-gray-200 hover:border-[#35A7FF] transition-colors">
+        <Card class="border-gray-200 hover:border-brand-blue transition-colors">
           <CardContent class="p-4">
             <div class="text-xs text-gray-500 mb-1">Current Value</div>
-            <div class="text-xl font-bold text-[#35A7FF]">
+            <div class="text-xl font-bold text-brand-blue">
               {{ formatCurrency(currentValue) }}
             </div>
             <div class="text-xs text-gray-500 mt-1">Market Value</div>
@@ -352,19 +352,19 @@ function goToTrade() {
       <!-- Profit/Loss -->
       <Card 
         class="border-2 transition-colors"
-        :class="profitAmount >= 0 ? 'border-[#01FF19] bg-gradient-to-br from-[#01FF19]/5 to-transparent' : 'border-[#FF5964] bg-gradient-to-br from-[#FF5964]/5 to-transparent'"
+        :class="profitAmount >= 0 ? 'border-brand-green bg-gradient-to-br from-brand-green/5 to-transparent' : 'border-brand-red bg-gradient-to-br from-brand-red/5 to-transparent'"
       >
         <CardContent class="p-6">
           <div class="text-center">
             <div class="text-sm text-gray-500 mb-2">Profit / Loss</div>
             <div 
               class="text-4xl font-bold mb-2"
-              :class="profitAmount >= 0 ? 'text-[#01FF19]' : 'text-[#FF5964]'"
+              :class="profitAmount >= 0 ? 'text-brand-green' : 'text-brand-red'"
             >
               {{ profitAmount >= 0 ? '+' : '' }}{{ formatCurrency(profitAmount) }}
             </div>
             <Badge 
-              :class="profitAmount >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+              :class="profitAmount >= 0 ? 'bg-brand-green' : 'bg-brand-red'"
               class="text-white text-lg px-4 py-2"
             >
               {{ profitAmount >= 0 ? '+' : '' }}{{ profitPercent.toFixed(2) }}%
@@ -376,7 +376,7 @@ function goToTrade() {
       <!-- Position Evolution Chart -->
       <Card>
         <CardHeader>
-          <CardTitle class="text-lg font-semibold text-[#38618C]">
+          <CardTitle class="text-lg font-semibold text-brand-dark">
             Position Evolution
           </CardTitle>
         </CardHeader>
@@ -396,7 +396,7 @@ function goToTrade() {
       <!-- Transaction History -->
       <Card>
         <CardHeader>
-          <CardTitle class="text-lg font-semibold text-[#38618C]">
+          <CardTitle class="text-lg font-semibold text-brand-dark">
             Transaction History
           </CardTitle>
         </CardHeader>
@@ -408,17 +408,17 @@ function goToTrade() {
             <div 
               v-for="t in transactions" 
               :key="t.id"
-              class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-[#35A7FF] transition-colors"
+              class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-brand-blue transition-colors"
             >
               <div class="flex items-center gap-4">
                 <Badge 
-                  :class="t.type === 'ACHAT' ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+                  :class="t.type === 'ACHAT' ? 'bg-brand-green' : 'bg-brand-red'"
                   class="text-white text-sm"
                 >
                   {{ t.type === 'ACHAT' ? '📈 BUY' : '📉 SELL' }}
                 </Badge>
                 <div>
-                  <div class="font-semibold text-[#38618C]">
+                  <div class="font-semibold text-brand-dark">
                     {{ formatNumber(t.quantity, 8) }} {{ String(position.crypto?.symbol || '').toUpperCase() }}
                   </div>
                   <div class="text-sm text-gray-500">
@@ -427,7 +427,7 @@ function goToTrade() {
                 </div>
               </div>
               <div class="text-right">
-                <div class="font-bold text-[#38618C]">
+                <div class="font-bold text-brand-dark">
                   {{ formatCurrency(Number(t.total_eur)) }}
                 </div>
                 <div class="text-xs text-gray-500">
@@ -449,18 +449,18 @@ function goToTrade() {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
+            <CardTitle class="text-lg font-semibold text-brand-dark">
               Market Information
             </CardTitle>
           </CardHeader>
           <CardContent class="space-y-3">
             <div class="flex justify-between">
               <span class="text-gray-500">24h Volume</span>
-              <span class="font-semibold text-[#38618C]">{{ formatCurrency(volume24h) }}</span>
+              <span class="font-semibold text-brand-dark">{{ formatCurrency(volume24h) }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">Category</span>
-              <span class="font-semibold text-[#38618C]">
+              <span class="font-semibold text-brand-dark">
                 {{ position.crypto?.category || 'N/A' }}
               </span>
             </div>
@@ -470,7 +470,7 @@ function goToTrade() {
                 v-if="position.crypto?.website"
                 :href="position.crypto.website" 
                 target="_blank"
-                class="text-[#35A7FF] hover:underline"
+                class="text-brand-blue hover:underline"
               >
                 Visit →
               </a>
@@ -481,18 +481,18 @@ function goToTrade() {
 
         <Card>
           <CardHeader>
-            <CardTitle class="text-lg font-semibold text-[#38618C]">
+            <CardTitle class="text-lg font-semibold text-brand-dark">
               Position Summary
             </CardTitle>
           </CardHeader>
           <CardContent class="space-y-3">
             <div class="flex justify-between">
               <span class="text-gray-500">Number of Transactions</span>
-              <span class="font-semibold text-[#38618C]">{{ transactions.length }}</span>
+              <span class="font-semibold text-brand-dark">{{ transactions.length }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">First Purchase Date</span>
-              <span class="font-semibold text-[#38618C]">
+              <span class="font-semibold text-brand-dark">
                 {{ transactions.length > 0 
                   ? new Date(transactions[transactions.length - 1].created_at).toLocaleDateString('en-GB')
                   : 'N/A' 
@@ -501,7 +501,7 @@ function goToTrade() {
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">Last Transaction Date</span>
-              <span class="font-semibold text-[#38618C]">
+              <span class="font-semibold text-brand-dark">
                 {{ transactions.length > 0 
                   ? new Date(transactions[0].created_at).toLocaleDateString('en-GB')
                   : 'N/A' 
@@ -511,7 +511,7 @@ function goToTrade() {
             <div class="flex justify-between">
               <span class="text-gray-500">Performance</span>
               <Badge 
-                :class="profitAmount >= 0 ? 'bg-[#01FF19]' : 'bg-[#FF5964]'"
+                :class="profitAmount >= 0 ? 'bg-brand-green' : 'bg-brand-red'"
                 class="text-white"
               >
                 {{ profitAmount >= 0 ? '📈 In Profit' : '📉 In Loss' }}
@@ -526,35 +526,35 @@ function goToTrade() {
 
 
 <style scoped>
-:deep(.border-\[#38618C\]) {
+:deep(.border-brand-dark) {
   border-color: #38618C;
 }
 
-:deep(.text-\[#38618C\]) {
+:deep(.text-brand-dark) {
   color: #38618C;
 }
 
-:deep(.bg-\[#01FF19\]) {
+:deep(.bg-brand-green) {
   background-color: #01FF19;
 }
 
-:deep(.bg-\[#35A7FF\]) {
+:deep(.bg-brand-blue) {
   background-color: #35A7FF;
 }
 
-:deep(.bg-\[#FF5964\]) {
+:deep(.bg-brand-red) {
   background-color: #FF5964;
 }
 
-:deep(.hover\:bg-\[#38618C\]:hover) {
+:deep(.hover\:bg-brand-dark:hover) {
   background-color: #38618C;
 }
 
-:deep(.hover\:bg-\[#35A7FF\]\/90:hover) {
+:deep(.hover\:bg-brand-blue\/90:hover) {
   background-color: rgba(53, 167, 255, 0.9);
 }
 
-:deep(.hover\:border-\[#35A7FF\]:hover) {
+:deep(.hover\:border-brand-blue:hover) {
   border-color: #35A7FF;
 }
 </style>

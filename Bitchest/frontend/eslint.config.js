@@ -37,6 +37,9 @@ export default [
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         HTMLImageElement: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
+        CustomEvent: 'readonly',
+        BodyInit: 'readonly',
         Element: 'readonly',
         Request: 'readonly',
         Response: 'readonly',
@@ -95,6 +98,9 @@ export default [
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         HTMLImageElement: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
+        CustomEvent: 'readonly',
+        BodyInit: 'readonly',
         Element: 'readonly',
         Request: 'readonly',
         Response: 'readonly',
@@ -115,7 +121,7 @@ export default [
       'vue/no-mutating-props': 'warn',
       'vue/require-default-prop': 'off',
       'vue/no-v-html': 'warn',
-      'no-console': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-unused-vars': 'off'
     }
   },
@@ -150,6 +156,9 @@ export default [
         HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         HTMLImageElement: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
+        CustomEvent: 'readonly',
+        BodyInit: 'readonly',
         Element: 'readonly',
         Request: 'readonly',
         Response: 'readonly',
@@ -180,7 +189,8 @@ export default [
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
-      'no-console': 'warn'
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-unused-vars': 'off'
     }
   },
 

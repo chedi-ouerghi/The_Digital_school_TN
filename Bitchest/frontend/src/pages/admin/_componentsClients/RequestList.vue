@@ -576,7 +576,7 @@ onMounted(() => {
 
     <!-- Approve Dialog -->
     <Dialog :open="approveDialog" @update:open="approveDialog = false">
-      <DialogContent class="sm:max-w-lg border border-gray-200">
+      <DialogContent class="sm:max-w-lg border border-gray-200 bg-white shadow-lg">
         <DialogHeader>
           <div class="flex items-center gap-3 mb-2">
             <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">

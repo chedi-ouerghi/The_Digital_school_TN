@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { createContext } from "reka-ui"
 import type { ComputedRef, Ref } from "vue"
 

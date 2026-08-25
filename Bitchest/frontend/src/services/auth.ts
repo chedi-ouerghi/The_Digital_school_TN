@@ -18,7 +18,6 @@ import api, { API_BASE } from './api';
 type Credentials = { email: string; password: string }
 
 const STORAGE_USER_KEY = 'user'
-const STORAGE_TYPE = 'sessionStorage'
 
 /**
  * 🔥 CRITIQUE : Initialiser le CSRF token
@@ -38,7 +37,6 @@ export async function initializeCsrf() {
         'Accept': 'application/json',
       },
     });
-    console.log('✅ CSRF token initialized');
   } catch (error) {
     console.error('❌ Failed to initialize CSRF token:', error);
   }
@@ -91,9 +89,12 @@ export const auth = {
 
   /**
    * Logout : le serveur efface les cookies
+   * 🔥 FIX double-clic : réinitialiser le CSRF avant le POST /logout,
+   * sinon le premier appel peut échouer en 419 et la session reste active.
    */
   async logout() {
     try {
+      await initializeCsrf();
       await api.auth.logout()
     } catch (e) {
       console.warn('Erreur lors de la déconnexion API:', e)
@@ -123,7 +124,9 @@ export const auth = {
           if (typeof window !== 'undefined' && window.sessionStorage) {
             window.sessionStorage.setItem(STORAGE_USER_KEY, JSON.stringify(safeUser))
           }
-        } catch { }
+        } catch {
+          // sessionStorage peut etre indisponible (navigation privee)
+        }
         return true
       }
       this.clearLocalAuth()

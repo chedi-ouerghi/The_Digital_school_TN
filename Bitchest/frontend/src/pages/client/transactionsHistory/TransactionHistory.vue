@@ -2,13 +2,10 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
-    Download, RefreshCw
+  Download, RefreshCw
 } from 'lucide-vue-next'
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -29,7 +26,7 @@ const transactions = ref<any[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const activeTab = ref('all')
-const dateRange = ref('30d')
+const dateRange = ref('all')
 const filterType = ref<'all' | 'ACHAT' | 'VENTE'>('all')
 const searchQuery = ref('')
 const showAdvancedFilters = ref(false)
@@ -114,24 +111,20 @@ const {
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🚀 Component mounted, fetching initial data...')
   await refreshData()
 })
 
 // Watchers
-watch(activeTab, (newTab, oldTab) => {
-  console.log(`📑 Tab changed from "${oldTab}" to "${newTab}"`)
+watch(activeTab, () => {
   currentPage.value = 1
 })
 
-watch([filterType, dateRange], (newValues) => {
-  console.log(`🔍 Filters changed:`, { filterType: newValues[0], dateRange: newValues[1] })
+watch([filterType, dateRange], () => {
   currentPage.value = 1
   loadTransactions()
 })
 
 watch(searchQuery, () => {
-  console.log(`🔎 Search query changed: "${searchQuery.value}"`)
   currentPage.value = 1
 })
 </script>
@@ -142,24 +135,24 @@ watch(searchQuery, () => {
       <!-- Header Section -->
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 class="text-3xl font-bold text-[#0F172A] tracking-tight">
+          <h1 class="text-3xl font-bold text-slate-900 tracking-tight">
             Transaction History
           </h1>
-          <p class="text-[#64748B] mt-2">
+          <p class="text-slate-500 mt-2">
             Track, analyze, and manage all your trading activities
           </p>
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
-          <TooltipProvider>
+          <!-- <TooltipProvider>
             <Tooltip>
               <TooltipTrigger as-child>
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E2E8F0] rounded-lg">
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg">
                   <Switch
                     v-model:checked="showValueInEur"
-                    class="data-[state=checked]:bg-[#35A7FF]"
+                    class="data-[state=checked]:bg-brand-blue"
                   />
-                  <Label class="text-sm text-[#64748B] cursor-pointer">
+                  <Label class="text-sm text-slate-500 cursor-pointer">
                     {{ showValueInEur ? 'Show EUR' : 'Show Crypto' }}
                   </Label>
                 </div>
@@ -169,10 +162,10 @@ watch(searchQuery, () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+           -->
           <Button
             variant="outline"
-            class="gap-2 border-[#E2E8F0] text-[#64748B] hover:bg-[#35A7FF]/5 hover:text-[#35A7FF]"
+            class="gap-2 border-slate-200 text-slate-500 hover:bg-brand-blue/5 hover:text-brand-blue"
             :disabled="isRefreshing"
             @click="refreshData"
           >
@@ -181,7 +174,7 @@ watch(searchQuery, () => {
           </Button>
           
           <Button 
-            class="gap-2 bg-[#35A7FF] hover:bg-[#35A7FF]/90 text-white"
+            class="gap-2 bg-brand-blue hover:bg-brand-blue/90 text-white"
             :disabled="filteredTransactions.length === 0"
             @click="exportTransactions"
           >
@@ -194,7 +187,7 @@ watch(searchQuery, () => {
       <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <template v-if="loading && !wallet">
-          <Card v-for="i in 4" :key="i" class="border-[#E2E8F0]">
+          <Card v-for="i in 4" :key="i" class="border-slate-200">
             <CardContent class="p-5">
               <Skeleton class="h-8 w-32 mb-3" />
               <Skeleton class="h-4 w-24" />
@@ -206,7 +199,7 @@ watch(searchQuery, () => {
           <Card
             v-for="(stat, index) in statsCards"
             :key="index"
-            class="group relative overflow-hidden border-[#E2E8F0] hover:border-[#35A7FF]/30 hover:shadow-lg transition-all duration-300"
+            class="group relative overflow-hidden border-slate-200 hover:border-brand-blue/30 hover:shadow-lg transition-all duration-300"
           >
             <div
               class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" 
@@ -215,10 +208,10 @@ watch(searchQuery, () => {
             <CardContent class="p-5 relative">
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                  <div class="p-2.5 rounded-xl border border-[#E2E8F0]" :style="{ backgroundColor: `${stat.color}10` }">
+                  <div class="p-2.5 rounded-xl border border-slate-200" :style="{ backgroundColor: `${stat.color}10` }">
                     <component :is="stat.icon" :style="{ color: stat.color }" class="w-5 h-5" />
                   </div>
-                  <span class="text-sm font-medium text-[#64748B]">{{ stat.title }}</span>
+                  <span class="text-sm font-medium text-slate-500">{{ stat.title }}</span>
                 </div>
                 <Badge
                   v-if="stat.title !== 'Available Balance'"
@@ -232,8 +225,8 @@ watch(searchQuery, () => {
                   {{ stat.change }}
                 </Badge>
               </div>
-              <div class="text-2xl font-bold text-[#0F172A] mb-1">{{ stat.value }}</div>
-              <div class="text-sm text-[#64748B]">{{ stat.description }}</div>
+              <div class="text-2xl font-bold text-slate-900 mb-1">{{ stat.value }}</div>
+              <div class="text-sm text-slate-500">{{ stat.description }}</div>
             </CardContent>
           </Card>
         </template>
@@ -255,22 +248,22 @@ watch(searchQuery, () => {
 
           <!-- Tabs Navigation -->
           <Tabs v-model="activeTab" class="w-full">
-            <TabsList class="grid grid-cols-3 w-full max-w-md bg-white border border-[#E2E8F0] p-1 rounded-xl">
+            <TabsList class="grid grid-cols-3 w-full max-w-md bg-white border border-slate-200 p-1 rounded-xl">
               <TabsTrigger 
                 value="all"
-                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#35A7FF] data-[state=active]:to-[#38618C] data-[state=active]:text-white rounded-lg"
+                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-blue data-[state=active]:to-brand-dark data-[state=active]:text-white rounded-lg"
               >
                 All Transactions
               </TabsTrigger>
               <TabsTrigger 
                 value="buy"
-                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#01FF19] data-[state=active]:to-[#35A7FF] data-[state=active]:text-white rounded-lg"
+                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-green data-[state=active]:to-brand-blue data-[state=active]:text-white rounded-lg"
               >
                 Purchases
               </TabsTrigger>
               <TabsTrigger 
                 value="sell"
-                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#FF5964] data-[state=active]:to-[#FF8B94] data-[state=active]:text-white rounded-lg"
+                class="data-[state=active]:bg-gradient-to-r data-[state=active]:from-brand-red data-[state=active]:to-brand-red-light data-[state=active]:text-white rounded-lg"
               >
                 Sales
               </TabsTrigger>

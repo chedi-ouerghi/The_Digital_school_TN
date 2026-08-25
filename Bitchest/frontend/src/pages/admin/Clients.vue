@@ -38,7 +38,6 @@ watch(activeTab, (newTab) => {
   if (newTab === 'requests') {
     fetchRequestsCount()
   }
-  console.log(`Switched to ${newTab} tab`)
 })
 
 // Écouter les événements de mise à jour depuis RequestList
@@ -52,7 +51,7 @@ function handleRequestsUpdated() {
     <!-- Header -->
     <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div>
-        <h1 class="text-3xl font-bold text-[#38618C] mb-1">Client Management</h1>
+        <h1 class="text-3xl font-bold text-brand-dark mb-1">Client Management</h1>
         <p class="text-gray-500">Manage platform users and account requests</p>
       </div>
     </div>
@@ -71,7 +70,7 @@ function handleRequestsUpdated() {
                 Account Requests
                 <Badge 
                   v-if="pendingRequestsCount > 0"
-                  class="ml-2 bg-[#FF5964] text-white font-semibold px-2 py-1 text-xs"
+                  class="ml-2 bg-brand-red text-white font-semibold px-2 py-1 text-xs"
                   :class="{'animate-pulse': loadingCount}"
                 >
                   {{ pendingRequestsCount }}
@@ -93,11 +92,11 @@ function handleRequestsUpdated() {
 </template>
 
 <style scoped>
-:deep(.text-\[#38618C\]) {
+:deep(.text-brand-dark) {
   color: #38618C;
 }
 
-:deep(.bg-\[#FF5964\]) {
+:deep(.bg-brand-red) {
   background-color: #FF5964;
 }
 

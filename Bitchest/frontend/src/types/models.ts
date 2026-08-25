@@ -69,7 +69,7 @@ export interface Wallet extends BaseModel {
   transactions?: Transaction[];
   totalValue?: number;
   totalInvestment?: number;
-  assets?: any[]; // You might want to define a more specific interface for assets
+  assets?: CryptoWalletAsset[];
   totalUnits?: number;
   buyCount?: number;
 }
@@ -157,6 +157,11 @@ export interface Notification extends BaseModel {
   message: string;
   type: NotificationType;
   is_read: boolean;
+  read_at?: string | null;
+  action_url?: string | null;
+  entity_id?: string | null;
+  entity_type?: string | null;
+  metadata?: Record<string, unknown> | null;
   user?: User;
 }
 
@@ -165,6 +170,10 @@ export const NotificationTypes = {
   ACCOUNT_REQUEST: 'account_request',
   TRANSACTION: 'transaction',
   PRICE_UPDATE: 'price_update',
+  PRICE_CHANGE: 'price_change',
+  ROLE_SYNC: 'role_sync',
+  SYSTEM: 'system',
+  WELCOME: 'welcome',
   ADMIN_ACTION: 'admin_action',
 } as const;
 
@@ -296,14 +305,14 @@ export interface CryptoWithHistory extends Cryptomoney {
 }
 
 // Type guards
-export const isUser = (obj: any): obj is User => {
-  return obj && typeof obj === 'object' && 'name' in obj && 'email' in obj && 'role' in obj;
+export const isUser = (obj: unknown): obj is User => {
+  return Boolean(obj) && typeof obj === 'object' && 'name' in obj && 'email' in obj && 'role' in obj;
 };
 
-export const isTransaction = (obj: any): obj is Transaction => {
-  return obj && typeof obj === 'object' && 'type' in obj && 'quantity' in obj && 'price' in obj;
+export const isTransaction = (obj: unknown): obj is Transaction => {
+  return Boolean(obj) && typeof obj === 'object' && 'type' in obj && 'quantity' in obj && 'price' in obj;
 };
 
-export const isCryptomoney = (obj: any): obj is Cryptomoney => {
-  return obj && typeof obj === 'object' && 'name' in obj && 'symbol' in obj && 'price_eur' in obj;
+export const isCryptomoney = (obj: unknown): obj is Cryptomoney => {
+  return Boolean(obj) && typeof obj === 'object' && 'name' in obj && 'symbol' in obj && 'price_eur' in obj;
 };

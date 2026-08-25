@@ -42,25 +42,17 @@ function storageUrl(path?: string | null) {
 // ---------------------------------------------------------------------
 async function fetchProfile() {
   try {
-    console.log('📥 Fetching profile data...')
     const res = await api.auth.profile()
     profile.value = res.user || res
-    console.log('✅ Profile loaded:', profile.value)
 
     if (profile.value?.profile_picture) {
       const picUrl = storageUrl(profile.value.profile_picture)
       avatarPreview.value = picUrl
-      console.log('🖼️ Avatar preview set:', picUrl)
-    } else {
-      console.log('⚠️ No profile picture found')
     }
 
     if (profile.value?.profile_banner) {
       const bannerUrl = storageUrl(profile.value.profile_banner)
       bannerPreview.value = bannerUrl
-      console.log('🖼️ Banner preview set:', bannerUrl)
-    } else {
-      console.log('⚠️ No profile banner found')
     }
   } catch (e: any) {
     console.error('❌ Error loading profile:', e)
@@ -108,14 +100,8 @@ const uploadImages = async () => {
       try {
         const form = new FormData()
         form.append('profile_picture', avatarFile.value)
-        console.log('📸 Uploading profile picture...', {
-          name: avatarFile.value.name,
-          size: avatarFile.value.size,
-          type: avatarFile.value.type
-        })
-        
-        const response = await api.auth.uploadProfilePicture(form)
-        console.log('✅ Profile picture uploaded successfully', response)
+
+        await api.auth.uploadProfilePicture(form)
         uploadedCount++
       } catch (e: any) {
         console.error('❌ Profile picture upload failed:', e.message)
@@ -127,14 +113,8 @@ const uploadImages = async () => {
       try {
         const form = new FormData()
         form.append('profile_banner', bannerFile.value)
-        console.log('🖼️ Uploading profile banner...', {
-          name: bannerFile.value.name,
-          size: bannerFile.value.size,
-          type: bannerFile.value.type
-        })
         
-        const response = await api.auth.uploadProfileBanner(form)
-        console.log('✅ Profile banner uploaded successfully', response)
+        await api.auth.uploadProfileBanner(form)
         uploadedCount++
       } catch (e: any) {
         console.error('❌ Profile banner upload failed:', e.message)
@@ -145,19 +125,15 @@ const uploadImages = async () => {
     // Success message
     if (uploadedCount === 2) {
       message.value = '✅ Photo et bannière téléchargées avec succès'
-      console.log('✅ All media uploaded successfully')
     } else if (uploadedCount === 1) {
       message.value = '✅ Fichier téléchargé avec succès'
-      console.log('✅ One file uploaded successfully')
     }
 
     avatarFile.value = null
     bannerFile.value = null
 
     // Reload images from backend
-    console.log('🔄 Reloading profile data...')
     await fetchProfile()
-    console.log('✅ Profile data reloaded')
 
     setTimeout(() => (message.value = null), 4000)
   } catch (e: any) {
@@ -183,7 +159,7 @@ const removeBannerPreview = () => {
 <template>
   <Card class="border-gray-200 shadow-lg">
     <CardHeader>
-      <CardTitle class="text-[#38618C]">Media</CardTitle>
+      <CardTitle class="text-brand-dark">Media</CardTitle>
     </CardHeader>
 
     <CardContent>
@@ -236,7 +212,7 @@ const removeBannerPreview = () => {
       <div class="mt-6 flex items-center gap-4">
         <Button
           :disabled="uploadLoading || (!avatarFile && !bannerFile)"
-          class="bg-[#35A7FF] hover:bg-[#38618C] text-white"
+          class="bg-brand-blue hover:bg-brand-dark text-white"
           @click="uploadImages"
         >
           {{ uploadLoading ? 'Uploading...' : 'Upload Media' }}

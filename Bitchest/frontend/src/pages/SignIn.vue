@@ -1,187 +1,275 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { auth } from '../services/auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import DottedSurface from '@/components/DottedSurface.vue'
-import { Loader2, Mail, Lock, AlertCircle, CheckCircle2, Eye, EyeOff, Shield, Sparkles } from 'lucide-vue-next'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { auth } from '../services/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import DottedSurface from '@/components/DottedSurface.vue';
+import {
+  Loader2,
+  Mail,
+  Lock,
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  ShieldCheck, ArrowRight
+} from 'lucide-vue-next';
+import { colors } from '@/config/designSystem';
 
-const router = useRouter()
-const email = ref('')
-const password = ref('')
-const error = ref<string | null>(null)
-const success = ref<string | null>(null)
-const loading = ref(false)
-const showPassword = ref(false)
+const router = useRouter();
+const email = ref('');
+const password = ref('');
+const error = ref<string | null>(null);
+const success = ref<string | null>(null);
+const loading = ref(false);
+const showPassword = ref(false);
 
 async function submit(e: Event) {
-  e.preventDefault()
-  error.value = null
-  success.value = null
-  loading.value = true
+  e.preventDefault();
+  error.value = null;
+  success.value = null;
+  loading.value = true;
   try {
-    await auth.login({ email: email.value, password: password.value })
-    success.value = 'Login successful! Redirecting...'
-    setTimeout(() => router.push('/dashboard'), 1500)
+    await auth.login({ email: email.value, password: password.value });
+    success.value = 'Login successful! Redirecting...';
+    setTimeout(() => router.push('/dashboard'), 1500);
   } catch (err: any) {
-    error.value = err.message || 'Invalid credentials. Please try again.'
+    error.value = err.message || 'Invalid credentials. Please try again.';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function togglePasswordVisibility() {
-  showPassword.value = !showPassword.value
+  showPassword.value = !showPassword.value;
 }
+
+
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col lg:flex-row overflow-hidden relative">
-    <!-- DottedSurface amélioré -->
+    <!-- Background Effects - Desktop Only -->
     <div class="absolute inset-0 hidden lg:block">
-      <DottedSurface className="w-full h-full opacity-100" />
-      <!-- Effets de gradient améliorés -->
-      <div class="absolute inset-0 bg-gradient-to-br from-gray-900/80 via-gray-900/50 to-gray-900/80" />
+      <DottedSurface class-name="w-full h-full opacity-20" />
+      <div class="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50" />
     </div>
 
-    <!-- LEFT SECTION - MODIFIÉ POUR LE CENTRAGE COMPLET -->
-    <div class="w-full min-h-screen lg:w-1/2 bg-white flex items-center justify-center px-4 sm:px-8 lg:px-16 py-8 lg:py-0 relative z-10 lg:rounded-r-[3rem] shadow-lg">
+    <!-- LEFT SECTION - Login Form -->
+    <div class="w-full lg:w-1/2 bg-background flex items-center justify-center px-4 sm:px-8 lg:px-12 py-8 lg:py-0 relative z-10">
       <div class="w-full max-w-md mx-auto space-y-8">
         <!-- Logo -->
-        <router-link to="/">
-          <div class="flex items-center space-x-2">
-            <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
-          </div>
-        </router-link>
-        <!-- Title -->
-        <div>
-          <h1 class="text-3xl font-bold text-[#0f172a]">Welcome Back 👋</h1>
-          <p class="text-sm text-gray-500 mt-1">Sign in to access your crypto dashboard</p>
+        <div class="flex justify-center mb-8">
+          <router-link to="/">
+            <div class="flex items-center space-x-2">
+              <img src="/assets/bitchest_logo.png" alt="BitChest Logo" class="h-14" />
+            </div>
+          </router-link>
         </div>
+
+        <!-- Title -->
+        <div class="text-center">
+          <h1
+            class="text-3xl md:text-4xl font-bold mb-2"
+            :style="{ color: colors.text.primary }"
+          >
+            Welcome Back 👋
+          </h1>
+          <p
+            class="text-sm"
+            :style="{ color: colors.text.primary }"
+          >
+            Sign in to access your crypto dashboard
+          </p>
+        </div>
+
         <!-- Alerts -->
-        <div class="space-y-2">
-          <Alert v-if="error" variant="destructive" class="border-red-200 bg-red-50 text-red-600 rounded-xl">
+        <div class="space-y-3">
+          <Alert
+            v-if="error"
+            variant="destructive"
+            class="border-error/20 bg-error/5 text-error rounded-xl"
+          >
             <AlertCircle class="h-4 w-4" />
             <AlertDescription class="text-xs">{{ error }}</AlertDescription>
           </Alert>
-          <Alert v-if="success" variant="default" class="border-green-200 bg-green-50 text-green-700 rounded-xl">
-            <CheckCircle2 class="h-4 w-4 text-green-500" />
+          <Alert
+            v-if="success"
+            variant="default"
+            class="border-primary-200 bg-primary-50 text-primary-700 rounded-xl"
+          >
+            <CheckCircle2 class="h-4 w-4 text-primary-500" />
             <AlertDescription class="text-xs">{{ success }}</AlertDescription>
           </Alert>
         </div>
+
         <!-- Login Form -->
-        <form class="space-y-5" @submit="submit">
+        <form class="space-y-6" @submit="submit">
+          <!-- Email Field -->
           <div>
-            <Label for="email" class="text-xs font-medium text-gray-600">Email</Label>
-            <div class="relative mt-1">
-              <Mail class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Label
+              for="email"
+              class="text-sm font-medium"
+              :style="{ color: colors.text.primary }"
+            >
+              Email Address
+            </Label>
+            <div class="relative mt-2">
+              <Mail
+                class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5"
+                :style="{ color: colors.text.tertiary }"
+              />
               <Input
                 id="email"
                 v-model="email"
                 type="email"
                 required
                 placeholder="you@bitchest.com"
-                class="pl-10 h-10 text-sm border-gray-300 focus:border-[#35A7FF] focus:ring-[#35A7FF]/20 rounded-xl"
+                class="pl-12 h-12 text-sm border-border-light focus:border-primary-500 focus:ring-primary-500/20 rounded-xl transition-all duration-200"
+                :style="{
+                  backgroundColor: colors.background,
+                  color: colors.text.primary
+                }"
               />
             </div>
           </div>
+
+          <!-- Password Field -->
           <div>
             <div class="flex justify-between items-center">
-              <Label for="password" class="text-xs font-medium text-gray-600">Password</Label>
+              <Label
+                for="password"
+                class="text-sm font-medium"
+                :style="{ color: colors.text.primary }"
+              >
+                Password
+              </Label>
+              <router-link
+                to="/forgot-password"
+                class="text-xs font-medium transition-colors duration-200 hover:text-primary-500"
+                :style="{ color: colors.text.primary }"
+              >
+                Forgot password?
+              </router-link>
             </div>
-            <div class="relative mt-1">
-              <Lock class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div class="relative mt-2">
+              <Lock
+                class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5"
+                :style="{ color: colors.text.tertiary }"
+              />
               <Input
                 id="password"
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 required
                 placeholder="••••••••"
-                class="pl-10 pr-10 h-10 text-sm border-gray-300 focus:border-[#35A7FF] focus:ring-[#35A7FF]/20 rounded-xl"
+                class="pl-12 pr-12 h-12 text-sm border-border-light focus:border-primary-500 focus:ring-primary-500/20 rounded-xl transition-all duration-200"
+                :style="{
+                  backgroundColor: colors.background,
+                  color: colors.text.primary
+                }"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                class="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                class="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
                 @click="togglePasswordVisibility"
               >
-                <EyeOff v-if="showPassword" class="h-4 w-4 text-gray-400" />
-                <Eye v-else class="h-4 w-4 text-gray-400" />
+                <EyeOff
+                  v-if="showPassword"
+                  class="h-5 w-5"
+                  :style="{ color: colors.text.tertiary }"
+                />
+                <Eye
+                  v-else
+                  class="h-5 w-5"
+                  :style="{ color: colors.text.tertiary }"
+                />
               </Button>
             </div>
           </div>
+
+          <!-- Submit Button -->
           <Button
             :disabled="loading"
             type="submit"
-            class="w-full h-10 bg-[#35A7FF] hover:bg-[#2d8ad9] text-white font-semibold rounded-xl text-sm transition-all duration-200 shadow-md"
+            class="w-full h-12 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-semibold rounded-xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            <Loader2 v-if="loading" class="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 v-if="loading" class="h-5 w-5 animate-spin" />
             <span v-else>Sign In</span>
+            <ArrowRight v-if="!loading" class="h-4 w-4" />
           </Button>
         </form>
-       
-        <p class="text-center text-[10px] text-gray-400 mt-8">© 2025 BitChest Technologies</p>
+
+
+
+        <!-- Legal Text -->
+        <p
+          class="text-center text-xs"
+          :style="{ color: colors.text.primary }"
+        >
+          &copy; 2025 BitChest Technologies. All rights reserved.
+        </p>
       </div>
     </div>
 
-    <!-- RIGHT SECTION - Revised -->
-    <div class="hidden lg:flex w-1/2 relative overflow-hidden backdrop-blur-sm">
-      <!-- Background effects -->
-      <div class="absolute inset-0">
-        <!-- Luminous circles -->
-        <!-- <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-[#6E00FF]/20 rounded-full blur-[100px] animate-pulse" />
-        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#35A7FF]/20 rounded-full blur-[100px] animate-pulse delay-700" />
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#00E0FF]/20 rounded-full blur-[100px] animate-pulse delay-1000" /> -->
-      </div>
+    <!-- RIGHT SECTION - Feature Highlights (Desktop Only) -->
+    <div class="hidden lg:flex w-1/2 relative overflow-hidden">
+      <!-- Background -->
+      <div class="absolute inset-0 bg-gradient-to-br from-white via-primary-50/60 to-secondary-50" />
 
-      <!-- Main content -->
+      <!-- Floating decorative elements -->
+      <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-primary-500/10 rounded-full blur-[120px] animate-pulse" />
+      <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-[120px] animate-pulse delay-700" />
+
+      <!-- Content Container -->
       <div class="relative z-10 flex flex-col justify-center items-center w-full h-full px-12">
-        <!-- Header -->
-        <div class="text-center mb-12">
-          <h1 class="text-6xl font-black leading-tight">
-            <span class="bg-gradient-to-r from-white via-[#FFE6FA] to-[#E6F7FF] bg-clip-text text-transparent drop-shadow-2xl">
-              The Future of<br />
+        <div class="max-w-md text-center space-y-8">
+          <!-- Main Title -->
+          <h2
+            class="text-4xl md:text-5xl font-extrabold leading-tight"
+            :style="{ color: colors.text.primary }"
+          >
+            The Future of
+            <span
+              class="relative inline-block"
+              :style="{ color: colors.primary[600] }"
+            >
               Crypto Trading
+              <span class="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary-400 to-transparent opacity-50" />
             </span>
-          </h1>
-          <p class="mt-6 text-lg text-white/80 max-w-xl mx-auto">
+          </h2>
+
+          <!-- Subtitle -->
+          <p
+            class="text-lg"
+            :style="{ color: colors.text.secondary }"
+          >
             Discover a new way to trade with BitChest, your trusted platform.
           </p>
-        </div>
 
-        <!-- Features Grid -->
-        <div class="grid grid-cols-2 gap-8 max-w-2xl w-full mb-12">
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-            <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Smart Trading</h3>
-            <p class="text-white/70 text-sm">Advanced analysis and personalized suggestions</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-            <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Enhanced Security</h3>
-            <p class="text-white/70 text-sm">Optimal protection for your assets</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-            <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">Intuitive Interface</h3>
-            <p class="text-white/70 text-sm">Smooth and pleasant navigation</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-            <Sparkles class="w-6 h-6 text-[#00E0FF] mb-4" />
-            <h3 class="text-white font-semibold mb-2">24/7 Support</h3>
-            <p class="text-white/70 text-sm">Dedicated assistance at any time</p>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="absolute bottom-8 w-full text-center">
-          <div class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md rounded-full px-6 py-2">
-            <Shield class="w-4 h-4 text-[#00E0FF]" />
-            <span class="text-sm text-white/80">Bank-level security</span>
+          <!-- Security Badge -->
+          <div
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+            :style="{
+              backgroundColor: `${colors.primary[500]}10`,
+              border: `1px solid ${colors.primary[500]}30`
+            }"
+          >
+            <ShieldCheck
+              class="w-4 h-4"
+              :style="{ color: colors.primary[600] }"
+            />
+            <span
+              class="text-sm font-medium"
+              :style="{ color: colors.primary[700] }"
+            >
+              Bank‑grade Security
+            </span>
           </div>
         </div>
       </div>
@@ -193,46 +281,112 @@ function togglePasswordVisibility() {
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 * {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   letter-spacing: 0.2px;
 }
 
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: v-bind('colors.background');
+}
+
+::-webkit-scrollbar-thumb {
+  background: v-bind('colors.border.light');
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: v-bind('colors.border.medium');
+}
+
+/* Input placeholder styling */
 input::placeholder {
-  color: #9ca3af;
+  color: v-bind('colors.text.tertiary');
   opacity: 0.8;
 }
 
-/* Animations personnalisées */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+/* Focus styles */
+input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
 }
 
-/* Animation améliorée */
-@keyframes gradientFlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.gradient-animate {
-  background-size: 200% 200%;
-  animation: gradientFlow 8s ease infinite;
-}
-
-/* Glassmorphism amélioré */
-.glass-effect {
-  backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Smooth scroll & background animation effect */
-body {
+/* Ensure no overflow on any screen size */
+html, body {
   overflow-x: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .min-h-screen.flex.flex-col.lg\:flex-row {
+    flex-direction: column !important;
+  }
+
+  .w-full.lg\:w-1\/2:first-child {
+    width: 100% !important;
+    min-height: 100vh;
+  }
+
+  .hidden.lg\:flex {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .max-w-md {
+    width: 100%;
+    padding: 0 1rem;
+  }
+
+  .px-4.sm\:px-8.lg\:px-12 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  h1 {
+    font-size: 1.75rem !important;
+  }
+}
+
+/* Animation for focus states */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+}
+
+/* Button hover effect */
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Decorative glow for the right panel */
+.animate-pulse {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 </style>

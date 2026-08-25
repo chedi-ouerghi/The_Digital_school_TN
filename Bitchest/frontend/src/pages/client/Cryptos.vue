@@ -253,6 +253,20 @@ function setQuickAmount(amountEur: number) {
   quantity.value = cryptoAmount.toFixed(8)
 }
 
+// Quantité maximale achetable avec le solde disponible pour la crypto sélectionnée.
+// Arrondi vers le BAS à la précision de l'application (8 décimales) pour garantir
+// que le coût total ne dépasse jamais le solde disponible.
+function calculateMaxQuantity(): number {
+  const price = Number(selectedCrypto.value?.price_eur || selectedCrypto.value?.price || 0)
+  if (!price || price <= 0 || !Number.isFinite(userBalance.value) || userBalance.value <= 0) return 0
+  return Math.floor((userBalance.value / price) * 1e8) / 1e8
+}
+
+function setMaxQuantity() {
+  const maxQty = calculateMaxQuantity()
+  quantity.value = maxQty > 0 ? maxQty.toFixed(8) : ''
+}
+
 function calculateTotalCost(): number {
   const price = selectedCrypto.value?.price_eur || selectedCrypto.value?.price || 0
   return (parseFloat(quantity.value) || 0) * price
@@ -371,7 +385,8 @@ function handleImgError(e: Event) {
 <template>
   <div class="space-y-6">
     <!-- Hero Section -->
-<div class="relative overflow-hidden rounded-xl 
+<div
+class="relative overflow-hidden rounded-xl 
             bg-gradient-to-br from-white via-blue-50 to-blue-200 
             p-6 text-gray-900">
 
@@ -458,7 +473,8 @@ function handleImgError(e: Event) {
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-500">Avg 24h Change</p>
-              <p :class="[
+              <p
+:class="[
                 'text-lg font-bold mt-1',
                 stats.avgChange >= 0 ? 'text-green-600' : 'text-red-600'
               ]">
@@ -578,8 +594,8 @@ function handleImgError(e: Event) {
                 variant="outline"
                 size="sm"
                 class="gap-2"
-                @click="fetchCryptos"
                 :disabled="loading"
+                @click="fetchCryptos"
               >
                 <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
               </Button>
@@ -985,11 +1001,21 @@ function handleImgError(e: Event) {
                     step="0.00000001"
                     min="0.00000001"
                     placeholder="Enter quantity"
-                    class="pr-24"
+                    class="pr-28"
                     :disabled="isBuying"
                     @input="validateQuantity"
                   />
-                  <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                  <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      class="h-6 px-2 rounded-md text-[11px] font-bold tracking-wide bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      :disabled="isBuying || calculateMaxQuantity() <= 0"
+                      aria-label="Set maximum purchasable quantity with available balance"
+                      title="Buy the maximum quantity allowed by your available balance"
+                      @click="setMaxQuantity"
+                    >
+                      MAX
+                    </button>
                     <Badge class="bg-blue-100 text-blue-700 border-blue-200">
                       {{ (selectedCrypto?.symbole || selectedCrypto?.symbol || '').toString().toUpperCase() }}
                     </Badge>
@@ -1053,13 +1079,14 @@ function handleImgError(e: Event) {
                 class="h-2"
                 :class="calculateTotalCost() <= userBalance ? 'bg-green-500' : 'bg-red-500'"
               />
-              <div class="flex justify-between items-center text-sm">
+<div class="flex justify-between items-center text-sm">
                 <span class="text-gray-600">Remaining After Purchase</span>
-                <span :class="[
-                  'font-medium',
-                  userBalance - calculateTotalCost() >= 0 ? 'text-green-600' : 'text-red-600'
-                ]">
-                  {{ formatCurrency(Math.max(0, userBalance - calculateTotalCost())) }}
+                <span
+                  :class="[
+                    'font-medium',
+                    userBalance - calculateTotalCost() >= 0 ? 'text-green-600' : 'text-red-600'
+                  ]">
+                  {{ formatCurrency(userBalance - calculateTotalCost()) }}
                 </span>
               </div>
             </div>

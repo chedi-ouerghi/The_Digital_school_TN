@@ -71,8 +71,8 @@ function refreshData() {
         <Button 
           variant="outline"
           class="border-gray-300 hover:bg-gray-100 gap-2"
-          @click="refreshData"
           :disabled="loading"
+          @click="refreshData"
         >
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
           Refresh Data
