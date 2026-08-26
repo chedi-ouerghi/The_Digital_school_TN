@@ -10,14 +10,14 @@ class CryptoHistory extends Model
 {
     use HasFactory;
 
-    // ✅ Configuration de la clé primaire
+    // Identifiant unique de l'enregistrement historique
     protected $keyType = 'string';
     public $incrementing = false;
     protected $primaryKey = 'id';
 
     protected $table = 'crypto_history';
 
-    // ✅ CORRECTION: Ajouter tous les champs fillable
+    // Champs persistés lors de la création ou de la mise à jour
     protected $fillable = [
         'cryptomoney_id',
         'price',
@@ -25,7 +25,7 @@ class CryptoHistory extends Model
         'recorded_at',
     ];
 
-    // ✅ CORRECTION: Types de casting appropriés
+    // Conversion des valeurs selon leur type métier
     protected $casts = [
         'id' => 'string',
         'cryptomoney_id' => 'string',
@@ -36,13 +36,13 @@ class CryptoHistory extends Model
         'updated_at' => 'immutable_datetime',
     ];
 
-    // ✅ Relations
+    // Relations avec la cryptomonnaie associée
     public function cryptomoney()
     {
         return $this->belongsTo(Cryptomoney::class, 'cryptomoney_id');
     }
 
-    // ✅ Génération automatique de l'ID (UUID harmonisé)
+    // Génération automatique de l'identifiant avant la création
     protected static function boot()
     {
         parent::boot();
@@ -54,7 +54,7 @@ class CryptoHistory extends Model
         });
     }
 
-    // ✅ Accesseurs pour faciliter la lecture
+    // Accesseurs pour exposer les valeurs calculées
     public function getPriceFormatted(): string
     {
         return number_format($this->price, 8, '.', '');
@@ -70,7 +70,7 @@ class CryptoHistory extends Model
         return number_format($this->volume ?? 0, 2, '.', '');
     }
 
-    // ✅ Scopes utiles
+    // Filtres réutilisables pour les requêtes historiques
     public function scopeRecent($query, int $days = 30)
     {
         return $query->where('recorded_at', '>=', now()->subDays($days));

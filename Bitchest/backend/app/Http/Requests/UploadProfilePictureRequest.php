@@ -15,11 +15,11 @@ class UploadProfilePictureRequest extends FormRequest
     {
         return [
             'profile_picture' => [
-                'nullable',  // Allow null (we'll check in controller)
+                'nullable',  // Fichier facultatif traité par le contrôleur
                 'file',
                 'image',
                 'mimes:jpeg,png,gif,webp,jpg',
-                'max:5120',  // Max 5MB
+                'max:5120',  // Taille maximale de 5 Mo
             ],
         ];
     }

@@ -35,10 +35,10 @@ class AccountRequestControllerTest extends TestCase
         // Appeler l'endpoint
         $response = $this->postJson('/api/v1/request-account', $requestData);
 
-        // Vérifier la réponse
+        // Vérifier la réponse — message réel AuthController::requestAccount: 'Your request has been sent successfully. Please check your email to confirm your address.'
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Your request has been successfully sent..'
+                'message' => 'Your request has been sent successfully. Please check your email to confirm your address.'
             ]);
 
         // Vérifier que la demande a été créée en base
@@ -70,10 +70,10 @@ class AccountRequestControllerTest extends TestCase
         // Appeler l'endpoint
         $response = $this->postJson('/api/v1/request-account', $requestData);
 
-        // Vérifier la réponse de validation
+        // Vérifier la réponse de validation — AuthController retourne 'Validation error' (anglais)
         $response->assertStatus(422)
             ->assertJson([
-                'error' => 'Erreur de validation',
+                'error' => 'Validation error',
                 'details' => [
                     'name' => ['The name field is required.']
                 ]
@@ -95,7 +95,7 @@ class AccountRequestControllerTest extends TestCase
         // Vérifier la réponse de validation
         $response->assertStatus(422)
             ->assertJson([
-                'error' => 'Erreur de validation',
+                'error' => 'Validation error',
                 'details' => [
                     'email' => ['The email field must be a valid email address.']
                 ]
@@ -122,7 +122,7 @@ class AccountRequestControllerTest extends TestCase
         // Vérifier la réponse de validation - should get Laravel validation error for existing user
         $response->assertStatus(422)
             ->assertJson([
-                'error' => 'Erreur de validation',
+                'error' => 'Validation error',
                 'details' => [
                     'email' => ['The email has already been taken.']
                 ]
@@ -150,10 +150,10 @@ class AccountRequestControllerTest extends TestCase
         // Appeler l'endpoint
         $response = $this->postJson('/api/v1/request-account', $requestData);
 
-        // Vérifier la réponse de validation - should get the pending request error
+        // Vérifier la réponse de validation - AuthController::requestAccount retourne 'A request is already pending for this email. Please check your inbox.' (anglais)
         $response->assertStatus(422)
             ->assertJson([
-                'error' => 'Une demande est déjà en attente pour cet email.'
+                'error' => 'A request is already pending for this email. Please check your inbox.'
             ]);
     }
 
@@ -179,15 +179,15 @@ class AccountRequestControllerTest extends TestCase
         // Vérifier la réponse
         $response->assertStatus(200);
 
-        // Vérifier que les notifications ont été créées pour les admins
+        // Vérifier que les notifications ont été créées pour les admins — AuthController utilise 'New account request' (anglais)
         $this->assertDatabaseHas('notifications', [
             'user_id' => $admin1->id,
-            'title' => 'Nouvelle demande de compte'
+            'title' => 'New account request'
         ]);
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $admin2->id,
-            'title' => 'Nouvelle demande de compte'
+            'title' => 'New account request'
         ]);
     }
 

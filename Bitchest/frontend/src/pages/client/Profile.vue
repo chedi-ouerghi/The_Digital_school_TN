@@ -8,18 +8,18 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { authApi } from '@/services/api'
 import {
-  AlertCircle,
-  Calendar,
-  CheckCircle2,
-  Edit3,
-  Eye,
-  EyeOff,
-  Mail,
-  Save,
-  Shield,
-  User,
-  Wallet,
-  X
+    AlertCircle,
+    Calendar,
+    CheckCircle2,
+    Edit3,
+    Eye,
+    EyeOff,
+    Mail,
+    Save,
+    Shield,
+    User,
+    Wallet,
+    X
 } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import api from '../../services/api'
@@ -119,7 +119,7 @@ async function changePassword() {
 
 function cancelEdit() {
   editing.value = false
-  loadProfile() // Reload original data
+  loadProfile() // Rechargement des données originales
 }
 
 function formatDate(dateString: string) {

@@ -146,7 +146,7 @@ async function generateChartData() {
     return cumulativeQty * currentPrice.value
   })
 
-  // Ajouter le point actuel
+  // Inclusion de la valeur actuelle dans l'historique
   chartLabels.value.push('Aujourd\'hui')
   chartData.value.push(currentValue.value)
 }

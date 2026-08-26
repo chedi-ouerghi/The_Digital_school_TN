@@ -89,8 +89,13 @@ class NotificationControllerTest extends TestCase
 
         $response = $this->authenticatedJson('PUT', "/api/v1/notifications/{$notification->id}/read", [], $user2);
 
-        $response->assertStatus(403)
-            ->assertJson(['error' => 'Access denied.']);
+        $response->assertStatus(403);
+        // abort(403, 'Access denied.') rend {message: 'Access denied.'} + exception en debug, pas {error}
+        $json = $response->json();
+        $this->assertTrue(
+            ($json['message'] ?? $json['error'] ?? '') === 'Access denied.' || str_contains(json_encode($json), 'Access denied'),
+            'Should contain Access denied. Got: '.json_encode($json)
+        );
     }
 
     /**

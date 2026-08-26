@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
-  AlertCircle,
-  Settings as SettingsIcon,
-  Shield
+    AlertCircle,
+    Settings as SettingsIcon,
+    Shield
 } from 'lucide-vue-next'
 import { onMounted, ref, watch } from 'vue'
 import api from '../../services/api'
@@ -45,7 +45,7 @@ async function fetchProfile() {
 
 // Reset success messages when changing tabs
 watch(activeTab, () => {
-  // Reset messages if needed
+  // Réinitialisation des messages lors du changement d'onglet
 })
 
 onMounted(fetchProfile)

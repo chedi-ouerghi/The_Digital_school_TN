@@ -22,7 +22,7 @@ class RegenerateRealisticHistory extends Command
         $historyService = app(RealisticPriceHistoryService::class);
 
         if ($symbol) {
-            // ✅ Regénérer pour une crypto spécifique
+                 // Régénération de l'historique d'une cryptomonnaie ciblée
             $this->command->info("🔄 Regenerating history for {$symbol}...");
 
             $crypto = Cryptomoney::where('symbol', strtoupper($symbol))->first();
@@ -42,7 +42,7 @@ class RegenerateRealisticHistory extends Command
             }
 
       } else {
-    // ✅ Regénérer pour TOUTES les cryptos
+    // Régénération de l'historique pour toutes les cryptomonnaies
     $this->info('🔄 Regenerating history for ALL cryptos...');
 
     $results = $historyService->generateForAllCryptos();

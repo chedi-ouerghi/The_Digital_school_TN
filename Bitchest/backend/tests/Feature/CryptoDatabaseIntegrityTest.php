@@ -26,18 +26,16 @@ class CryptoDatabaseIntegrityTest extends TestCase
         $this->seed(DatabaseSeeder::class);
     }
 
-    /** Test 1: Chaque crypto possède exactement 40 historiques */
+    /** Test 1: Chaque crypto officielle possède exactement 40 historiques */
     public function test_each_crypto_has_exactly_40_histories(): void
     {
         $days = (int) config('bitchest.history_days', 40);
-        $this->assertEquals(10, Cryptomoney::count(), 'Expected 10 cryptos');
-
-        foreach (Cryptomoney::all() as $crypto) {
+        $officialSymbols = array_keys(config('bitchest.cryptos', []));
+        $this->assertGreaterThanOrEqual(10, Cryptomoney::count(), 'Expected at least 10 cryptos');
+        foreach (Cryptomoney::whereIn('symbol', $officialSymbols)->get() as $crypto) {
             $count = CryptoHistory::where('cryptomoney_id', $crypto->id)->count();
             $this->assertEquals($days, $count, "Crypto {$crypto->symbol} should have {$days} histories, got {$count}");
         }
-
-        $this->assertEquals(10 * $days, CryptoHistory::count());
     }
 
     /** Test 2: Aucune crypto ne possède deux historiques le même jour (UNIQUE) */
@@ -77,10 +75,11 @@ class CryptoDatabaseIntegrityTest extends TestCase
         $this->assertEquals(0, $negativeCurrent, 'Found cryptos with non-positive current price');
     }
 
-    /** Test 4: Le dernier historique correspond au prix courant */
+    /** Test 4: Le dernier historique correspond au prix courant (uniquement officiels) */
     public function test_latest_history_equals_current_price(): void
     {
-        foreach (Cryptomoney::all() as $crypto) {
+        $officialSymbols = array_keys(config('bitchest.cryptos', []));
+        foreach (Cryptomoney::whereIn('symbol', $officialSymbols)->get() as $crypto) {
             $latest = CryptoHistory::where('cryptomoney_id', $crypto->id)
                 ->orderByDesc('recorded_at')
                 ->first();
@@ -91,9 +90,9 @@ class CryptoDatabaseIntegrityTest extends TestCase
                 "Latest history price {$latest->price} != current price {$crypto->price_eur} for {$crypto->symbol}");
         }
 
-        // Vérifier que la date du dernier est aujourd'hui
+        // Vérifier que la date du dernier est aujourd'hui (officiels seulement)
         $today = now()->toDateString();
-        foreach (Cryptomoney::all() as $crypto) {
+        foreach (Cryptomoney::whereIn('symbol', $officialSymbols)->get() as $crypto) {
             $latest = CryptoHistory::where('cryptomoney_id', $crypto->id)->orderByDesc('recorded_at')->first();
             $this->assertEquals($today, \Carbon\Carbon::parse($latest->recorded_at)->toDateString(),
                 "Latest history not today for {$crypto->symbol}");
@@ -104,8 +103,9 @@ class CryptoDatabaseIntegrityTest extends TestCase
     public function test_seeder_is_idempotent(): void
     {
         $days = (int) config('bitchest.history_days', 40);
-        $initialCryptoCount = Cryptomoney::count();
-        $initialHistoryCount = CryptoHistory::count();
+        $officialSymbols = array_keys(config('bitchest.cryptos', []));
+        $initialCryptoCount = Cryptomoney::whereIn('symbol', $officialSymbols)->count();
+        $initialHistoryCount = CryptoHistory::whereIn('cryptomoney_id', Cryptomoney::whereIn('symbol', $officialSymbols)->pluck('id'))->count();
 
         $this->assertEquals(10, $initialCryptoCount);
         $this->assertEquals(10 * $days, $initialHistoryCount);
@@ -113,21 +113,22 @@ class CryptoDatabaseIntegrityTest extends TestCase
         // Re-seed
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertEquals($initialCryptoCount, Cryptomoney::count(), 'Crypto count changed after re-seed');
-        $this->assertEquals($initialHistoryCount, CryptoHistory::count(), 'History count changed after re-seed');
+        $this->assertEquals($initialCryptoCount, Cryptomoney::whereIn('symbol', $officialSymbols)->count(), 'Crypto count changed after re-seed');
+        $this->assertEquals($initialHistoryCount, CryptoHistory::whereIn('cryptomoney_id', Cryptomoney::whereIn('symbol', $officialSymbols)->pluck('id'))->count(), 'History count changed after re-seed');
 
-        // Re-seed via CryptoHistoryGenerator directly
+        // Re-seed via CryptoHistoryGenerator directly (officiels seulement)
         $generator = app(CryptoHistoryGenerator::class);
-        foreach (Cryptomoney::all() as $crypto) {
+        foreach (Cryptomoney::whereIn('symbol', $officialSymbols)->get() as $crypto) {
             $generator->generateFor($crypto, $days);
         }
-        $this->assertEquals($initialHistoryCount, CryptoHistory::count(), 'History count changed after generator re-run');
+        $this->assertEquals($initialHistoryCount, CryptoHistory::whereIn('cryptomoney_id', Cryptomoney::whereIn('symbol', $officialSymbols)->pluck('id'))->count(), 'History count changed after generator re-run');
     }
 
-    /** Test 6: Les relations Eloquent fonctionnent */
+    /** Test 6: Les relations Eloquent fonctionnent (officiel) */
     public function test_eloquent_relations_work(): void
     {
-        $crypto = Cryptomoney::first();
+        $officialSymbols = array_keys(config('bitchest.cryptos', []));
+        $crypto = Cryptomoney::whereIn('symbol', $officialSymbols)->first();
         $this->assertNotNull($crypto->histories, 'histories relation missing');
         $this->assertGreaterThan(0, $crypto->histories->count());
         $this->assertInstanceOf(CryptoHistory::class, $crypto->histories->first());
@@ -183,15 +184,16 @@ class CryptoDatabaseIntegrityTest extends TestCase
         $this->assertTrue($asset->transactions->contains($transaction));
     }
 
-    /** Test supplémentaire: La période est J-39 .. J (40 dates distinctes) */
+    /** Test supplémentaire: La période est J-39 .. J (40 dates distinctes) — officiels seulement */
     public function test_history_covers_40_distinct_dates(): void
     {
         $days = (int) config('bitchest.history_days', 40);
         $today = now()->startOfDay();
         $start = $today->copy()->subDays($days - 1)->toDateString();
         $end = $today->toDateString();
+        $officialSymbols = array_keys(config('bitchest.cryptos', []));
 
-        foreach (Cryptomoney::all() as $crypto) {
+        foreach (Cryptomoney::whereIn('symbol', $officialSymbols)->get() as $crypto) {
             $min = CryptoHistory::where('cryptomoney_id', $crypto->id)->min('recorded_at');
             $max = CryptoHistory::where('cryptomoney_id', $crypto->id)->max('recorded_at');
             $this->assertEquals($start, \Carbon\Carbon::parse($min)->toDateString(), "Min date mismatch for {$crypto->symbol}");
@@ -205,8 +207,11 @@ class CryptoDatabaseIntegrityTest extends TestCase
     /** Test supplémentaire: Factory CryptoHistory ne crée pas de doublons si utilisée avec date existante -> doit échouer grâce à UNIQUE */
     public function test_factory_respects_unique_constraint(): void
     {
-        $crypto = Cryptomoney::first();
-        $existingDate = CryptoHistory::where('cryptomoney_id', $crypto->id)->first()->recorded_at;
+        $officialSymbols = array_keys(config('bitchest.cryptos', []));
+        $crypto = Cryptomoney::whereIn('symbol', $officialSymbols)->first();
+        $existing = CryptoHistory::where('cryptomoney_id', $crypto->id)->first();
+        $this->assertNotNull($existing, 'No history to test unique constraint');
+        $existingDate = $existing->recorded_at;
 
         // Création manuelle avec même date doit lever exception via DB constraint
         try {

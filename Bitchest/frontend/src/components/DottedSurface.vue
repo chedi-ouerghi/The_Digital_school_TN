@@ -23,7 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
 const attrs = useAttrs()
 const containerRef = ref<HTMLDivElement | null>(null)
 
-// Utilité pour combiner les classes (vous devrez l'adapter à votre projet)
+ // Combinaison des classes CSS optionnelles du composant
 const cn = (...classes: (string | undefined)[]): string => {
   return classes.filter(Boolean).join(' ')
 }

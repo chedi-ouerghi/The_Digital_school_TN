@@ -15,7 +15,7 @@ return new class extends Migration
         if (DB::getDriverName() !== 'mysql') {
             return;
         }
-        // For MySQL, we need to use raw SQL to modify the enum
+        // Modification de l'enum via SQL natif pour respecter le type MySQL
         DB::statement("ALTER TABLE notifications MODIFY COLUMN type ENUM('account_request', 'transaction', 'price_update', 'admin_action', 'welcome')");
     }
 
@@ -27,7 +27,7 @@ return new class extends Migration
         if (DB::getDriverName() !== 'mysql') {
             return;
         }
-        // Revert the enum back to original values
+        // Restauration des valeurs initiales de l'enum lors de l'annulation de la migration
         DB::statement("ALTER TABLE notifications MODIFY COLUMN type ENUM('account_request', 'transaction', 'price_update', 'admin_action')");
     }
 };

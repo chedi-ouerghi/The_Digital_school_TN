@@ -2,11 +2,11 @@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,7 +32,7 @@ const formLoading = ref(false)
 const formError = ref('')
 const formSuccess = ref('')
 
-// ✅ TOUS LES CHAMPS REQUIS POUR LE NOUVEAU FORMULAIRE
+// État des champs du formulaire de cryptomonnaie
 const symbol = ref('')
 const name = ref('')
 const coingeckoId = ref('')
@@ -121,7 +121,7 @@ async function handleSubmit() {
   
   try {
     if (props.isEditMode && props.editingCryptoId) {
-      // ✅ Mode édition - Utilise updateWithImage si image sélectionnée
+      // Mise à jour de la cryptomonnaie avec son image éventuelle
       if (cryptoImage.value) {
         // Créer FormData avec tous les champs
         const formData = new FormData()
@@ -151,7 +151,7 @@ async function handleSubmit() {
       }
       formSuccess.value = '✅ Crypto modifiée avec succès!'
     } else {
-      // ✅ Mode ajout avec le nouveau formulaire complet
+      // Création d'une cryptomonnaie avec les données du formulaire
       await api.crypto.create({
         symbol: symbol.value.toUpperCase(),
         name: name.value,

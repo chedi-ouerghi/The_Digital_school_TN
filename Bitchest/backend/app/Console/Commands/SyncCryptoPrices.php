@@ -50,7 +50,7 @@ class SyncCryptoPrices extends Command
 
                 $oldPrice = $crypto->price_eur;
 
-                // ✅ METTRE À JOUR LE PRIX
+                 // Mise à jour du prix courant de la cryptomonnaie
                 $crypto->update([
                     'price_eur' => $newPrice,
                     'market_cap' => $data['market_data']['market_cap']['eur'] ?? null,

@@ -6,24 +6,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress'
 import api from '@/services/api'
 import {
-  Activity,
-  AlertCircle,
-  ArrowLeft,
-  BarChart3,
-  Calendar,
-  CheckCircle,
-  ChevronRight,
-  Clock,
-  DollarSign,
-  Download,
-  ExternalLink,
-  Globe,
-  RefreshCw,
-  Share2,
-  Shield,
-  Star,
-  TrendingDown,
-  TrendingUp
+    Activity,
+    AlertCircle,
+    ArrowLeft,
+    BarChart3,
+    Calendar,
+    CheckCircle,
+    ChevronRight,
+    Clock,
+    DollarSign,
+    Download,
+    ExternalLink,
+    Globe,
+    RefreshCw, Shield, TrendingDown,
+    TrendingUp
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -266,7 +262,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
   }
 }))
 
-// Computed Properties (basics needed)
+// Valeurs dérivées utilisées par la vue
 const currentPrice = computed(() => {
   return crypto.value?.price_eur ? parseFloat(crypto.value.price_eur) : 0
 })

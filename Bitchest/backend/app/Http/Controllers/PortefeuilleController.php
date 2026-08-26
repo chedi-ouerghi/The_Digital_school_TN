@@ -85,7 +85,7 @@ class PortefeuilleController extends Controller
             $user = Auth::user();
 
             // SECURITE - Etape 2 : une session authentifiee ne suffit pas pour
-            // trader. Le mot de passe temporaire doit d'abord avoir ete change.
+            // Le changement du mot de passe temporaire est requis avant l'accès au portefeuille
             if (is_null($user->password_changed_at)) {
                 return response()->json([
                     'error' => 'You must change your password before making transactions.',

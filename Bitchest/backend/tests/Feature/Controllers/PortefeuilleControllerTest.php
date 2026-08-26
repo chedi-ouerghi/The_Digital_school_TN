@@ -96,7 +96,7 @@ class PortefeuilleControllerTest extends TestCase
             'balance_eur' => 10000.00
         ]);
         $crypto = Cryptomoney::factory()->create([
-            'symbol' => 'BTC',
+            'symbol' => 'BTC'.strtoupper(substr(uniqid(), -3)),
             'price_eur' => 50000
         ]);
 
@@ -121,7 +121,7 @@ class PortefeuilleControllerTest extends TestCase
             'balance_eur' => 100.00
         ]);
         $crypto = Cryptomoney::factory()->create([
-            'symbol' => 'BTC',
+            'symbol' => 'BTC'.strtoupper(substr(uniqid(), -3)),
             'price_eur' => 50000
         ]);
 
@@ -160,7 +160,7 @@ class PortefeuilleControllerTest extends TestCase
     {
         $user = $this->createAuthenticatedUser(['password_changed_at' => now()]);
         $wallet = Wallet::factory()->create(['user_id' => $user->id, 'balance_eur' => 1000]);
-        $crypto = Cryptomoney::factory()->create(['symbol' => 'BTC', 'price_eur' => 50000]);
+        $crypto = Cryptomoney::factory()->create(['symbol' => 'BTC'.strtoupper(substr(uniqid(), -3)), 'price_eur' => 50000]);
         
         // Create wallet asset with crypto
         CryptoWalletAsset::factory()->create([

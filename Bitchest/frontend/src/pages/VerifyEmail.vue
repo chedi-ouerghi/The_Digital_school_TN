@@ -25,7 +25,7 @@ onMounted(async () => {
   }
 
   try {
-    // 🔥 CSRF Protection: Initialiser le token avant la vérification
+    // Initialisation du token CSRF avant la vérification de l'adresse
     await initializeCsrf()
     
     const response = await api.auth.verifyEmail({ token: token.value })

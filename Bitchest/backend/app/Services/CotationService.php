@@ -90,7 +90,7 @@ public function getDailyVariation(string $symbol, ?float $currentPrice = null): 
 
     $delta = round($newPrice - $base, 6);
 
-    // ✅ CORRECTION: Générer un volume réaliste basé sur le prix et le symbole
+    // Génération d'un volume estimé à partir du prix et du symbole
     $volumeMultiplier = random_int(1000, 50000); // Volume aléatoire réaliste
     $volume = round($newPrice * $volumeMultiplier, 2);
 

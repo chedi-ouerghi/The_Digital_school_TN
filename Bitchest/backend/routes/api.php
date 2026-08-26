@@ -39,7 +39,7 @@ Route::middleware('web')->group(function () {
 });
 
 Route::prefix('v1')
-    ->middleware('web')  // 🔥 CRITIQUE : Ajouter le middleware 'web' pour les sessions Sanctum SPA
+    ->middleware('web')  // Session web requise pour l'authentification Sanctum de la SPA
     ->group(function () {
 
     /*

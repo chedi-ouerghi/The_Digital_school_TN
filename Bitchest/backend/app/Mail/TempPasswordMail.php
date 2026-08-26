@@ -22,9 +22,9 @@ class TempPasswordMail extends Mailable
 
 	public function build()
 	{
-		// Simple plain-text mail (adapter pour vos vues si besoin)
+			 // Utilisation de la vue de courrier texte dédiée
 		return $this->subject('Votre compte a été créé - mot de passe temporaire')
-		            ->view('emails.temp_password') // si vous avez une view, sinon utiliser ->text(...)
+						 ->view('emails.temp_password') // Vue contenant le mot de passe temporaire
 		            ->with([
 						'userName' => $this->user->name,
 						'email' => $this->user->email,

@@ -21,7 +21,7 @@ class AddCryptoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // ✅ REQUIRED
+            // Champs obligatoires de la cryptomonnaie
             'symbol' => [
                 'required',
                 'string',
@@ -37,7 +37,7 @@ class AddCryptoRequest extends FormRequest
                 'unique:cryptomoney,name,' . ($this->crypto->id ?? 'NULL') . ',id',
             ],
 
-            // ✅ OPTIONAL
+            // Champs complémentaires facultatifs
             'coingecko_id' => [
                 'nullable',
                 'string',
@@ -116,21 +116,21 @@ class AddCryptoRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // ✅ Automatically convert symbol to uppercase
+        // Normalisation du symbole en majuscules
         if ($this->has('symbol')) {
             $this->merge([
                 'symbol' => strtoupper($this->input('symbol')),
             ]);
         }
 
-        // ✅ Automatically convert coingecko_id to lowercase
+        // Normalisation de l'identifiant CoinGecko en minuscules
         if ($this->has('coingecko_id')) {
             $this->merge([
                 'coingecko_id' => strtolower($this->input('coingecko_id')),
             ]);
         }
 
-        // ✅ Normalize website URLs
+        // Normalisation du format des URLs de site web
         if ($this->has('website')) {
             $website = $this->input('website');
             if (
@@ -143,7 +143,7 @@ class AddCryptoRequest extends FormRequest
             }
         }
 
-        // ✅ Cast numeric values
+        // Conversion des valeurs numériques
         if ($this->has('market_cap')) {
             $this->merge([
                 'market_cap' => (float) $this->input('market_cap'),
