@@ -303,7 +303,7 @@ if (
             $emailConfirmationSent = $this->sendAccountRequestConfirmation($accountRequest);
             if (!$emailConfirmationSent) {
                 \Log::warning("Unable to send the confirmation email to {$email}");
-                // Ne pas bloquer la réponse, mais logger l'erreur
+                // Journalisation de l'échec d'envoi sans interrompre la réponse
             }
 
             // 6. Notifier les administrateurs

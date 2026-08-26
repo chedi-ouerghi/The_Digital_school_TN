@@ -164,7 +164,7 @@ class TransactionService
             }
 
             if ($transaction->type === 'ACHAT') {
-                // Rendre l'argent et retirer les cryptos
+                // Remboursement du montant et restitution des cryptomonnaies
                 $wallet->balance_eur = DecimalMath::add((string)$wallet->balance_eur, (string)$transaction->total_eur, 2);
                 $wallet->save();
 
@@ -173,13 +173,13 @@ class TransactionService
                     $asset->quantity = DecimalMath::compare($newQuantity, '0') > 0 ? $newQuantity : '0';
                     $asset->save();
                 }
-            } else { // VENTE: retirer l'argent et rendre les cryptos
+            } else { // VENTE: remboursement du montant et restitution des cryptomonnaies
                 $wallet->balance_eur = DecimalMath::subtract((string)$wallet->balance_eur, (string)$transaction->total_eur, 2);
                 $wallet->save();
 
                 if ($asset) {
                     $asset->quantity = DecimalMath::add((string)$asset->quantity, (string)$transaction->quantity);
-                    // si pas d'avg, fixer à prix de la transaction
+                    // Utilisation du prix de la transaction lorsqu'aucun prix moyen n'est disponible
                     if (!$asset->average_buy_price) {
                         $asset->average_buy_price = (string)$transaction->price;
                     }

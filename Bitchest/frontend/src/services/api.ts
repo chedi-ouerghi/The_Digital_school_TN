@@ -42,7 +42,7 @@ interface ApiError {
  */
 async function initializeCsrfToken(): Promise<void> {
   try {
-    // 🔥 IMPORTANT: Utiliser l'URL absolue du backend, pas une URL relative
+    // Utilisation de l'URL absolue du backend pour les requêtes API
     // Le frontend (localhost:5173) ne peut pas servir cette route
     const csrfUrl = 'http://localhost:8000/sanctum/csrf-cookie';
 
@@ -97,7 +97,7 @@ async function request<T = unknown>(
       headers['Content-Type'] = 'application/json';
     }
 
-    // 🔥 CRITICAL : Ajouter le header X-XSRF-TOKEN pour la protection CSRF
+    // Transmission du token XSRF pour la protection CSRF
     // Sanctum valide que ce header correspond au cookie XSRF-TOKEN
     const xsrfToken = getXsrfToken();
     if (xsrfToken) {
@@ -111,7 +111,7 @@ async function request<T = unknown>(
     let finalBody = body;
 
     // Laravel does not natively support PUT/PATCH with multipart/form-data
-    // We must spoof the method by sending a POST request with _method field
+    // Utilisation du champ _method pour transmettre la méthode HTTP ciblée
     if ((method === 'PUT' || method === 'PATCH') && body instanceof FormData) {
       finalMethod = 'POST';
       finalBody.append('_method', method);
@@ -338,7 +338,7 @@ export const cryptoApi = {
     return await request<CryptoHistoryPayload>(`/cryptos/${id}/history?days=${days}`, 'GET');
   },
 
-  // ✅ Synchroniser l'historique de toutes les cryptos (24h, 7j, 30j)
+  // Synchronisation de l'historique de toutes les cryptomonnaies
   async syncHistory(): Promise<ApiResponse<{ status: string; message: string; output: string[] }>> {
     return await request<ApiResponse<{ status: string; message: string; output: string[] }>>('/admin/cryptos/sync-history', 'POST');
   },

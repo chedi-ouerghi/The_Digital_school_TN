@@ -163,7 +163,7 @@ class PortefeuilleService
             'cryptoWalletAssets.transactions'
         ])->findOrFail($walletId);
 
-        // CORRECTION: Restructure par cryptomonnaie
+        // Regroupement des actifs et transactions par cryptomonnaie
         $positions = $wallet->cryptoWalletAssets
             ->filter(fn($asset) => DecimalMath::compare((string)$asset->quantity, '0') > 0) // Filtre les assets avec quantité > 0
             ->map(function ($asset) {
@@ -187,7 +187,7 @@ class PortefeuilleService
                     'plus_value_percent' => DecimalMath::compare($invested, '0') > 0
                         ? DecimalMath::scale(DecimalMath::multiply(DecimalMath::divide($plusValue, $invested), '100', 4), 2)
                         : '0',
-                    // CORRECTION: Liste des transactions par crypto
+                    // Transactions associées à la cryptomonnaie
                     'transactions' => $asset->transactions
                         ->filter(fn($t) => !$t->cancelled_at)
                         ->map(function ($t) {

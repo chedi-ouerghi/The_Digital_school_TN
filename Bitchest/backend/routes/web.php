@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
-// 🔧 DEBUG ROUTES - À supprimer en production
+// Routes de diagnostic disponibles dans l'environnement local
 if (app()->environment('local')) {
     // Test 1 : Vérifier que la session fonctionne
     Route::get('/debug/session', function (\Illuminate\Http\Request $request) {

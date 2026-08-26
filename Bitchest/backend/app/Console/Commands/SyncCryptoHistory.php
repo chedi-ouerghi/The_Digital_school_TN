@@ -10,7 +10,7 @@ use App\Services\NotificationService;
 
 class SyncCryptoHistory extends Command
 {
-    // ⚠️ IMPORTANT : Doit correspondre à 'crypto:sync-history'
+    // Nom de la commande de synchronisation de l'historique des cours
     protected $signature = 'crypto:sync-history';
     protected $description = 'Synchronize cryptocurrency prices for today only';
 

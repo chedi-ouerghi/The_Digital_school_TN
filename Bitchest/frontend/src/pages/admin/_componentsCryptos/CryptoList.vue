@@ -1,44 +1,44 @@
 <script setup lang="ts">
 import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogTrigger,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { computed, ref } from 'vue'
 import api from '../../../services/api'
 import {
-  Coins,
-  Search,
-  Filter,
-  Grid3x3,
-  List,
-  RefreshCw,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight, ExternalLink,
-  Clock,
-  AlertCircle
+    Coins,
+    Search,
+    Filter,
+    Grid3x3,
+    List,
+    RefreshCw,
+    TrendingUp,
+    TrendingDown,
+    BarChart3,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight, ExternalLink,
+    Clock,
+    AlertCircle
 } from 'lucide-vue-next'
 
 // Props interface
@@ -152,7 +152,7 @@ async function handleSyncHistory() {
     emit('refresh')
   } catch (err: any) {
     const msg = err?.message || 'Error during synchronization'
-    // You could use a toast notification here instead
+    // Notification de l'échec de suppression dans la console
     console.error('Sync error:', msg)
   } finally {
     syncLoading.value = false

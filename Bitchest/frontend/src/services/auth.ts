@@ -29,7 +29,7 @@ const STORAGE_USER_KEY = 'user'
  */
 export async function initializeCsrf() {
   try {
-    const apiUrl = API_BASE.replace('/api/v1', ''); // Retirer v1 du prefix
+    const apiUrl = API_BASE.replace('/api/v1', ''); // URL racine utilisée pour les endpoints hors versionnement
     await fetch(`${apiUrl}/sanctum/csrf-cookie`, {
       method: 'GET',
       credentials: 'include',  // ← Inclure les cookies

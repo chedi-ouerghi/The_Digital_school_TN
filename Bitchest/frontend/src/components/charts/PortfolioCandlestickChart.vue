@@ -220,7 +220,7 @@ function initChart() {
     // Sync crosshair
     chart.subscribeCrosshairMove(param => {
       if (!volumeChart || !param.time) return
-      // lightweight-charts crosshair sync is automatic via timeScale; explicit not needed for v4
+      // La synchronisation du curseur est assurée par timeScale dans lightweight-charts
     })
   }
 

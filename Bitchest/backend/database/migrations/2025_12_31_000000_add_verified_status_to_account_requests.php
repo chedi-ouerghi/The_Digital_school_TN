@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up()
     {
-        // Modifier l'enum pour ajouter VERIFIED et EXPIRED
+        // Extension des statuts possibles d'une demande de compte
         Schema::table('account_requests', function (Blueprint $table) {
             $table->enum('status', ['PENDING', 'VERIFIED', 'APPROVED', 'REJECTED', 'EXPIRED'])
                 ->default('PENDING')
                 ->change();
         });
 
-        // Ajouter la colonne email_verified_at si elle n'existe pas
+        // Ajout de la date de vérification de l'adresse email
         Schema::table('account_requests', function (Blueprint $table) {
             if (!Schema::hasColumn('account_requests', 'email_verified_at')) {
                 $table->timestamp('email_verified_at')->nullable()->after('token');

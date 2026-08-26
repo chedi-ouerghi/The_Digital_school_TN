@@ -31,7 +31,7 @@ public function index(): JsonResponse
         ->with('wallet:id,user_id,balance_eur') // optimisation : ne charger que les champs utiles
         ->paginate(20);
 
-    // Transformer les données pour ajouter balance_eur même si le wallet n'existe pas
+    // Préparation du solde en euros, y compris lorsque le wallet est absent
     $users->getCollection()->transform(function ($user) {
         return [
             'id' => $user->id,
@@ -148,7 +148,7 @@ public function show($id): JsonResponse
     {
         $data = $request->validated();
         $data['role'] = $data['role'] ?? 'CLIENT';
-        // Mot de passe temporaire généré
+        // Génération du mot de passe temporaire du nouveau compte
         $tempPassword = Str::random(10);
         $data['password'] = $tempPassword; // le mutator du modèle User va le hasher
         // Solde initial si client et non fourni
@@ -163,7 +163,7 @@ public function show($id): JsonResponse
                 $transactionService->creditInitialBalance($user, (string)$initial);
                 $notificationService->createWelcome($user);
             }
-            // Envoi du mot de passe temporaire par mail (ne pas bloquer la création si le mail échoue)
+            // Envoi du mot de passe temporaire par courrier électronique
             try {
                 Mail::to($user->email)->send(new TempPasswordMail($user, $tempPassword));
             } catch (\Exception $mailEx) {

@@ -36,7 +36,7 @@ const formatNumber = (num: any, decimals = 2) => {
   })
 }
 
-// Fetch data with TypeScript fix
+ // Chargement des données du portfolio
 const fetchData = async () => {
   loading.value = true
   error.value = null

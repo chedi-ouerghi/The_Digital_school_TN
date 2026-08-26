@@ -19,10 +19,10 @@ const role = ref(auth.getRole())
 const showPasswordWarning = ref(false)
 const passwordChecked = ref(false)
 
-// ✅ API Base URL
+// URL de base de l'API
 const API_BASE = (import.meta.env as any).VITE_API_URL || 'http://localhost:8000'
 
-// ✅ Rendre la prop profile optionnelle avec une valeur par défaut
+// Profil utilisateur transmis au tableau de bord
 interface Props {
   profile?: any
 }
@@ -30,10 +30,10 @@ const props = withDefaults(defineProps<Props>(), {
   profile: () => ({})
 })
 
-// ✅ Fetch user profile if not provided via props
+// Chargement du profil lorsque le composant ne le reçoit pas en propriété
 const userProfile = ref<any>(props.profile)
 
-// ✅ Computed property for profile picture URL
+// URL de l'image de profil
 const getProfilePictureUrl = computed(() => {
   const profileData = userProfile.value?.user || userProfile.value
   
@@ -51,7 +51,7 @@ const getProfilePictureUrl = computed(() => {
   return `${API_BASE.replace(/\/+$/, '')}/storage/${picturePath}`
 })
 
-// ✅ Fallback for user data
+// Valeurs de remplacement pour les données utilisateur absentes
 const displayUser = computed(() => {
   const profileData = userProfile.value?.user || userProfile.value
   return profileData || user.value || {}
@@ -76,7 +76,7 @@ const notifError = ref<string | null>(null)
 // Mobile sidebar state
 const showMobileSidebar = ref(false)
 
-// ✅ User initials computed property
+// Initiales utilisées pour l'avatar de remplacement
 const userInitials = computed(() => {
   const name = displayUser.value?.name || displayUser.value?.email || ''
   if (!name) return 'U'
@@ -90,7 +90,7 @@ const userInitials = computed(() => {
     .slice(0, 2)
 })
 
-// ✅ FIX double-clic : attendre la fin du logout (API + nettoyage session)
+// Déconnexion après la fin de l'appel API et du nettoyage de session
 // avant de naviguer, sinon le guard requiresGuest de /signin revalide la
 // session encore active et renvoie vers le dashboard.
 const isLoggingOut = ref(false)
@@ -227,7 +227,7 @@ function formatPercentage(value: number): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
 }
 
-// ✅ CORRECTION: Charger la plus-value depuis l'endpoint dédié
+// Chargement de la plus-value depuis l'endpoint dédié
 async function loadWalletData() {
   if (String(role.value).toUpperCase().includes('ADMIN')) return
   
@@ -243,11 +243,11 @@ async function loadWalletData() {
     portfolio.value = walletData.cryptomonnaies || walletData.cryptos || walletData.assets || []
     totalValue.value = Number(walletData.current_value || walletData.total_value || walletData.totalValue || 0)
     
-    // ✅ CORRECTION PRINCIPALE: Charger depuis /wallets/plus-value
+    // Récupération de la plus-value depuis l'endpoint du portefeuille
     try {
       const plusValueResponse = await api.wallet.plusValue()
       
-      // ✅ Utiliser les noms de champs corrects de l'API
+      // Lecture des champs renvoyés par l'API
       totalPlusValue.value = Number(plusValueResponse.total_plus_value_eur || 0)
       totalPlusValuePercent.value = Number(plusValueResponse.total_plus_value_percent || 0)
       totalValue.value = Number(plusValueResponse.total_current_value || totalValue.value)
@@ -329,7 +329,7 @@ const onBalanceUpdated = async (e: any) => {
   }
 }
 
-// ✅ Function to load user profile
+// Chargement du profil utilisateur
 async function loadUserProfile() {
   try {
     if (Object.keys(props.profile).length === 0) {
