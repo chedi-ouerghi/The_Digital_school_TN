@@ -9,13 +9,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import BuyDialog from '@/components/landing/BuyDialog.vue'
+import SellDialog from '@/pages/client/transactionsHistory/SellDialog.vue'
 
 // Chart.js
 import type { ChartData, ChartOptions } from 'chart.js'
 import { Chart, registerables } from 'chart.js'
 import { Line } from 'vue-chartjs'
-Chart.register(...registerables)
 import CryptoCandlestickChart from '@/components/charts/CryptoCandlestickChart.vue'
+Chart.register(...registerables)
 
 // ============================================================================
 // INTERFACES
@@ -109,12 +111,19 @@ const crypto = ref<CryptoData | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const positions = ref<PositionData | null>(null)
+const walletBalance = ref(0)
 const history = ref<HistoryEntry[]>([])
 const walletTransactions = ref<Transaction[]>([])
 const historyLoading = ref(false)
 const timeRange = ref('30d')
 const chartMode = ref<'line' | 'candle'>('candle')
 const chartRenderKey = ref(0)
+const showTradeDialog = ref(false)
+const tradeMode = ref<'buy' | 'sell'>('buy')
+const tradeQuantity = ref('')
+const tradeError = ref('')
+const tradeSuccess = ref('')
+const isTrading = ref(false)
 
 // ============================================================================
 // FONCTIONS UTILITAIRES
@@ -213,11 +222,26 @@ async function fetchWalletHoldings() {
   if (!crypto.value) return
   try {
     const response = await api.wallet.list() as WalletResponse
-    // Find this crypto in wallet holdings
-    const asset = response.assets?.find(a => a.symbol === crypto.value!.symbol)
-    positions.value = asset || null
+    walletBalance.value = Number(response.balance_eur || 0)
+    const targetSymbol = crypto.value.symbol.toLowerCase()
+    const asset = (response.assets || []).find((candidate: any) => {
+      const symbol = candidate.symbol || candidate.cryptomoney?.symbol || candidate.crypto?.symbol
+      return String(symbol || '').toLowerCase() === targetSymbol
+    }) as any
+
+    positions.value = asset ? {
+      ...asset,
+      symbol: asset.symbol || asset.cryptomoney?.symbol || asset.crypto?.symbol,
+      name: asset.name || asset.cryptomoney?.name || asset.crypto?.name || crypto.value.name,
+      quantity: Number(asset.quantity ?? asset.pivot?.quantity ?? 0),
+      avg_buy_price_eur: Number(asset.avg_buy_price_eur ?? asset.average_buy_price ?? asset.pivot?.average_buy_price ?? 0),
+      current_price_eur: Number(asset.current_price_eur ?? crypto.value.price_eur ?? 0),
+      current_value_eur: Number(asset.current_value_eur ?? 0),
+      invested_eur: Number(asset.invested_eur ?? 0)
+    } : null
   } catch (e: any) {
     console.error('Error loading wallet holdings:', e)
+    walletBalance.value = 0
     positions.value = null
   }
 }
@@ -226,16 +250,15 @@ async function fetchHistoricalData() {
   if (!crypto.value?.id) return
   historyLoading.value = true
   try {
-    // Map time ranges to days
-    const dayMap: Record<string, number> = {
+  const dayMap: Record<string, number> = {
       '1d': 1,
       '7d': 7,
       '30d': 30,
-      '60d': 60
-    }
-    
-    const days = dayMap[timeRange.value] || 30
-    
+    '60d': 60
+  }
+
+  const days = dayMap[timeRange.value] || 30
+
     try {
       const response = await api.crypto.history(crypto.value.id, days)
       const data = response as any
@@ -305,6 +328,13 @@ const profitLossPercentage = computed(() => {
   if (investedValue.value === 0) return 0
   return (profitLoss.value / investedValue.value) * 100
 })
+
+const availableQuantity = computed(() => positions.value?.quantity || 0)
+const tradeTotal = computed(() => currentPrice.value * (parseFloat(tradeQuantity.value) || 0))
+const selectedSellAsset = computed(() => crypto.value ? {
+  crypto: { ...crypto.value, current_price: currentPrice.value },
+  unitPrice: positions.value?.avg_buy_price_eur || 0
+} : null)
 
 
 
@@ -514,15 +544,109 @@ function goBack() {
   router.push('/dashboard/cryptos')
 }
 
-function goToBuy() {
-  if (crypto.value) {
-    router.push(`/dashboard/cryptos?buy=${crypto.value.id}`)
-  }
+function openTradeDialog(mode: 'buy' | 'sell') {
+  if (!crypto.value || (mode === 'sell' && availableQuantity.value <= 0)) return
+  tradeMode.value = mode
+  tradeQuantity.value = mode === 'sell' ? availableQuantity.value.toFixed(8) : ''
+  tradeError.value = ''
+  tradeSuccess.value = ''
+  showTradeDialog.value = true
 }
 
-function goToSell() {
-  if (crypto.value && positions.value && positions.value.quantity > 0) {
-    router.push(`/dashboard/cryptos?sell=${crypto.value.id}`)
+function closeTradeDialog() {
+  if (isTrading.value) return
+  showTradeDialog.value = false
+  tradeQuantity.value = ''
+  tradeError.value = ''
+  tradeSuccess.value = ''
+}
+
+function validateTradeQuantity() {
+  const quantity = parseFloat(tradeQuantity.value)
+  if (!Number.isFinite(quantity) || quantity < 0) tradeQuantity.value = ''
+}
+
+function calculateQuickAmount(amountEur: number): number {
+  return currentPrice.value > 0 ? amountEur / currentPrice.value : 0
+}
+
+function calculateTradeTotal(): number {
+  return tradeTotal.value
+}
+
+function getAvailableQuantity(_symbol: string): number {
+  return availableQuantity.value
+}
+
+function setQuickAmount(amountEur: number) {
+  tradeQuantity.value = calculateQuickAmount(amountEur).toFixed(8)
+}
+
+function calculateMaxQuantity() {
+  if (currentPrice.value <= 0 || walletBalance.value <= 0) return 0
+  return Math.floor((walletBalance.value / currentPrice.value) * 1e8) / 1e8
+}
+
+function setMaxQuantity() {
+  tradeQuantity.value = calculateMaxQuantity().toFixed(8)
+}
+
+function setSellPercentage(percent: number) {
+  tradeQuantity.value = (availableQuantity.value * percent / 100).toFixed(8)
+}
+
+function calculateProfitLoss() {
+  return tradeTotal.value - (positions.value?.avg_buy_price_eur || 0) * (parseFloat(tradeQuantity.value) || 0)
+}
+
+function calculateProfitLossPercentage() {
+  const invested = (positions.value?.avg_buy_price_eur || 0) * (parseFloat(tradeQuantity.value) || 0)
+  return invested > 0 ? ((calculateProfitLoss() / invested) * 100).toFixed(2) : '0.00'
+}
+
+async function executeTrade() {
+  if (!crypto.value) return
+  tradeError.value = ''
+  tradeSuccess.value = ''
+
+  const quantity = parseFloat(tradeQuantity.value)
+  if (!quantity || quantity <= 0) {
+    tradeError.value = 'Please enter a valid quantity'
+    return
+  }
+  if (quantity < 0.00000001) {
+    tradeError.value = 'Minimum quantity is 0.00000001'
+    return
+  }
+  if (tradeMode.value === 'buy' && tradeTotal.value > walletBalance.value) {
+    tradeError.value = `Insufficient balance. Available: ${formatCurrency(walletBalance.value)}`
+    return
+  }
+  if (tradeMode.value === 'sell' && quantity > availableQuantity.value) {
+    tradeError.value = `Insufficient quantity. Available: ${formatNumber(availableQuantity.value, 8)} ${crypto.value.symbol.toUpperCase()}`
+    return
+  }
+
+  isTrading.value = true
+  try {
+    const profile = await api.auth.profile()
+    if (!profile.password_changed_at) {
+      tradeError.value = `You must change your password before making ${tradeMode.value === 'buy' ? 'purchases' : 'sales'}. Please go to your profile settings.`
+      return
+    }
+
+    await api.wallet.transact({
+      symbol: crypto.value.symbol,
+      type: tradeMode.value === 'buy' ? 'ACHAT' : 'VENTE',
+      quantity
+    })
+    tradeSuccess.value = `${tradeMode.value === 'buy' ? 'Purchase' : 'Sale'} completed successfully!`
+    await loadAllData()
+    window.setTimeout(closeTradeDialog, 800)
+  } catch (e: any) {
+    tradeError.value = e?.message || `Error during ${tradeMode.value === 'buy' ? 'purchase' : 'sale'}`
+  } finally {
+    isTrading.value = false
   }
 }
 
@@ -672,7 +796,7 @@ function viewAllTransactions() {
             <div class="flex gap-3">
               <Button 
                 class="flex-1 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
-                @click="goToBuy"
+                @click="openTradeDialog('buy')"
               >
                 Buy
               </Button>
@@ -680,7 +804,7 @@ function viewAllTransactions() {
                 variant="outline"
                 class="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                 :disabled="!positions || positions.quantity <= 0"
-                @click="goToSell"
+                @click="openTradeDialog('sell')"
               >
                 Sell
               </Button>
@@ -803,7 +927,7 @@ function viewAllTransactions() {
                 <p class="text-gray-600 dark:text-gray-400 mb-6">You don't own {{ crypto.name }} yet</p>
                 <Button 
                   class="bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900"
-                  @click="goToBuy"
+                  @click="openTradeDialog('buy')"
                 >
                   Buy {{ crypto.symbol.toUpperCase() }}
                 </Button>
@@ -952,6 +1076,50 @@ function viewAllTransactions() {
         </Card>
       </div>
     </main>
+
+    <BuyDialog
+      :show="showTradeDialog && tradeMode === 'buy'"
+      :selected-crypto="crypto"
+      :quantity="tradeQuantity"
+      :user-balance="walletBalance"
+      :buying-error="tradeError"
+      :buying-success="tradeSuccess"
+      :is-buying="isTrading"
+      :make-image-url="makeImageUrl"
+      :format-currency="formatCurrency"
+      :format-number="formatNumber"
+      :is-in-portfolio="() => Boolean(positions && positions.quantity > 0)"
+      :get-owned-quantity="() => availableQuantity"
+      :calculate-max-quantity="calculateMaxQuantity"
+      :calculate-quick-amount="calculateQuickAmount"
+      :calculate-total-cost="calculateTradeTotal"
+      @update:quantity="tradeQuantity = $event"
+      @validate="validateTradeQuantity"
+      @set-max="setMaxQuantity"
+      @quick-amount="setQuickAmount"
+      @close="closeTradeDialog"
+      @confirm="executeTrade"
+    />
+
+    <SellDialog
+      :show="showTradeDialog && tradeMode === 'sell'"
+      :selected-asset="selectedSellAsset"
+      :sell-quantity="tradeQuantity"
+      :sell-error="tradeError || null"
+      :sell-success="tradeSuccess || null"
+      :is-selling="isTrading"
+      :format-currency="formatCurrency"
+      :format-number="formatNumber"
+      :get-available-quantity="getAvailableQuantity"
+      :calculate-sell-amount="calculateTradeTotal"
+      :calculate-profit-loss="calculateProfitLoss"
+      :calculate-profit-loss-percentage="calculateProfitLossPercentage"
+      @update:quantity="tradeQuantity = $event"
+      @validate="validateTradeQuantity"
+      @set-percentage="setSellPercentage"
+      @confirm="executeTrade"
+      @close="closeTradeDialog"
+    />
   </div>
 </template>
 

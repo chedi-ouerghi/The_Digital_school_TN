@@ -3,22 +3,22 @@ import Header from '@/components/landing/Header.vue';
 import { ref, onMounted, computed } from 'vue';
 import { colors, shadows, radius } from '@/config/designSystem';
 import {
-  TrendingUp,
-  ShieldCheck,
-  Users,
-  Clock,
-  ArrowRight,
-  CheckCircle2,
-  BarChart3,
-  Layers,
-  Lock,
-  Zap
+    TrendingUp,
+    ShieldCheck,
+    Users,
+    Clock,
+    ArrowRight,
+    CheckCircle2,
+    BarChart3,
+    Layers,
+    Lock,
+    Zap
 } from 'lucide-vue-next';
 
 // Dashboard metrics
 const dashboardItems = [
   { 
-    title: 'Utilisateurs Actifs', 
+    title: 'Active Users', 
     value: '2,458', 
     trend: '+12%', 
     icon: Users,
@@ -34,7 +34,7 @@ const dashboardItems = [
     bgColor: colors.secondary[50]
   },
   { 
-    title: 'Score Sécurité', 
+    title: 'Security Score', 
     value: '99.8%', 
     trend: 'A+', 
     icon: ShieldCheck,
@@ -45,47 +45,47 @@ const dashboardItems = [
 
 const features = [
   {
-    title: 'Sécurité Enterprise',
-    description: 'Chiffrement bancaire, wallets multi-signatures et authentification 2FA pour une protection maximale.',
+    title: 'Enterprise Security',
+    description: 'Bank-grade encryption, multi-signature wallets, and 2FA authentication for maximum protection.',
     icon: ShieldCheck,
     iconBg: colors.primary[100],
     iconColor: colors.primary[600],
     details: [
-      { text: 'Conforme aux normes OWASP', icon: CheckCircle2 },
-      { text: 'Chiffrement de bout en bout', icon: Lock },
-      { text: 'Multi-signature obligatoire', icon: Zap }
+      { text: 'OWASP-compliant security', icon: CheckCircle2 },
+      { text: 'End-to-end encryption', icon: Lock },
+      { text: 'Mandatory multi-signature', icon: Zap }
     ]
   },
   {
-    title: 'Trading Avancé',
-    description: 'Des algorithmes optimisés pour l\'achat et la vente avec calcul automatique des plus-values.',
+    title: 'Advanced Trading',
+    description: 'Optimized algorithms for buying and selling with automatic profit and loss calculations.',
     icon: BarChart3,
     iconBg: colors.secondary[100],
     iconColor: colors.secondary[600],
     details: [
-      { text: 'Achat en 3 clics', icon: CheckCircle2 },
-      { text: 'Calcul en temps réel', icon: Clock },
-      { text: 'Historique complet', icon: Layers }
+      { text: 'Buy in three clicks', icon: CheckCircle2 },
+      { text: 'Real-time calculations', icon: Clock },
+      { text: 'Complete history', icon: Layers }
     ]
   },
   {
     title: 'Analytics & Rapports',
-    description: 'Visualisez vos performances avec des graphiques interactifs et des rapports détaillés exportables.',
+    description: 'Visualize your performance with interactive charts and detailed, exportable reports.',
     icon: TrendingUp,
     iconBg: colors.primary[100],
     iconColor: colors.primary[600],
     details: [
-      { text: 'Graphiques de performance', icon: CheckCircle2 },
-      { text: 'Rapports PDF exportables', icon: Layers },
-      { text: 'Métriques clés en temps réel', icon: Zap }
+      { text: 'Performance charts', icon: CheckCircle2 },
+      { text: 'Exportable PDF reports', icon: Layers },
+      { text: 'Real-time key metrics', icon: Zap }
     ]
   }
 ];
 
 const stats = [
-  { value: '99.8%', label: 'Disponibilité', icon: TrendingUp, color: colors.primary[500] },
-  { value: '< 0.1s', label: 'Exécution', icon: Zap, color: colors.secondary[500] },
-  { value: '100%', label: 'Sécurisé', icon: ShieldCheck, color: colors.primary[500] },
+  { value: '99.8%', label: 'Uptime', icon: TrendingUp, color: colors.primary[500] },
+  { value: '< 0.1s', label: 'Execution', icon: Zap, color: colors.secondary[500] },
+  { value: '100%', label: 'Secure', icon: ShieldCheck, color: colors.primary[500] },
 ];
 
 const isLoading = ref(true);
@@ -94,7 +94,7 @@ const animatedUsers = ref(0);
 
 // Sample chart data
 const chartData = [65, 72, 68, 75, 82, 78, 85, 80, 88, 92, 87, 95];
-const chartMonths = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+const chartMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 onMounted(() => {
   setTimeout(() => {
@@ -178,7 +178,7 @@ const chartAreaPath = computed(() => {
           }"
         />
         <p class="text-sm font-medium" :style="{ color: colors.text.secondary }">
-          Chargement...
+          Loading...
         </p>
       </div>
     </div>
@@ -203,7 +203,7 @@ const chartAreaPath = computed(() => {
                 class="w-1.5 h-1.5 rounded-full animate-pulse"
                 :style="{ backgroundColor: colors.primary[500] }"
               />
-              PLATEFORME DE TRADING CRYPTO PREMIUM
+              PREMIUM CRYPTO TRADING PLATFORM
             </span>
             
             <!-- Hero Title -->
@@ -211,7 +211,7 @@ const chartAreaPath = computed(() => {
               class="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight"
               :style="{ color: colors.text.primary }"
             >
-              Tradez vos 
+              Trade your 
               <span 
                 class="relative inline-block"
                 :style="{ color: colors.primary[500] }"
@@ -227,9 +227,9 @@ const chartAreaPath = computed(() => {
               </span>
               <br />
               <span class="relative">
-                en Toute
+                with Total
                 <span class="text-gradient bg-gradient-to-r from-primary-400 to-primary-600">
-                  Sécurité
+                  Security
                 </span>
               </span>
             </h1>
@@ -239,8 +239,8 @@ const chartAreaPath = computed(() => {
               class="text-lg md:text-xl leading-relaxed max-w-lg"
               :style="{ color: colors.text.secondary }"
             >
-              BitChest est une plateforme complète de gestion et trading de cryptomonnaies. 
-              Achetez, vendez et suivez vos investissements avec des outils professionnels dignes des meilleurs standards SaaS.
+              BitChest is a complete cryptocurrency management and trading platform. 
+              Buy, sell, and track your investments with professional tools built to the highest SaaS standards.
             </p>
             
             <!-- CTA Buttons -->
@@ -254,7 +254,7 @@ const chartAreaPath = computed(() => {
                   boxShadow: shadows.primary.md
                 }"
               >
-                Commencer
+                Get Started
                 <ArrowRight class="w-5 h-5" />
               </router-link>
               
@@ -266,7 +266,7 @@ const chartAreaPath = computed(() => {
                   color: colors.text.primary
                 }"
               >
-                Découvrir les fonctionnalités
+                Explore Features
               </a>
             </div>
             
@@ -300,7 +300,7 @@ const chartAreaPath = computed(() => {
                   class="text-sm"
                   :style="{ color: colors.text.tertiary }"
                 >
-                  utilisateurs actifs
+                  active users
                 </span>
               </div>
             </div>
@@ -331,13 +331,13 @@ const chartAreaPath = computed(() => {
                     class="text-lg font-bold"
                     :style="{ color: colors.text.primary }"
                   >
-                    Aperçu du Portefeuille
+                    Portfolio Overview
                   </h3>
                   <p 
                     class="text-xs mt-1"
                     :style="{ color: colors.text.tertiary }"
                   >
-                    Données en temps réel
+                    Real-time data
                   </p>
                 </div>
                 <span 
@@ -347,7 +347,7 @@ const chartAreaPath = computed(() => {
                     color: colors.primary[600]
                   }"
                 >
-                  Démo
+                  Demo
                 </span>
               </div>
               
@@ -392,7 +392,7 @@ const chartAreaPath = computed(() => {
                     class="text-xs font-medium mb-2"
                     :style="{ color: colors.text.tertiary }"
                   >
-                    Utilisateurs
+                    Users
                   </p>
                   <p 
                     class="text-xl font-bold"
@@ -409,7 +409,7 @@ const chartAreaPath = computed(() => {
                     class="text-xs font-medium mb-2"
                     :style="{ color: colors.text.tertiary }"
                   >
-                    Sécurité
+                    Security
                   </p>
                   <p 
                     class="text-xl font-bold"
@@ -440,19 +440,19 @@ const chartAreaPath = computed(() => {
               color: colors.primary[600]
             }"
           >
-            FONCTIONNALITÉS
+            FEATURES
           </span>
           
           <h2 
             class="text-4xl md:text-5xl font-extrabold leading-tight mb-5"
             :style="{ color: colors.text.primary }"
           >
-            Une Plateforme 
+            A Complete 
             <span 
               class="relative inline-block"
               :style="{ color: colors.primary[500] }"
             >
-              Complète
+              Platform
               <span 
                 class="absolute bottom-0 left-0 w-full h-2 -mb-1 opacity-30 blur-lg"
                 :style="{
@@ -467,7 +467,7 @@ const chartAreaPath = computed(() => {
             class="text-lg md:text-xl"
             :style="{ color: colors.text.secondary }"
           >
-            Tout ce dont vous avez besoin pour gérer vos cryptomonnaies de manière professionnelle et sécurisée.
+            Everything you need to manage your cryptocurrency professionally and securely.
           </p>
         </div>
         
@@ -549,13 +549,13 @@ const chartAreaPath = computed(() => {
                     class="font-bold"
                     :style="{ color: colors.text.primary }"
                   >
-                    Performance du Portefeuille
+                    Portfolio Performance
                   </h4>
                   <p 
                     class="text-xs mt-1"
                     :style="{ color: colors.text.tertiary }"
                   >
-                    Derniers 12 mois
+                    Last 12 months
                   </p>
                 </div>
                 <span 
@@ -598,13 +598,13 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
                   class="text-sm font-bold mb-4"
                   :style="{ color: colors.text.primary }"
                 >
-                  Répartition des Actifs
+                  Asset Allocation
                 </h5>
                 <div 
                   v-for="asset in [
                     { name: 'Bitcoin (BTC)', percent: 45, color: colors.primary[500] },
                     { name: 'Ethereum (ETH)', percent: 30, color: colors.secondary[500] },
-                    { name: 'Autres', percent: 25, color: colors.slate[600] }
+                    { name: 'Other', percent: 25, color: colors.slate[600] }
                   ]" 
                   :key="asset.name" 
                   class="flex items-center gap-4"
@@ -647,7 +647,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
                 color: colors.secondary[600]
               }"
             >
-              ANALYTIQUES AVANCÉES
+              ADVANCED ANALYTICS
             </span>
             
             <h2 
@@ -659,7 +659,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
                 class="relative inline-block"
                 :style="{ color: colors.secondary[500] }"
               >
-                Rapports
+                Reports
                 <span 
                   class="absolute bottom-0 left-0 w-full h-2 -mb-1 opacity-30 blur-lg"
                   :style="{
@@ -674,8 +674,8 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
               class="text-lg leading-relaxed"
               :style="{ color: colors.text.secondary }"
             >
-              Suivez vos performances avec des graphiques détaillés. Analysez vos investissements, 
-              visualisez l'évolution de votre portefeuille et exportez vos rapports.
+              Track your performance with detailed charts. Analyze your investments, 
+              view your portfolio growth, and export your reports.
             </p>
             
             <!-- Metrics -->
@@ -760,7 +760,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
                 color: colors.text.primary
               }"
             >
-              Voir les Rapports Complets
+              View Full Reports
               <ArrowRight class="w-4 h-4" />
             </router-link>
           </div>
@@ -782,19 +782,19 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
             color: colors.primary[600]
           }"
         >
-          PRÊT À COMMENCER ?
+          READY TO GET STARTED?
         </span>
         
         <h2 
           class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight"
           :style="{ color: colors.text.primary }"
         >
-          Tradez avec 
+          Trade with 
           <span 
             class="relative inline-block"
             :style="{ color: colors.primary[500] }"
           >
-            Confiance
+            Confidence
             <span 
               class="absolute bottom-0 left-0 w-full h-3 -mb-2 opacity-30 blur-lg"
               :style="{
@@ -809,7 +809,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
           class="text-lg mb-10 max-w-2xl mx-auto"
           :style="{ color: colors.text.secondary }"
         >
-          Rejoignez des milliers d'utilisateurs qui font confiance à BitChest pour leurs investissements crypto.
+          Join thousands of users who trust BitChest with their crypto investments.
         </p>
         
         <div class="flex flex-wrap gap-4 justify-center">
@@ -822,7 +822,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
               boxShadow: shadows.primary.md
             }"
           >
-            Créer un Compte
+            Create an Account
             <ArrowRight class="w-5 h-5" />
           </router-link>
           
@@ -834,7 +834,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
               color: colors.text.primary
             }"
           >
-            Se connecter
+            Sign In
           </router-link>
         </div>
       </div>
@@ -855,7 +855,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
               class="text-sm leading-relaxed"
               :style="{ color: colors.text.secondary }"
             >
-              Plateforme de trading crypto sécurisée. Simple, rapide et professionnelle. Conçue pour les investisseurs exigeants.
+              Secure crypto trading platform. Simple, fast, and professional. Built for discerning investors.
             </p>
             
             <!-- Social Links -->
@@ -888,30 +888,30 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
           <div 
             v-for="section in [
               { 
-                title: 'Produit', 
+                title: 'Product', 
                 links: [
-                  { label: 'Fonctionnalités', href: '#features' },
-                  { label: 'Sécurité', href: '#security' },
-                  { label: 'Tarifs', href: '#pricing' },
-                  { label: 'Intégrations', href: '#integrations' }
+                  { label: 'Features', href: '#features' },
+                  { label: 'Security', href: '#security' },
+                  { label: 'Pricing', href: '#pricing' },
+                  { label: 'Integrations', href: '#integrations' }
                 ]
               },
               { 
-                title: 'Société', 
+                title: 'Company', 
                 links: [
-                  { label: 'À propos', href: '#about' },
+                  { label: 'About', href: '#about' },
                   { label: 'Blog', href: '#blog' },
                   { label: 'Contact', href: '#contact' },
-                  { label: 'Carrières', href: '#careers' }
+                  { label: 'Careers', href: '#careers' }
                 ]
               },
               { 
-                title: 'Légal', 
+                title: 'Legal', 
                 links: [
-                  { label: 'Confidentialité', href: '#privacy' },
-                  { label: 'Conditions', href: '#terms' },
-                  { label: 'Conformité', href: '#compliance' },
-                  { label: 'Sécurité', href: '#security-policy' }
+                  { label: 'Privacy', href: '#privacy' },
+                  { label: 'Terms', href: '#terms' },
+                  { label: 'Compliance', href: '#compliance' },
+                  { label: 'Security', href: '#security-policy' }
                 ]
               }
             ]" 
@@ -943,7 +943,7 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
           :style="{ borderColor: colors.border.light }"
         >
           <span :style="{ color: colors.text.tertiary }">
-            © 2025 BitChest. Tous droits réservés.
+            © 2025 BitChest. All rights reserved.
           </span>
           
           <div class="flex gap-6">
@@ -952,14 +952,14 @@ d="M0,90 L 40,85 L 80,70 L 120,75 L 160,55 L 200,60 L 240,45 L 280,50 L 320,35 L
               class="transition-all duration-200 hover:text-primary-500"
               :style="{ color: colors.text.tertiary }"
             >
-              Politique de confidentialité
+              Privacy Policy
             </a>
             <a
               href="#terms"
               class="transition-all duration-200 hover:text-primary-500"
               :style="{ color: colors.text.tertiary }"
             >
-              Conditions d'utilisation
+              Terms of Use
             </a>
           </div>
           
