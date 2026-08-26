@@ -5,8 +5,8 @@ import GetStartedDialog from './GetStartedDialog.vue';
 import { colors } from '@/config/designSystem';
 
 const navItems = [
-  { label: 'Accueil', href: '#top' },
-  { label: 'Fonctionnalités', href: '#features' },
+  { label: 'Home', href: '#top' },
+  { label: 'Features', href: '#features' },
   { label: 'Analytics', href: '#analytics' },
 ];
 
@@ -83,7 +83,7 @@ onUnmounted(() => {
               class="hidden lg:inline-flex items-center px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-300 hover:scale-[1.03]"
               :style="{ borderColor: colors.border.medium, color: colors.text.primary }"
             >
-              Se connecter
+              Sign In
             </router-link>
             <GetStartedDialog />
           </div>
